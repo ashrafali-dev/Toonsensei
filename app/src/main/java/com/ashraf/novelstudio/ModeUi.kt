@@ -29,8 +29,8 @@ import kotlin.math.sin
  */
 object ModeUi {
     val names = arrayOf("Novel", "Scan", "Live")
-    private val starts = intArrayOf(UiTheme.accentA, 0xFF4ADEB0.toInt(), 0xFFFF8FB5.toInt())
-    private val ends = intArrayOf(UiTheme.accentB, 0xFF1D9E75.toInt(), 0xFFD4537E.toInt())
+    private val starts = intArrayOf(UiTheme.accent, UiTheme.ok, UiTheme.accent)
+    private val ends = intArrayOf(UiTheme.accent, UiTheme.ok, UiTheme.accent)
 
     fun start(i: Int): Int = starts[i.coerceIn(0, 2)]
     fun end(i: Int): Int = ends[i.coerceIn(0, 2)]
@@ -193,13 +193,14 @@ class ModeCapsule(ctx: Context) : View(ctx) {
         val t = pos - a
         val c0 = ModeUi.lerp(ModeUi.start(a), ModeUi.start(a + 1), t)
         val c1 = ModeUi.lerp(ModeUi.end(a), ModeUi.end(a + 1), t)
-        thumb.shader = LinearGradient(rect.left, rect.top, rect.right, rect.bottom, c0, c1, Shader.TileMode.CLAMP)
+        thumb.shader = null
+        thumb.color = c0
         c.drawRoundRect(rect, th / 2f, th / 2f, thumb)
 
         for (i in 0..2) {
             val cx = pad + segW * (i + 0.5f)
             val d = min(1f, abs(pos - i))
-            glyph.draw(c, i, cx, h / 2f, 17f * dens, ModeUi.lerp(Color.WHITE, UiTheme.iconIdle, d))
+            glyph.draw(c, i, cx, h / 2f, 17f * dens, ModeUi.lerp(UiTheme.onAccent, UiTheme.iconIdle, d))
         }
     }
 
