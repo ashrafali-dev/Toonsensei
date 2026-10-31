@@ -49,7 +49,7 @@ object ToonToast {
                 ToonTheme.dp(context, ToonTheme.Space.xs),
                 ToonTheme.dp(context, ToonTheme.Space.sm)
             )
-            isFocusable = true
+            isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
@@ -86,6 +86,7 @@ object ToonToast {
                     0
                 )
                 isFocusable = true
+                isFocusableInTouchMode = true
                 background = ToonComponents.ripple(context, actionShape, ToonTheme.Radius.pill)
                 ToonComponents.applyFocusOutline(this, context, actionShape, Color.TRANSPARENT)
                 setOnClickListener { onAction() }
@@ -111,6 +112,7 @@ object ToonToast {
                 setMinimumWidth(ToonTheme.dp(context, ToonTheme.Metrics.minimumTouchDp))
                 setMinimumHeight(ToonTheme.dp(context, ToonTheme.Metrics.minimumTouchDp))
                 isFocusable = true
+                isFocusableInTouchMode = true
                 background = ToonComponents.ripple(context, closeShape, ToonTheme.Radius.pill)
                 ToonComponents.applyFocusOutline(this, context, closeShape, Color.TRANSPARENT)
                 setOnClickListener { onDismiss() }
