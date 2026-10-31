@@ -69,7 +69,7 @@ object ToonComponents {
         text = value
         textSize = sizeSp
         setTextColor(color)
-        typeface = typeface ?: if (medium) ToonTheme.Type.mediumTypeface() else ToonTheme.Type.uiTypeface()
+        this.typeface = typeface ?: if (medium) ToonTheme.Type.mediumTypeface() else ToonTheme.Type.uiTypeface()
         includeFontPadding = true
         setLineSpacing(0f, lineSpacingMultiplier)
     }
