@@ -51,7 +51,7 @@ object ToonStateView {
                     progressBackgroundTintList =
                         android.content.res.ColorStateList.valueOf(colors.line)
                     progress = progressPercent.coerceIn(0, 100)
-                    contentDescription = "${progress} percent complete"
+                    contentDescription = context.getString(com.ashraf.novelstudio.R.string.toon_progress_percent, progress)
                 }
                 content.addView(
                     progress,
@@ -63,10 +63,10 @@ object ToonStateView {
             }
         } else {
             val eyebrow = when (state) {
-                State.EMPTY -> "NOTHING HERE YET"
-                State.ERROR -> "SOMETHING WENT WRONG"
-                State.OFFLINE -> "YOU ARE OFFLINE"
-                State.PERMISSION -> "PERMISSION NEEDED"
+                State.EMPTY -> context.getString(com.ashraf.novelstudio.R.string.toon_state_empty_eyebrow)
+                State.ERROR -> context.getString(com.ashraf.novelstudio.R.string.toon_state_error_eyebrow)
+                State.OFFLINE -> context.getString(com.ashraf.novelstudio.R.string.toon_state_offline_eyebrow)
+                State.PERMISSION -> context.getString(com.ashraf.novelstudio.R.string.toon_state_permission_eyebrow)
                 State.LOADING -> ""
             }
             content.addView(
