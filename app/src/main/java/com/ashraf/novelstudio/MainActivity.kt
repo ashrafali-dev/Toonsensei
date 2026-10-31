@@ -11528,8 +11528,34 @@ ${rows.take(220).joinToString("\n")}
             sheet.show()
             return
         }
-        val labels = names.map { it + "   (" + Store.chapters(this, it).size + " chapters)" }
-        listDialog("Library", labels, { i -> novelActions(names[i]) }, null)
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Library")
+        val group = Toon.group(this, c)
+        val palette = listOf(c.novel, c.scan, c.manual, c.live, c.success)
+        names.forEachIndexed { i, name ->
+            val count = Store.chapters(this, name).size
+            val cover = TextView(this).apply {
+                text = name.trim().take(1).uppercase()
+                textSize = 20f
+                typeface = boldMedium
+                textAlignment = View.TEXT_ALIGNMENT_CENTER
+                gravity = Gravity.CENTER
+                setTextColor(c.onInk)
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(10).toFloat()
+                    setColor(palette[Math.abs(name.hashCode()) % palette.size])
+                }
+            }
+            val row = Toon.listRow(this, c, name, valueText = "$count chapters", chevron = true, onClick = {
+                sheet.close(); novelActions(name)
+            })
+            row.addView(cover, LinearLayout.LayoutParams(dp(40), dp(56)).also { it.marginEnd = dp(12) })
+            row.onLongClickListener = null
+            group.addView(row)
+            if (i != names.lastIndex) group.addView(Toon.divider(this, c))
+        }
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        sheet.show()
     }
 
     private fun novelActions(name: String) {
