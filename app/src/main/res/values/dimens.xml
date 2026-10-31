@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="toon_hairline_stroke">1dp</dimen>
+    <dimen name="toon_focus_stroke">2dp</dimen>
+    <dimen name="toon_dialog_radius">24dp</dimen>
+    <dimen name="toon_sheet_radius">24dp</dimen>
+</resources>
