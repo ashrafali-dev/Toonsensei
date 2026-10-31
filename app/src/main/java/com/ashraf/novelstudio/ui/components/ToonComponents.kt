@@ -7,6 +7,7 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
+import android.graphics.Typeface
 import android.widget.TextView
 import com.ashraf.novelstudio.ui.theme.ToonTheme
 
@@ -61,14 +62,16 @@ object ToonComponents {
         value: CharSequence,
         sizeSp: Float = ToonTheme.Type.body,
         color: Int = ToonTheme.colors(context).ink,
-        medium: Boolean = false
+        medium: Boolean = false,
+        typeface: Typeface? = null,
+        lineSpacingMultiplier: Float = ToonTheme.Type.lineSpacingMultiplier
     ): TextView = TextView(context).apply {
         text = value
         textSize = sizeSp
         setTextColor(color)
-        typeface = if (medium) ToonTheme.Type.mediumTypeface() else ToonTheme.Type.uiTypeface()
+        typeface = typeface ?: if (medium) ToonTheme.Type.mediumTypeface() else ToonTheme.Type.uiTypeface()
         includeFontPadding = true
-        setLineSpacing(0f, ToonTheme.Type.lineSpacingMultiplier)
+        setLineSpacing(0f, lineSpacingMultiplier)
     }
 
     fun exposeAsButton(view: View) {
