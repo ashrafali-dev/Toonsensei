@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.view.View
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.TextView
 import com.ashraf.novelstudio.ui.theme.ToonTheme
 
@@ -16,7 +17,7 @@ object ToonComponents {
         fill: Int,
         radiusDp: Int,
         stroke: Int = Color.TRANSPARENT,
-        strokeDp: Int = 1
+        strokeDp: Int = ToonTheme.Metrics.hairlineDp
     ): GradientDrawable = GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
         setColor(fill)
@@ -45,7 +46,7 @@ object ToonComponents {
             fill,
             radiusDp,
             if (focused) ToonTheme.colors(context).focus else normalStroke,
-            if (focused) 2 else 1
+            if (focused) ToonTheme.Metrics.focusStrokeDp else ToonTheme.Metrics.hairlineDp
         )
         view.background = background(view.hasFocus())
         view.isFocusable = true
@@ -70,7 +71,16 @@ object ToonComponents {
         setLineSpacing(0f, 1.15f)
     }
 
-    fun touchTarget(view: View, context: Context, minDp: Int = 48) {
+    fun exposeAsButton(view: View) {
+        view.accessibilityDelegate = object : View.AccessibilityDelegate() {
+            override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
+                super.onInitializeAccessibilityNodeInfo(host, info)
+                info.className = android.widget.Button::class.java.name
+            }
+        }
+    }
+
+    fun touchTarget(view: View, context: Context, minDp: Int = ToonTheme.Metrics.minimumTouchDp) {
         view.minimumWidth = ToonTheme.dp(context, minDp)
         view.minimumHeight = ToonTheme.dp(context, minDp)
         view.isFocusable = true
