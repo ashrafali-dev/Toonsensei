@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paper palette: single source of truth for app-owned UI colours. -->
+    <color name="toon_bg">#F4F1EA</color>
+    <color name="toon_surface">#FBFAF6</color>
+    <color name="toon_surface_alt">#E9E4D8</color>
+    <color name="toon_ink">#1F1D1A</color>
+    <color name="toon_body">#1F1D1A</color>
+    <color name="toon_muted">#6B665E</color>
+    <color name="toon_faint">#6B665E</color>
+    <color name="toon_line">#E3DED3</color>
+    <color name="toon_line_strong">#CFC8BA</color>
+    <color name="toon_accent">#9C3D2E</color>
+    <color name="toon_accent_tint">#F0E1DB</color>
+    <color name="toon_on_accent">#FFFFFF</color>
+    <color name="toon_success">#3F6B4B</color>
+    <color name="toon_success_tint">#E3EDE5</color>
+    <color name="toon_success_ink">#2F5A3B</color>
+    <color name="toon_warning">#5E3F0B</color>
+    <color name="toon_warning_tint">#F5ECD8</color>
+    <color name="toon_warning_line">#E3CFA3</color>
+    <color name="toon_danger">#9C3D2E</color>
+    <color name="toon_danger_tint">#F0E1DB</color>
+    <color name="toon_scrim">#571F1D1A</color>
+    <color name="toon_focus">#9C3D2E</color>
+    <color name="toon_ripple">#229C3D2E</color>
+</resources>
