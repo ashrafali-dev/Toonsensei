@@ -3,9 +3,9 @@
     <!-- ToonSensei "Paper & Seal": window chrome follows the system light/dark setting; every screen
          paints itself from ToonTheme, so these values only cover system bars and dropdown menus. -->
     <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
-        <item name="android:colorBackground">#FFF7F4EE</item>
-        <item name="android:statusBarColor">#FFF7F4EE</item>
-        <item name="android:navigationBarColor">#FFF7F4EE</item>
+        <item name="android:colorBackground">@color/toon_bg</item>
+        <item name="android:statusBarColor">@color/toon_bg</item>
+        <item name="android:navigationBarColor">@color/toon_bg</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:colorAccent">#FF2C6650</item>
         <item name="android:alertDialogTheme">@style/GlassAlertDialog</item>

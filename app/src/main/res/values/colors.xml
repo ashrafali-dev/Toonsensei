@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paper & Seal window chrome; night values live in values-night/colors.xml. -->
+    <color name="toon_bg">#FFF7F4EE</color>
+</resources>

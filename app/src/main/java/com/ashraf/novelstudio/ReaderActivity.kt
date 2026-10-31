@@ -27,12 +27,14 @@ class ReaderActivity : Activity() {
     private lateinit var capsule: LinearLayout
     private lateinit var readBar: ProgressBar
 
-    // themes: 0 dark, 1 sepia, 2 white
-    private val bg = intArrayOf(0xFF121211.toInt(), 0xFFF4ECD8.toInt(), 0xFFFFFFFF.toInt())
-    private val fg = intArrayOf(0xFFE8E3D9.toInt(), 0xFF3B2F1E.toInt(), 0xFF111111.toInt())
-    private val dim = intArrayOf(0xFF9B9488.toInt(), 0xFF8A7B5C.toInt(), 0xFF777777.toInt())
-    private val card = intArrayOf(0xFF1B1B1A.toInt(), 0x33FFFFFF, 0x11000000)
-    private val pill = intArrayOf(0xFF1B1B1A.toInt(), 0xE63B2F1E.toInt(), 0xE6111111.toInt())
+    // Reader themes (draft B05): 0 paper (day), 1 sepia, 2 night (charcoal), 3 white. The user's
+    // saved preference stays on the old 0/1/2 scale, so 3 is only reachable from the theme cycle.
+    // themes: 0 paper, 1 sepia, 2 night, 3 white
+    private val bg = intArrayOf(0xFFF7F4EE.toInt(), 0xFFF4ECD8.toInt(), 0xFF121211.toInt(), 0xFFFFFFFF.toInt())
+    private val fg = intArrayOf(0xFF3D3832.toInt(), 0xFF3B2F1E.toInt(), 0xFFE8E3D9.toInt(), 0xFF111111.toInt())
+    private val dim = intArrayOf(0xFF6B665E.toInt(), 0xFF8A7B5C.toInt(), 0xFF9B9488.toInt(), 0xFF777777.toInt())
+    private val card = intArrayOf(0xFFFBFAF6.toInt(), 0x33FFFFFF, 0xFF1B1B1A.toInt(), 0x11000000)
+    private val pill = intArrayOf(0xFFFBFAF6.toInt(), 0xE63B2F1E.toInt(), 0xFF1B1B1A.toInt(), 0xE6111111.toInt())
     private val accent = UiTheme.accent
     private var novel = ""
 

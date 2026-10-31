@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paper & Seal night mode: charcoal chrome, bone text. -->
+    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:colorBackground">@color/toon_bg</item>
+        <item name="android:statusBarColor">@color/toon_bg</item>
+        <item name="android:navigationBarColor">@color/toon_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:colorAccent">#FFE07A5F</item>
+        <item name="android:alertDialogTheme">@style/GlassAlertDialog</item>
+    </style>
+
+    <style name="GlassAlertDialog" parent="@android:style/Theme.DeviceDefault.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/glass_dialog_bg</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:textColorPrimary">#FFE9E5DC</item>
+        <item name="android:textColorSecondary">#FFBDB7AA</item>
+        <item name="android:textColorHint">#FF7A7469</item>
+        <item name="android:colorAccent">#FFE07A5F</item>
+    </style>
+</resources>
