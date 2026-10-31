@@ -4651,8 +4651,26 @@ return t.length>=40?'TXT:'+t:'';
         }
     )
 
+    /** Home half of the first-run tour; the reader steps run the first time a page opens. */
+    private fun homeTourSteps(): List<TourOverlay.Step> = listOf(
+        TourOverlay.Step("Welcome", "Four ways to read: Novel for text, Scanning for whole comic chapters, Real-time while you scroll, and Manual Lite for one screen at a time.") { null },
+        TourOverlay.Step("Library", "Read translated chapters offline and export them. Long-press a novel for more.") {
+            if (::bottomNavHost.isInitialized && bottomNavHost.isShown) tourOverlay.rectOf(bottomNavHost.getChildAt(0)) else null
+        },
+        TourOverlay.Step("Menu", "Language, prompts, OCR engine and the advanced tools live here.") {
+            if (::bottomNavHost.isInitialized && bottomNavHost.isShown) tourOverlay.rectOf(bottomNavHost.getChildAt(1)) else null
+        }
+    )
+
     private fun startTour(manual: Boolean, attempt: Int = 0) {
         if (!::tourOverlay.isInitialized || tourOverlay.isRunning()) return
+        // First run: the reader chrome is not on screen yet, so walk through Home first (mode chips, nav)
+        // and keep the dock steps ready for the first page the user opens.
+        if (homeVisible() && !Prefs.bool(this, "tourHomeDone")) {
+            Prefs.putBool(this, "tourHomeDone", true)
+            tourOverlay.start(homeTourSteps()) { Prefs.putBool(this, "tourDone", true) }
+            return
+        }
         hideHome()
         handler.postDelayed({
             if (isFinishing) return@postDelayed
@@ -4679,7 +4697,6 @@ return t.length>=40?'TXT:'+t:'';
         var tgt = Langs.target(this)
         val c = UiTheme.palette
         val sheet = Toon.SheetDialog(this, c, if (firstRun) "What are you translating?" else "Translation language")
-        sheet.shell.setOnHierarchyChangeListener(null)
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), 0, dp(16), dp(8))
