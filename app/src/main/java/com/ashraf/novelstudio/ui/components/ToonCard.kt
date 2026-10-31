@@ -21,13 +21,9 @@ object ToonCard {
             "Interactive cards require an accessibilityLabel."
         }
         val colors = ToonTheme.colors(context)
+        val shape = ToonComponents.rounded(context, colors.surface, radiusDp, colors.line)
         return FrameLayout(context).apply {
-            background = ToonComponents.rounded(
-                context,
-                colors.surface,
-                radiusDp,
-                colors.line
-            )
+            background = shape
             setPadding(
                 ToonTheme.dp(context, paddingDp),
                 ToonTheme.dp(context, paddingDp),
@@ -42,14 +38,12 @@ object ToonCard {
             )
             isClickable = isInteractive
             isFocusable = isInteractive
+            isFocusableInTouchMode = isInteractive
+            if (isInteractive) ToonComponents.applyFocusOutline(this, context, shape, colors.line)
             contentDescription = accessibilityLabel?.toString()
             if (onClick != null) {
                 ToonComponents.exposeAsButton(this)
-                background = ToonComponents.ripple(
-                    context,
-                    ToonComponents.rounded(context, colors.surface, radiusDp, colors.line),
-                    radiusDp
-                )
+                background = ToonComponents.ripple(context, shape, radiusDp)
                 setOnClickListener { onClick() }
                 
             }
