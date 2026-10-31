@@ -15,7 +15,8 @@ object ToonCard {
         accessibilityLabel: CharSequence? = null,
         onClick: (() -> Unit)? = null
     ): FrameLayout {
-        val isInteractive = clickable || onClick != null
+        require(!clickable || onClick != null) { "Clickable cards require an onClick action." }
+        val isInteractive = onClick != null
         require(!isInteractive || !accessibilityLabel.isNullOrBlank()) {
             "Interactive cards require an accessibilityLabel."
         }
