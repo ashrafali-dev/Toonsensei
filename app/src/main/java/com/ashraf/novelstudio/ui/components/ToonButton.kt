@@ -51,6 +51,12 @@ object ToonButton {
             }
         }
         val radius = ToonTheme.Radius.pill
+        val shape = ToonComponents.rounded(
+            context,
+            if (variant == ToonButtonVariant.GHOST) Color.TRANSPARENT else fill,
+            radius,
+            stroke
+        )
         val view = TextView(context).apply {
             this.text = label
             textSize = ToonTheme.Type.label
@@ -67,22 +73,12 @@ object ToonButton {
                 ToonTheme.dp(context, horizontal),
                 ToonTheme.dp(context, ToonTheme.Space.xs)
             )
-            background = if (variant == ToonButtonVariant.GHOST) {
-                ToonComponents.ripple(
-                    context,
-                    GradientDrawable().apply { setColor(Color.TRANSPARENT); cornerRadius = ToonTheme.dp(context, radius).toFloat() },
-                    radius
-                )
-            } else {
-                ToonComponents.ripple(
-                    context,
-                    ToonComponents.rounded(context, fill, radius, stroke),
-                    radius
-                )
-            }
+            background = ToonComponents.ripple(context, shape, radius)
             isEnabled = enabled
             isClickable = onClick != null
-            isFocusable = true
+            isFocusable = onClick != null
+            isFocusableInTouchMode = onClick != null
+            if (onClick != null) ToonComponents.applyFocusOutline(this, context, shape, stroke)
             this.contentDescription = accessibilityLabel?.takeIf { it.isNotBlank() }
             alpha = if (enabled) 1f else 0.48f
             onClick?.let { action -> setOnClickListener { if (isEnabled) action() } }
