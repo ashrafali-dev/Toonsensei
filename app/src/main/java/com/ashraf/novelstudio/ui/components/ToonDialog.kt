@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ashraf.novelstudio.R
+import com.ashraf.novelstudio.ui.theme.ToonTheme
 
 /** Central dialog factory. Existing call sites migrate to this in the overlays group. */
 object ToonDialog {
