@@ -4089,6 +4089,8 @@ return t.length>=40?'TXT:'+t:'';
             setTextColor(UiTheme.text)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
+            contentDescription = "Translation progress"
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
         progressPct = TextView(this).apply {
             textSize = 13.5f
@@ -5958,108 +5960,6 @@ return t.length>=40?'TXT:'+t:'';
             else -> { setReadMode(ReadMode.SCAN); Prefs.putBool(this, "rtAutoOcrEnabled", false); refreshModeChip() }
         }
         if (homeVisible()) refreshHome()
-    }
-
-    private fun showModeSheetLegacy() {
-        val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(18))
-            background = Sheets.sheetBackground(this@MainActivity)
-        }
-        box.addView(TextView(this).apply {
-            text = "Reading mode"
-            textSize = 15f
-            typeface = boldMedium
-            setTextColor(UiTheme.text)
-        }, LinearLayout.LayoutParams(MP, WC).also { it.bottomMargin = dp(10) })
-        val rowMain = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val rowSub = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val viewBtn = TextView(this).apply {
-            textSize = 12.5f
-            typeface = medium
-            gravity = Gravity.CENTER_VERTICAL
-            setTextColor(UiTheme.dim)
-            setPadding(dp(14), 0, dp(14), 0)
-            background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, 0x0FFFFFFF, 14, UiTheme.strokeSoft), 14)
-        }
-        fun viewLabel() = "View: " + when (mode) {
-            Mode.SPLIT -> "Split view"
-            Mode.NOVEL -> "Novel only"
-            Mode.CHAT -> "Chatbot only"
-        } + "  (tap to change)"
-        viewBtn.text = viewLabel()
-        viewBtn.setOnClickListener { cycleMode(); viewBtn.text = viewLabel() }
-
-        var sheet: android.app.Dialog? = null
-        fun seg(label: String, selected: Boolean, onClick: () -> Unit): TextView = TextView(this).apply {
-            text = label
-            textSize = 13.5f
-            typeface = boldMedium
-            gravity = Gravity.CENTER
-            setTextColor(if (selected) Color.WHITE else UiTheme.dim)
-            background = Glass.ripple(
-                this@MainActivity,
-                if (selected) Glass.accent(this@MainActivity, 14) else Glass.solid(this@MainActivity, 0x12FFFFFF, 14, UiTheme.strokeSoft),
-                14
-            )
-            setOnClickListener { onClick() }
-        }
-        fun lp() = LinearLayout.LayoutParams(0, dp(46), 1f).also { it.setMargins(dp(3), 0, dp(3), 0) }
-        fun render() {
-            val cur = currentReadMode()
-            rowMain.removeAllViews()
-            rowSub.removeAllViews()
-            // Tapping the button that is already selected switches it off again (to the other choice), so
-            // no second button has to be pressed just to go back.
-            val toonSub = if (Prefs.get(this, "lastToonSub", "scan") == "rt") ReadMode.REALTIME else ReadMode.SCAN
-            rowMain.addView(seg("Novel", cur == ReadMode.NOVEL) {
-                if (currentReadMode() == ReadMode.NOVEL) {
-                    setReadMode(toonSub)
-                    toast("WebToon mode")
-                } else {
-                    setReadMode(ReadMode.NOVEL)
-                    toast("Novel mode")
-                }
-                sheet?.dismiss()
-            }, lp())
-            rowMain.addView(seg("WebToon", cur != ReadMode.NOVEL) {
-                if (currentReadMode() == ReadMode.NOVEL) {
-                    setReadMode(toonSub)
-                    render()
-                } else {
-                    setReadMode(ReadMode.NOVEL)
-                    toast("Novel mode")
-                    sheet?.dismiss()
-                }
-            }, lp())
-            rowSub.addView(seg("Realtime", cur == ReadMode.REALTIME) {
-                if (currentReadMode() == ReadMode.REALTIME) {
-                    setReadMode(ReadMode.SCAN)
-                    toast("Real-time OFF — Scanning mode")
-                } else {
-                    setReadMode(ReadMode.REALTIME)
-                    toast("AI real-time mode ON — current chatbot will translate chapter panels")
-                }
-                sheet?.dismiss()
-            }, lp())
-            rowSub.addView(seg("Scanning", cur == ReadMode.SCAN) {
-                if (currentReadMode() == ReadMode.SCAN) {
-                    setReadMode(ReadMode.REALTIME)
-                    toast("Scanning OFF — AI real-time mode ON")
-                } else {
-                    setReadMode(ReadMode.SCAN)
-                    toast("Scanning mode — tap the bolt to read image chapters with OCR")
-                }
-                sheet?.dismiss()
-            }, lp())
-            rowSub.visibility = if (cur == ReadMode.NOVEL) View.GONE else View.VISIBLE
-        }
-        render()
-        box.addView(rowMain, LinearLayout.LayoutParams(MP, WC))
-        box.addView(rowSub, LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(6) })
-        box.addView(viewBtn, LinearLayout.LayoutParams(MP, dp(42)).also { it.topMargin = dp(12) })
-        sheet = Sheets.create(this, box)
-        sheet?.show()
     }
 
     // ---- Chrome-style bars: hide while reading, come back with a light pull.
@@ -11379,7 +11279,16 @@ ${rows.take(220).joinToString("\n")}
     // ---------- offline library ----------
     private fun libraryNovels() {
         val names = Store.novelNames(this)
-        if (names.isEmpty()) return toast("Library is empty. Saved translations will appear here.")
+        if (names.isEmpty()) {
+            val c = UiTheme.palette
+            val sheet = Toon.SheetDialog(this, c, "Library")
+            sheet.shell.addContent(Toon.stateBlock(this, c, "Your library is empty",
+                "Translated chapters you save appear here, ready to read offline."))
+            sheet.shell.footer.addView(Toon.buttonPrimary(this, c, "Browse sites") { sheet.close(); showHome() },
+                LinearLayout.LayoutParams(MP, dp(48)))
+            sheet.show()
+            return
+        }
         val labels = names.map { it + "   (" + Store.chapters(this, it).size + " chapters)" }
         listDialog("Library", labels, { i -> novelActions(names[i]) }, null)
     }
@@ -11469,7 +11378,14 @@ ${rows.take(220).joinToString("\n")}
 
     private fun bookmarkList() {
         val l = Store.bookmarks(this)
-        if (l.isEmpty()) return toast("Bookmarks are empty")
+        if (l.isEmpty()) {
+            val c = UiTheme.palette
+            val sheet = Toon.SheetDialog(this, c, "Bookmarks")
+            sheet.shell.addContent(Toon.stateBlock(this, c, "No bookmarks yet",
+                "Bookmark a page from the menu and it will be one tap away."))
+            sheet.show()
+            return
+        }
         val labels = l.map { it.name + (if (it.lastTitle.isNotEmpty()) "\n" + it.lastTitle else "") }
         listDialog("Bookmarks (long-press to delete)", labels,
             { i ->
