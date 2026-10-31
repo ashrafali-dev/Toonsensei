@@ -17,7 +17,7 @@ object ToonBadge {
         val colors = ToonTheme.colors(context)
         val (fill, ink, stroke) = when (tone) {
             ToonBadgeTone.NEUTRAL -> Triple(colors.surfaceAlt, colors.body, colors.line)
-            ToonBadgeTone.ACCENT -> Triple(colors.accentTint, colors.accent, colors.accent)
+            ToonBadgeTone.ACCENT -> Triple(colors.accentTint, colors.accentForeground, colors.accentForeground)
             ToonBadgeTone.SUCCESS -> Triple(colors.successTint, colors.successInk, colors.success)
             ToonBadgeTone.WARNING -> Triple(colors.warningTint, colors.warning, colors.warningLine)
             ToonBadgeTone.ERROR -> Triple(colors.dangerTint, colors.danger, colors.danger)
@@ -29,7 +29,7 @@ object ToonBadge {
             setTextColor(ink)
             gravity = Gravity.CENTER
             includeFontPadding = false
-            minHeight = ToonTheme.dp(context, 24)
+            minHeight = ToonTheme.dp(context, ToonTheme.Metrics.badgeHeightDp)
             setPadding(
                 ToonTheme.dp(context, ToonTheme.Space.xs),
                 ToonTheme.dp(context, ToonTheme.Space.xxs),
