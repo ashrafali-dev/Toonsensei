@@ -26,9 +26,9 @@
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.ToonSensei.Dialog</item>
     </style>
 
-    <style name="ShapeAppearance.ToonSensei.Dialog" parent="">
+    <style name="ShapeAppearance.ToonSensei.Dialog" parent="ShapeAppearance.MaterialComponents.MediumComponent">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">24dp</item>
+        <item name="cornerSize">@dimen/toon_dialog_radius</item>
     </style>
 
     <style name="ThemeOverlay.ToonSensei.BottomSheetDialog" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
@@ -40,10 +40,10 @@
         <item name="shapeAppearance">@style/ShapeAppearance.ToonSensei.Sheet</item>
     </style>
 
-    <style name="ShapeAppearance.ToonSensei.Sheet" parent="">
+    <style name="ShapeAppearance.ToonSensei.Sheet" parent="ShapeAppearance.MaterialComponents.MediumComponent">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSizeTopLeft">24dp</item>
-        <item name="cornerSizeTopRight">24dp</item>
+        <item name="cornerSizeTopLeft">@dimen/toon_sheet_radius</item>
+        <item name="cornerSizeTopRight">@dimen/toon_sheet_radius</item>
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
