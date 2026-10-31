@@ -4141,11 +4141,11 @@ return t.length>=40?'TXT:'+t:'';
         prefetchChip = TextView(this).apply {
             textSize = 11f
             typeface = boldMedium
-            setTextColor(UiTheme.palette.onInk)
+            setTextColor(UiTheme.palette.text)
             gravity = Gravity.CENTER
             setPadding(dp(10), 0, dp(12), 0)
             compoundDrawablePadding = dp(5)
-            val bi = IconDrawable(Ic.BOLT, UiTheme.palette.onInk)
+            val bi = IconDrawable(Ic.BOLT, UiTheme.palette.text)
             bi.setBounds(0, 0, dp(12), dp(12))
             setCompoundDrawablesRelative(bi, null, null, null)
             elevation = dp(8).toFloat()
@@ -5706,10 +5706,11 @@ return t.length>=40?'TXT:'+t:'';
     private fun refreshModeChip() {
         if (!::modeChipText.isInitialized) return
         val mode = currentReadMode()
-        val t = when (mode) {
-            ReadMode.NOVEL -> "Novel"
-            ReadMode.REALTIME -> "WebToon\nRealtime"
-            ReadMode.SCAN -> "WebToon\nScanning"
+        val t = when {
+            manualLiteOn() -> "Lite"
+            mode == ReadMode.NOVEL -> "Novel"
+            mode == ReadMode.REALTIME -> "Live"
+            else -> "Scan"
         }
         if (modeChipText.text.toString() != t) modeChipText.text = t
         val idx = when (mode) {
@@ -5737,8 +5738,8 @@ return t.length>=40?'TXT:'+t:'';
         prefetchChip.text = if (on) "Ahead ON" else "Ahead OFF"
         prefetchChip.background = GradientDrawable().apply {
             cornerRadius = dp(14).toFloat()
-            setColor(if (on) 0xEB2FBF8A.toInt() else 0xD92A2E3F.toInt())
-            setStroke(dp(1), 0x38FFFFFF)
+            setColor(UiTheme.palette.surface)
+            setStroke(dp(1), if (on) UiTheme.palette.success else UiTheme.palette.line)
         }
     }
 
