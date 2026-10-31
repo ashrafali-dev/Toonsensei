@@ -2706,7 +2706,7 @@ return t.length>=40?'TXT:'+t:'';
 
         if (reOcrBusy) {
             statuses.add(ActivityDotStatus(
-                "manual-extract", 0xFF64B5F6.toInt(),
+                "manual-extract", UiTheme.palette.manual,
                 if (webModeHandle == null) "Manual Extract: waiting for current OCR/translation to finish"
                 else "Manual Extract: reading visible panels with fresh OCR",
                 blinking = true
@@ -2715,9 +2715,9 @@ return t.length>=40?'TXT:'+t:'';
 
         if (aheadOcrHandle != null) {
             val color = when {
-                aheadStage.contains("loading image") || aheadStage.contains("fetching image") -> 0xFF40C4FF.toInt()
-                aheadStage.contains("cached") -> 0xFF64FFDA.toInt()
-                else -> 0xFF42A5F5.toInt()
+                aheadStage.contains("loading image") || aheadStage.contains("fetching image") -> UiTheme.palette.infoInk
+                aheadStage.contains("cached") -> UiTheme.palette.scan
+                else -> UiTheme.palette.manual
             }
             statuses.add(ActivityDotStatus(
                 "read-ahead-ocr", color,
@@ -2727,14 +2727,14 @@ return t.length>=40?'TXT:'+t:'';
 
         if (rtAheadWorkerBusy) {
             statuses.add(ActivityDotStatus(
-                "ahead-translation", 0xFFFFAB40.toInt(),
+                "ahead-translation", UiTheme.palette.warnInk,
                 "Pre-translating upcoming panels"
             ))
         }
 
         if (activePlacementIds.isNotEmpty()) {
             statuses.add(ActivityDotStatus(
-                "placement", 0xFF64FFDA.toInt(), "Placing translated text on the novel page"
+                "placement", UiTheme.palette.scan, "Placing translated text on the novel page"
             ))
         }
 
@@ -2747,15 +2747,15 @@ return t.length>=40?'TXT:'+t:'';
             statuses.add(
                 when {
                     aheadTranslation -> ActivityDotStatus(
-                        "ahead-translation", 0xFFFFAB40.toInt(),
+                        "ahead-translation", UiTheme.palette.warnInk,
                         "Pre-translating upcoming panels"
                     )
                     prefetched -> ActivityDotStatus(
-                        "prefetch-translation", 0xFFFFAB40.toInt(),
+                        "prefetch-translation", UiTheme.palette.warnInk,
                         "Chatbot translating a prefetched chapter"
                     )
                     else -> ActivityDotStatus(
-                        "chatbot-translation", 0xFFFF80AB.toInt(),
+                        "chatbot-translation", UiTheme.palette.live,
                         if (livePanel) "Chatbot translating visible panels" else "Chatbot translating chapter"
                     )
                 }
@@ -2764,9 +2764,9 @@ return t.length>=40?'TXT:'+t:'';
 
         if (webModeHandle != null || (webModePct >= 0 && !stage.contains("sending to chatbot"))) {
             val color = when {
-                stage.contains("loading image") || stage.contains("fetching image") -> 0xFF40C4FF.toInt()
-                stage.contains("writing") || stage.contains("placing") || stage.contains("bubble") -> 0xFF64FFDA.toInt()
-                else -> 0xFFB388FF.toInt()
+                stage.contains("loading image") || stage.contains("fetching image") -> UiTheme.palette.infoInk
+                stage.contains("writing") || stage.contains("placing") || stage.contains("bubble") -> UiTheme.palette.scan
+                else -> UiTheme.palette.accent
             }
             statuses.add(ActivityDotStatus("visible-ocr", color, "Current panel/chapter OCR: " +
                 webModeStage.ifBlank { "reading visible panels" }))
@@ -2774,9 +2774,9 @@ return t.length>=40?'TXT:'+t:'';
 
         if (webModePrefetchBusy) {
             val color = when {
-                prefetchStage.contains("loading image") || prefetchStage.contains("fetching image") -> 0xFF40C4FF.toInt()
-                prefetchStage.contains("writing") || prefetchStage.contains("placing") -> 0xFF64FFDA.toInt()
-                else -> 0xFF7E57C2.toInt()
+                prefetchStage.contains("loading image") || prefetchStage.contains("fetching image") -> UiTheme.palette.infoInk
+                prefetchStage.contains("writing") || prefetchStage.contains("placing") -> UiTheme.palette.scan
+                else -> UiTheme.palette.accent
             }
             statuses.add(ActivityDotStatus(
                 "next-chapter-ocr", color,
@@ -2786,7 +2786,7 @@ return t.length>=40?'TXT:'+t:'';
 
         if (prefetchLoading && !webModePrefetchBusy) {
             statuses.add(ActivityDotStatus(
-                "next-chapter-load", 0xFF40C4FF.toInt(),
+                "next-chapter-load", UiTheme.palette.infoInk,
                 "Loading/extracting the next chapter for prefetch"
             ))
         }
@@ -2838,17 +2838,17 @@ return t.length>=40?'TXT:'+t:'';
         val text: String?
         val color: Int
         when {
-            reOcrBusy -> { text = "Re-reading this screen"; color = 0xFF64B5F6.toInt() }
-            sending -> { text = "Sending to chatbot"; color = 0xFFFFAB40.toInt() }
+            reOcrBusy -> { text = "Re-reading this screen"; color = UiTheme.palette.manual }
+            sending -> { text = "Sending to chatbot"; color = UiTheme.palette.warnInk }
             // Say WHICH reading is running and with WHICH engine. One merged "Reading the page" label (and one
             // timer) hid whether the 56 s were spent on the screen in front of the reader or on panels ahead.
             keys.contains("visible-ocr") ->
-                { text = "Reading this screen · " + shortOcrEngineName(); color = 0xFFB388FF.toInt() }
+                { text = "Reading this screen · " + shortOcrEngineName(); color = UiTheme.palette.accent }
             keys.contains("next-chapter-ocr") ->
-                { text = "Reading next chapter · " + shortOcrEngineName(); color = 0xFFB388FF.toInt() }
+                { text = "Reading next chapter · " + shortOcrEngineName(); color = UiTheme.palette.accent }
             keys.contains("read-ahead-ocr") ->
-                { text = "Reading ahead · " + shortOcrEngineName(); color = 0xFF7E57C2.toInt() }
-            keys.contains("placement") -> { text = "Adding the translation"; color = 0xFF64FFDA.toInt() }
+                { text = "Reading ahead · " + shortOcrEngineName(); color = UiTheme.palette.accent }
+            keys.contains("placement") -> { text = "Adding the translation"; color = UiTheme.palette.scan }
             keys.any { it == "chatbot-translation" || it == "ahead-translation" || it == "prefetch-translation" } -> {
                 val fresh = android.os.SystemClock.elapsedRealtime() - chatPhaseAtMs < 2_500L
                 text = when (if (fresh) chatPhase else 2) {
@@ -2856,7 +2856,7 @@ return t.length>=40?'TXT:'+t:'';
                     3 -> "Checking the answer"
                     else -> "Translating"
                 }
-                color = 0xFFFF80AB.toInt()
+                color = UiTheme.palette.live
             }
             else -> { text = null; color = 0 }
         }
