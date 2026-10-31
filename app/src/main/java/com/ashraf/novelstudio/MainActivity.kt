@@ -4935,9 +4935,10 @@ return t.length>=40?'TXT:'+t:'';
 
     // ---- tab rail: a slim row of chips (visible with 2+ tabs). The active chip is filled with the
     // accent tint and shows a close button; the others switch instantly (state is saved/restored).
+    // Paper & Seal fallback covers: the mode seals, muted, so the tab grid stays on-palette.
     private val tabHues = listOf(
-        0xFF27324F.toInt(), 0xFF3A2A52.toInt(), 0xFF1F3D3A.toInt(),
-        0xFF3D2F27.toInt(), 0xFF283A52.toInt(), 0xFF42283A.toInt()
+        0xFF9C3D2E.toInt(), 0xFF2E6B47.toInt(), 0xFF1A4FB4.toInt(),
+        0xFF8C2C1D.toInt(), 0xFF2C6650.toInt(), 0xFF5E3F0B.toInt()
     )
 
     private fun tabHost(tab: BrowserTab): String = Uri.parse(tab.url).host?.removePrefix("www.") ?: ""
