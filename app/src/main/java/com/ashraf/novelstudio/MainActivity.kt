@@ -3502,7 +3502,7 @@ return t.length>=40?'TXT:'+t:'';
         setTextColor(UiTheme.iconIdle)
         gravity = Gravity.CENTER
         setPadding(dp(14), 0, dp(14), 0)
-        background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, 0x14FFFFFF, 17, UiTheme.strokeSoft), 17)
+        background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, UiTheme.sheet, 17, UiTheme.strokeSoft), 17)
         layoutParams = LinearLayout.LayoutParams(WC, dp(34)).also { it.setMargins(dp(3), dp(4), dp(3), dp(4)) }
         setOnClickListener { onClick() }
         if (onLong != null) setOnLongClickListener { onLong(); true }
@@ -3513,7 +3513,7 @@ return t.length>=40?'TXT:'+t:'';
         text = label
         textSize = 12.5f
         typeface = if (active) boldMedium else medium
-        setTextColor(if (active) Color.WHITE else UiTheme.dim)
+        setTextColor(if (active) UiTheme.onAccent else UiTheme.dim)
         gravity = Gravity.CENTER
         setPadding(dp(15), 0, dp(15), 0)
         background = if (active) Glass.accent(this@MainActivity, 17) else Glass.ripple(this@MainActivity, null, 17)
@@ -3915,7 +3915,7 @@ return t.length>=40?'TXT:'+t:'';
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(9), 0, dp(6), 0)
             background = floatingBarBg(26)
-            elevation = dp(8).toFloat()
+            elevation = 0f
             addView(tabCountBtn, LinearLayout.LayoutParams(dp(34), dp(34)))
             addView(addressBox)
         }
@@ -4023,10 +4023,10 @@ return t.length>=40?'TXT:'+t:'';
             text = "Stop scanning · use pages so far"
             textSize = 12.5f
             typeface = boldMedium
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.text)
             gravity = Gravity.CENTER
             setPadding(dp(14), dp(8), dp(14), dp(8))
-            background = GradientDrawable().apply { cornerRadius = dp(16).toFloat(); setColor(0x33FFFFFF) }
+            background = GradientDrawable().apply { cornerRadius = dp(16).toFloat(); setColor(UiTheme.surfaceAlt) }
             visibility = View.GONE
             setOnClickListener {
                 scanStopRequested = true
@@ -4061,14 +4061,14 @@ return t.length>=40?'TXT:'+t:'';
         prefetchChip = TextView(this).apply {
             textSize = 11f
             typeface = boldMedium
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.text)
             gravity = Gravity.CENTER
             setPadding(dp(10), 0, dp(12), 0)
             compoundDrawablePadding = dp(5)
-            val bi = IconDrawable(Ic.BOLT, Color.WHITE)
+            val bi = IconDrawable(Ic.CLOCK, UiTheme.accent)
             bi.setBounds(0, 0, dp(12), dp(12))
             setCompoundDrawablesRelative(bi, null, null, null)
-            elevation = dp(8).toFloat()
+            elevation = 0f
             contentDescription = "Translate next chapter ahead"
             setOnClickListener { setPrefetchEnabled(!Prefs.bool(this@MainActivity, "prefetchNextChapter")) }
         }
@@ -6960,7 +6960,7 @@ return t.length>=40?'TXT:'+t:'';
                     if(old) old.remove();
                     var x=document.createElement('div');
                     x.id='__ns_nav_loading';
-                    x.style.cssText='position:fixed;inset:0;z-index:2147483647;background:linear-gradient(160deg,#0B0D14,#131826);color:#8B93A7;display:flex;align-items:center;justify-content:center;font:15px sans-serif;letter-spacing:.4px;';
+                    x.style.cssText='position:fixed;inset:0;z-index:2147483647;background:#0B0F0D;color:#8CA98C;display:flex;align-items:center;justify-content:center;font:15px sans-serif;letter-spacing:.4px;';
                     x.textContent='⏳ Loading chapter…';
                     (document.body||document.documentElement).appendChild(x);
                 } catch(e) {}
@@ -7017,7 +7017,7 @@ return t.length>=40?'TXT:'+t:'';
                     try {
                         document.documentElement.innerHTML =
                             '<head><title>Loading…</title></head>' +
-                            '<body style="background:linear-gradient(160deg,#0B0D14,#131826);color:#8B93A7;font-family:sans-serif">' +
+                            '<body style="background:#0B0F0D;color:#8CA98C;font-family:sans-serif">' +
                             '<div style="padding:32px;text-align:center;letter-spacing:.4px">⏳ Loading chapter…</div>' +
                             '</body>';
                     } catch(e) {}
@@ -10167,8 +10167,8 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             addView(labelView, LinearLayout.LayoutParams(WC, WC).also { it.topMargin = dp(7) })
         }
         fun style(active: Boolean) {
-            iconView.setImageDrawable(IconDrawable(ic, if (active) Color.WHITE else UiTheme.iconIdle))
-            labelView.setTextColor(if (active) Color.WHITE else UiTheme.iconIdle)
+            iconView.setImageDrawable(IconDrawable(ic, if (active) UiTheme.onAccent else UiTheme.iconIdle))
+            labelView.setTextColor(if (active) UiTheme.onAccent else UiTheme.iconIdle)
             box.background = Glass.ripple(
                 this,
                 if (active) Glass.solid(this, UiTheme.accentTint, 20, UiTheme.accent, 1)
