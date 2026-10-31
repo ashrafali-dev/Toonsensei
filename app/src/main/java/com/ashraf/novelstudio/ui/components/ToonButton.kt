@@ -58,8 +58,8 @@ object ToonButton {
             setTextColor(text)
             gravity = Gravity.CENTER
             includeFontPadding = false
-            minHeight = ToonTheme.dp(context, 48)
-            minWidth = ToonTheme.dp(context, 48)
+            minHeight = ToonTheme.dp(context, ToonTheme.Metrics.minimumTouchDp)
+            minWidth = ToonTheme.dp(context, ToonTheme.Metrics.minimumTouchDp)
             val horizontal = if (size == ToonButtonSize.COMPACT) ToonTheme.Space.md else ToonTheme.Space.xl
             setPadding(
                 ToonTheme.dp(context, horizontal),
@@ -86,19 +86,20 @@ object ToonButton {
             this.contentDescription = accessibilityLabel?.takeIf { it.isNotBlank() }
             alpha = if (enabled) 1f else 0.48f
             onClick?.let { action -> setOnClickListener { if (isEnabled) action() } }
+            if (onClick != null) ToonComponents.exposeAsButton(this)
             stateListAnimator = null
             setOnTouchListener { target, event ->
                 if (!isEnabled || !ToonTheme.Motion.enabled(context)) return@setOnTouchListener false
                 when (event.actionMasked) {
                     android.view.MotionEvent.ACTION_DOWN -> {
                         target.animate().cancel()
-                        target.animate().scaleX(0.985f).scaleY(0.985f)
+                        target.animate().scaleX(ToonTheme.Metrics.pressScale).scaleY(ToonTheme.Metrics.pressScale)
                             .setDuration(ToonTheme.Motion.pressMs).start()
                     }
                     android.view.MotionEvent.ACTION_UP,
                     android.view.MotionEvent.ACTION_CANCEL -> {
                         target.animate().cancel()
-                        target.animate().scaleX(1f).scaleY(1f)
+                        target.animate().scaleX(ToonTheme.Metrics.neutralScale).scaleY(ToonTheme.Metrics.neutralScale)
                             .setDuration(ToonTheme.Motion.exitMs).start()
                     }
                 }
