@@ -3654,6 +3654,7 @@ return t.length>=40?'TXT:'+t:'';
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyPaperTheme()   // bars and window chrome follow the system light/dark setting
         OcrRescan.resetDebug(this)   // OCR debug is a per-session tool: never leave it on by accident
         // Android 13+: lets the "scanning in background" notification show (the service works without it).
         if (Build.VERSION.SDK_INT >= 33 && !Prefs.bool(this, "askedNotifPerm") &&
