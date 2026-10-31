@@ -1,21 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Novel Studio "Aurora Glass": dark app theme; every AlertDialog picks up GlassAlertDialog -->
-    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
-        <item name="android:colorBackground">#FF07080D</item>
-        <item name="android:statusBarColor">#FF07080D</item>
-        <item name="android:navigationBarColor">#FF07080D</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:colorAccent">#FF8C9CFF</item>
-        <item name="android:alertDialogTheme">@style/GlassAlertDialog</item>
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/toon_accent</item>
+        <item name="colorPrimaryVariant">@color/toon_accent</item>
+        <item name="colorOnPrimary">@color/toon_on_accent</item>
+        <item name="colorSecondary">@color/toon_accent</item>
+        <item name="colorOnSecondary">@color/toon_on_accent</item>
+        <item name="colorSurface">@color/toon_surface</item>
+        <item name="colorOnSurface">@color/toon_ink</item>
+        <item name="colorError">@color/toon_danger</item>
+        <item name="android:colorBackground">@color/toon_bg</item>
+        <item name="android:statusBarColor">@color/toon_bg</item>
+        <item name="android:navigationBarColor">@color/toon_bg</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.ToonSensei.MaterialAlertDialog</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.ToonSensei.BottomSheetDialog</item>
     </style>
 
-    <style name="GlassAlertDialog" parent="@android:style/Theme.DeviceDefault.Dialog.Alert">
-        <item name="android:windowBackground">@drawable/glass_dialog_bg</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:textColorPrimary">#FFF4F6FB</item>
-        <item name="android:textColorSecondary">#FF9AA3B8</item>
-        <item name="android:textColorHint">#FF6B7488</item>
-        <item name="android:colorAccent">#FF8C9CFF</item>
+    <style name="ThemeOverlay.ToonSensei.MaterialAlertDialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="colorPrimary">@color/toon_accent</item>
+        <item name="colorOnPrimary">@color/toon_on_accent</item>
+        <item name="colorSurface">@color/toon_surface</item>
+        <item name="colorOnSurface">@color/toon_ink</item>
+        <item name="colorError">@color/toon_danger</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.ToonSensei.Dialog</item>
+    </style>
+
+    <style name="ShapeAppearance.ToonSensei.Dialog" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">24dp</item>
+    </style>
+
+    <style name="ThemeOverlay.ToonSensei.BottomSheetDialog" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.ToonSensei.BottomSheet</item>
+    </style>
+
+    <style name="Widget.ToonSensei.BottomSheet" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <item name="backgroundTint">@color/toon_surface</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.ToonSensei.Sheet</item>
+    </style>
+
+    <style name="ShapeAppearance.ToonSensei.Sheet" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">24dp</item>
+        <item name="cornerSizeTopRight">24dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
     </style>
 </resources>
