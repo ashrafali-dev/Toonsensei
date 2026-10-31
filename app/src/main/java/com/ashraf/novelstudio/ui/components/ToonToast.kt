@@ -2,10 +2,14 @@ package com.ashraf.novelstudio.ui.components
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.ashraf.novelstudio.Ic
+import com.ashraf.novelstudio.IconDrawable
 import com.ashraf.novelstudio.ui.theme.ToonTheme
 
 /**
@@ -76,20 +80,40 @@ object ToonToast {
                     0
                 )
                 isFocusable = true
+                background = ToonComponents.ripple(
+                    context,
+                    GradientDrawable().apply {
+                        setColor(Color.TRANSPARENT)
+                        cornerRadius = ToonTheme.dp(context, ToonTheme.Radius.pill).toFloat()
+                    },
+                    ToonTheme.Radius.pill
+                )
                 setOnClickListener { onAction() }
             }
             root.addView(action)
         }
         if (onDismiss != null) {
-            val close = TextView(context).apply {
-                text = "×"
+            val close = ImageView(context).apply {
+                setImageDrawable(IconDrawable(Ic.CLOSE, ink))
                 contentDescription = context.getString(com.ashraf.novelstudio.R.string.toon_action_dismiss)
-                textSize = 22f
-                setTextColor(ink)
-                gravity = Gravity.CENTER
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                setPadding(
+                    ToonTheme.dp(context, ToonTheme.Space.md),
+                    ToonTheme.dp(context, ToonTheme.Space.md),
+                    ToonTheme.dp(context, ToonTheme.Space.md),
+                    ToonTheme.dp(context, ToonTheme.Space.md)
+                )
                 minWidth = ToonTheme.dp(context, 48)
                 minHeight = ToonTheme.dp(context, 48)
                 isFocusable = true
+                background = ToonComponents.ripple(
+                    context,
+                    GradientDrawable().apply {
+                        setColor(Color.TRANSPARENT)
+                        cornerRadius = ToonTheme.dp(context, ToonTheme.Radius.pill).toFloat()
+                    },
+                    ToonTheme.Radius.pill
+                )
                 setOnClickListener { onDismiss() }
             }
             root.addView(close)
