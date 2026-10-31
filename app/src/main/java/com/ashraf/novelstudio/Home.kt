@@ -218,8 +218,8 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(ctx.dpi(16), 0, ctx.dpi(6), 0)
-            background = Glass.solid(ctx, UiTheme.sheet, 27, UiTheme.stroke)
-            elevation = ctx.dpf(10)
+            background = Glass.solid(ctx, UiTheme.palette.surface, 27, UiTheme.palette.line)
+            elevation = ctx.dpf(4)
             addView(searchIcon, LinearLayout.LayoutParams(ctx.dpi(20), ctx.dpi(20)).also { it.marginEnd = ctx.dpi(10) })
             addView(input, LinearLayout.LayoutParams(0, wc, 1f))
             addView(go, LinearLayout.LayoutParams(ctx.dpi(42), ctx.dpi(42)))
