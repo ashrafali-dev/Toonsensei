@@ -12,8 +12,13 @@ object ToonCard {
         paddingDp: Int = ToonTheme.Space.md,
         radiusDp: Int = ToonTheme.Radius.card,
         clickable: Boolean = false,
+        accessibilityLabel: CharSequence? = null,
         onClick: (() -> Unit)? = null
     ): FrameLayout {
+        val isInteractive = clickable || onClick != null
+        require(!isInteractive || !accessibilityLabel.isNullOrBlank()) {
+            "Interactive cards require an accessibilityLabel."
+        }
         val colors = ToonTheme.colors(context)
         return FrameLayout(context).apply {
             background = ToonComponents.rounded(
@@ -34,8 +39,9 @@ object ToonCard {
                 content,
                 LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
             )
-            isClickable = clickable || onClick != null
-            isFocusable = clickable || onClick != null
+            isClickable = isInteractive
+            isFocusable = isInteractive
+            contentDescription = accessibilityLabel?.toString()
             if (onClick != null) {
                 background = ToonComponents.ripple(
                     context,
@@ -43,7 +49,7 @@ object ToonCard {
                     radiusDp
                 )
                 setOnClickListener { onClick() }
-                contentDescription = content?.contentDescription
+                
             }
             stateListAnimator = null
         }
