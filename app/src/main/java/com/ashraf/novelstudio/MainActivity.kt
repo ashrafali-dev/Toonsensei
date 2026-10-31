@@ -2948,6 +2948,7 @@ return t.length>=40?'TXT:'+t:'';
     private lateinit var tabStrip: LinearLayout
     private lateinit var shortcutStrip: LinearLayout
     private lateinit var modeBtn: ImageView
+    private lateinit var chatRing: ChatRingButton
     private lateinit var modeChip: LinearLayout
     private lateinit var modeChipText: TextView
     private lateinit var modeChipDot: View
@@ -4243,7 +4244,11 @@ return t.length>=40?'TXT:'+t:'';
         contentHolderView = contentHolder
 
         // ================= floating dock: [view mode] [prev] [EXTRACT] [next] [save]
+        // Paper & Seal: the view switcher sits at the far right as the chatbot ring. The arc is the
+        // chapter progress; tapping cycles page / split / chatbot. modeBtn stays alive for the tour.
         modeBtn = dockBtn(Ic.SPLIT, "View mode") { cycleMode() }
+        modeBtn.visibility = View.GONE
+        chatRing = ChatRingButton(this).apply { onClick = { cycleMode() } }
         modeChipDot = View(this).apply {
             background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(UiTheme.ok) }
         }
@@ -4313,6 +4318,7 @@ return t.length>=40?'TXT:'+t:'';
             addView(dockBtn(Ic.BACK, "Previous chapter") { step("prev") })
             addView(extractBtn, extractLp())
             addView(dockBtn(Ic.FORWARD, "Next chapter") { step("next") })
+            addView(chatRing, LinearLayout.LayoutParams(dp(44), dp(48)))
             addView(dockBtn(Ic.GRID, "Menu") { menu() }.also { menuBtnView = it })
         }
         val dockWrap = FrameLayout(this).apply {
@@ -5525,6 +5531,7 @@ return t.length>=40?'TXT:'+t:'';
     }
 
     private fun setMode(m: Mode) {
+        if (::chatRing.isInitialized) { chatRing.viewMode = when (m) { Mode.NOVEL -> 0; Mode.SPLIT -> 1; Mode.CHAT -> 2 }; refreshChatRing() }
         // Both WebViews are always alive: switching Novel / Split / Chatbot-only only changes what is
         // visible. The real-time scanner keeps reading the novel pane (it captures from the WebView
         // itself, not from the screen) while the chatbot pane is enlarged.
@@ -5726,7 +5733,23 @@ return t.length>=40?'TXT:'+t:'';
             if (changed && !first && ::modeOverlay.isInitialized) modeOverlay.play(idx)
         }
         if (::extractBtn.isInitialized) extractBtn.modeIndex = idx
+        refreshChatRing()
         refreshPrefetchChip()
+    }
+
+    /** Chatbot ring: arc = chapter progress, glyph = current view; tap cycles page / split / chatbot. */
+    private fun refreshChatRing() {
+        if (!::chatRing.isInitialized) return
+        val chapters = try { Store.chapters(this, lastChapter?.novel ?: "").size } catch (_: Exception) { 0 }
+        val idx = try { lastChapter?.let { c -> Store.chapters(this, c.novel).indexOfFirst { keyOf(it) == keyOf(c) } } ?: -1 } catch (_: Exception) { -1 }
+        val total = chapterCountFor(lastChapter?.url)
+        val now = chapterNo(lastChapter?.url ?: "")
+        chatRing.progress = when {
+            total > 1 && now != null -> (now * 100 / total).toInt().coerceIn(1, 100)
+            chapters > 1 && idx >= 0 -> ((idx + 1) * 100 / chapters)
+            else -> -1
+        }
+        chatRing.viewMode = when (mode) { Mode.NOVEL -> 0; Mode.SPLIT -> 1; Mode.CHAT -> 2 }
     }
 
     /** Shown in Novel and Scanning mode only; Real-time never prefetches whole chapters. */
@@ -7869,6 +7892,11 @@ return t.length>=40?'TXT:'+t:'';
     } catch (_: Exception) { "" }
 
     /** Chapter number from the address path (chapter-18, /ep/7, episode_3 ...), or null. */
+    /** Chapter count on reader sites that number their URL (.../chapter-128), used for the dock ring. */
+    private val chapterTotals = HashMap<String, Int>()
+
+    private fun chapterCountFor(url: String?): Int = if (url.isNullOrBlank()) 0 else chapterTotals[pageKey(url)] ?: 0
+
     private fun chapterNo(url: String): Double? {
         val path = try { Uri.parse(url).path.orEmpty() } catch (_: Exception) { return null }
         val m = Regex("(?i)(?:chapter|chap|episode|ep|ch)[-_/=.]?(\\d+(?:\\.\\d+)?)").findAll(path).lastOrNull() ?: return null

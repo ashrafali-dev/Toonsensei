@@ -668,7 +668,51 @@ object Toon {
         }
     }
 
-    // ================================================================== dialog / sheet scaffolding
+    /** Chatbot ring for the dock: chapter progress arc, view glyph inside, 44 dp target. */
+class ChatRingButton(ctx: Context) : View(ctx) {
+    var onClick: (() -> Unit)? = null
+    /** -1 = no chapter loaded, otherwise 0..100. */
+    var progress: Int = -1
+        set(v) { field = v; contentDescription = describe(); invalidate() }
+    /** 0 page only, 1 split, 2 chatbot only. */
+    var viewMode: Int = 0
+        set(v) { field = v; contentDescription = describe(); invalidate() }
+
+    private val c = ToonTheme.colors(ctx)
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; color = c.line }
+    private val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; color = c.accent }
+    private val glyph = ToonIconDrawable(ToonIc.CHAT, c.text)
+
+    init {
+        isClickable = true; isFocusable = true
+        contentDescription = describe()
+        setOnClickListener { onClick?.invoke() }
+    }
+
+    private fun describe(): String = when (viewMode) {
+        0 -> "Open chatbot side by side"
+        1 -> "Show chatbot only"
+        else -> "Show the page only"
+    } + if (progress >= 0) ". Chapter progress $progress percent" else ""
+
+    override fun onDraw(canvas: Canvas) {
+        val d = resources.displayMetrics.density
+        val stroke = 2.5f * d
+        val r = minOf(width, height) / 2f - stroke
+        val cx = width / 2f
+        val cy = height / 2f
+        track.strokeWidth = stroke
+        arc.strokeWidth = stroke
+        val rect = RectF(cx - r, cy - r, cx + r, cy + r)
+        canvas.drawCircle(cx, cy, r, track)
+        if (progress >= 0) canvas.drawArc(rect, -90f, 360f * progress / 100f, false, arc)
+        val s = (r * 1.05f).toInt()
+        glyph.setBounds((cx - s / 2f).toInt(), (cy - s / 2f).toInt(), (cx + s / 2f).toInt(), (cy + s / 2f).toInt())
+        glyph.draw(canvas)
+    }
+}
+
+// ================================================================== dialog / sheet scaffolding
 
     /** Sheet shell: grabber, title, close, scrollable content, pinned footer. */
     class SheetShell(ctx: Context, val c: ToonColors, titleText: String, private val onClose: () -> Unit) : LinearLayout(ctx) {
