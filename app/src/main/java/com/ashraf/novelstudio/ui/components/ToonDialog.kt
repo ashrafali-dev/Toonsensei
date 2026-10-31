@@ -62,11 +62,4 @@ object ToonDialog {
         .setTitle(title)
         .setItems(labels) { _, which -> onChoice(which) }
         .create()
-        .also { dialog ->
-            dialog.setOnShowListener {
-                dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(
-                    ToonTheme.colors(context).muted
-                )
-            }
-        }
 }
