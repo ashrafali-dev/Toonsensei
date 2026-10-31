@@ -68,7 +68,7 @@ object ToonComponents {
         setTextColor(color)
         typeface = if (medium) ToonTheme.Type.mediumTypeface() else ToonTheme.Type.uiTypeface()
         includeFontPadding = true
-        setLineSpacing(0f, 1.15f)
+        setLineSpacing(0f, ToonTheme.Type.lineSpacingMultiplier)
     }
 
     fun exposeAsButton(view: View) {
