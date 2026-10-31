@@ -16,7 +16,7 @@ import android.graphics.Typeface
 import android.view.MotionEvent
 import android.view.View
 import android.view.animation.LinearInterpolator
-import android.view.animation.OvershootInterpolator
+import android.view.animation.DecelerateInterpolator
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
@@ -149,8 +149,8 @@ class ModeCapsule(ctx: Context) : View(ctx) {
         anim?.cancel()
         if (animate && isAttachedToWindow && width > 0) {
             anim = ValueAnimator.ofFloat(pos, target.toFloat()).apply {
-                duration = 380L
-                interpolator = OvershootInterpolator(1.5f)
+                duration = 180L
+                interpolator = DecelerateInterpolator()
                 addUpdateListener { pos = it.animatedValue as Float; invalidate() }
                 start()
             }
@@ -278,24 +278,10 @@ class ModeSwitchOverlay(ctx: Context) : View(ctx) {
     }
 
     fun play(m: Int) {
+        // The dock switch itself communicates the selected mode; no large animated overlay.
         mode = m.coerceIn(0, 2)
         anim?.cancel()
-        t = 0f
-        visibility = VISIBLE
-        bringToFront()
-        anim = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 2600L
-            interpolator = LinearInterpolator()
-            addUpdateListener { t = it.animatedValue as Float; invalidate() }
-            addListener(object : AnimatorListenerAdapter() {
-                private var cancelled = false
-                override fun onAnimationCancel(animation: Animator) { cancelled = true }
-                override fun onAnimationEnd(animation: Animator) {
-                    if (!cancelled) visibility = GONE
-                }
-            })
-            start()
-        }
+        visibility = GONE
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
