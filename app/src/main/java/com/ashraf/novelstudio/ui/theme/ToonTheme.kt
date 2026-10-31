@@ -189,6 +189,7 @@ object ToonTheme {
         const val body = 15f
         const val bodyLarge = 17f
         const val bodyLine = 22f
+        const val lineSpacingMultiplier = 1.15f
         const val reader = 19f
         const val section = 12f
         const val title = 20f
