@@ -1,265 +1,291 @@
-# ToonSensei UI/UX Redesign — TODO
+# ToonSensei UI/UX Redesign — Live TODO
 
-Living status file. Group → screen → sub-task (Design · Implement · Audit · Polish).
-Branch, base: `in-1-minute,-later-detector`. Design specification (colors, type, spacing, components,
-screen briefs): **[docs/redesign/DESIGN.md](docs/redesign/DESIGN.md)**. That file is the single source of
-truth — every screen must be built from its tokens; no ad-hoc values.
+Source of truth branch: `Adding-stop-on-scanning`
+Source HEAD at start: `2e200b1d80b66fc0e09283f7b3dc0a934b09ca57`
+Working branch: `ui/g1-theme-and-components`
 
-Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` out of scope (with reason)
+## Status legend
 
----
+- `[ ]` Not started
+- `[~]` In progress / implementation exists but verification is pending
+- `[x]` Verified complete
+- `[-]` Excluded from current scope (reason recorded)
 
-## Using a design-system skill (FAQ)
+## Project inventory
 
-| Skill (as in the task text) | Status |
-|---|---|
-| UI/UX Pro Max (`JaimeJunr/claude-code-frontend-skills`) | **Not installed** — this XINCLI build has no `/plugin marketplace add` command, and `~/.xincli/plugins/marketplaces` is empty. Design system written by hand in `docs/redesign/DESIGN.md` following the same principles (token-first, WCAG 2.1 AA, 4/8 grid, component states). |
-| Anthropic Frontend Design | Not installable CLI-side; applied as principles: one ownable identity (paper + ink + seals), no template look, no emoji in chrome. |
-| Vercel Web Design Guidelines (`vercel-labs/agent-skills`) | Not fetchable offline; the actionable subset is codified as the **Audit gate** below and run per group. |
-| Emil Kowalski / Impeccable (`master5d/claude-design-skills`) | Not fetchable offline; motion rules codified as **Motion tokens** in DESIGN.md (springs, 150–260 ms, honour reduced-motion). |
+| Item | Verified baseline |
+|---|---:|
+| `MainActivity.kt` | 11,538 lines |
+| `Ui.kt` | 608 lines |
+| `Home.kt` | 596 lines |
+| `ModeUi.kt` | 482 lines |
+| `ReaderActivity.kt` | 182 lines |
+| Kotlin files in repository | 96 |
+| `AlertDialog.Builder` construction sites in MainActivity | 36 |
+| `Sheets.create` construction sites in MainActivity | 7 |
+| Other custom Dialog construction sites | 1 |
+| Total modal construction points | 44 |
+| Existing `toast(...)` call sites | 191 |
 
-Everything below is written from those principles so the redesign does not depend on the plugins.
+The 44 modal construction points are a code inventory, not 44 unique HTML boards. Shared builders produce multiple runtime dialogs, lists, and states. These must be counted by user-visible flow during implementation.
 
----
+## Reference-board inventory
 
-## Platform facts that shape the work
+The uploaded `toon-sensei-ui-spec.zip` contains 57 numbered boards. Board 09 is superseded; boards 11 and 12 are explicitly planned for a later phase. The active redesign scope contains **54 boards**.
 
-- No Compose, no XML layouts: every screen is programmatic `View` code.
-  `MainActivity.kt` (11.4k lines) · `ReaderActivity.kt` · `Home.kt` · `Ui.kt` (Aurora Glass) ·
-  `ModeUi.kt` · `ModeChip`/`ModeCapsule`/`ExtractButton`/`BookwormProgress`/`ActivityChip`/`TourOverlay`.
-- 36 `AlertDialog.Builder` sites (emoji-prefixed labels, always dark, hairline-less) + 7 `Sheets`.
-- Android chrome is dark-only today (`UiTheme` has no light palette); inline web content follows the
-  site's own theme via `Js.kt` → needs a `prefers-color-scheme` bridge.
-- Four modes confirmed by product owner: **Novel · Scanning · Real-time · Manual Lite**
-  (Manual Lite = the existing `manualExtractOn()` path, one tap → one crop/OCR).
+| Group | Scope | Board count | Priority |
+|---|---|---:|---|
+| G1 | Design system / components | 0 | P0 |
+| G2 | Common overlays | 14 | P0 / P1 |
+| G3 | State views | 2 + offline/permission variants | P0 |
+| G4 | Home + navigation | 5 | P0 / P1 / P2 |
+| G5 | Reader / browser chrome | 6 | P0 / P1 |
+| G6 | Modes | 2 visual boards / 4 mode implementations | P0 |
+| G7 | Settings + Library + Search | 19 | P0 / P1 / P2 |
+| G8 | Splash + permission onboarding | 6 | P0 / P1 |
+| **Total active HTML boards** |  | **54** |  |
 
-## Audit gate (every screen, before `[x]`)
+### Excluded / later-phase references
 
-1. Light **and** dark (`ToonTheme.dark`), 360 dp and ≥ 412 dp widths.
-2. Loading / empty / error / offline / permission states present or explicitly N/A.
-3. Contrast ≥ 4.5:1 text, ≥ 3:1 UI strokes; focused state visible (keyboard + TalkBack).
-4. `contentDescription` on every icon-only control; section headings exposed.
-5. Touch targets ≥ 48 dp (even if the visual is 40 dp → 4 dp invisible padding).
-6. Motion on enter/exit/selection only, ≤ 260 ms, respects system animator scale 0.
-7. No hard-coded colour outside `ToonTheme`; no emoji in app chrome.
+- `09-menu.html`: superseded older menu sketch.
+- `11-linkrun.html` and `12-preview.html`: later-phase planned features; do not implement in this redesign pass unless the owner explicitly expands scope.
+- Board 10 is the approved “Link → Translate (soon)” placeholder, not permission to build the planned flow.
 
-## Motion tokens (Emil-style)
+## G1 — Theme and component foundation
 
-| Token | Use | Value |
-|---|---|---|
-| `tokDurFast` | press/ripple, chip toggle | 110 ms decelerate |
-| `tokDurBase` | sheet slide, list reveal | 220 ms decelerate |
-| `tokDurSlow` | full-screen fade, mode switch | 260 ms decelerate |
-| `tokSpring` | selection thumb, per-item stagger | Overshoot 1.4, stagger 40 ms |
+Branch: `ui/g1-theme-and-components`
 
----
+### Files
 
-## Group S — Design system (must finish first)
+- [x] Project-level Codex UI/UX Pro Max skill files added under `.agents/skills/ui-ux-pro-max/`.
+- [x] ToonSensei Android Views-specific skill guidance added.
+- [x] `ui/theme/ToonTheme.kt`: semantic token model, light/dark resource lookup, typography, space, radius, motion, elevation, accent presets.
+- [x] `ui/components/ToonComponents.kt`: shared shape, ripple, text, focus and touch helpers.
+- [x] `ui/components/ToonButton.kt`: primary / secondary / ghost / danger and compact / regular variants.
+- [x] `ui/components/ToonChip.kt`: selected / unselected / disabled chip.
+- [x] `ui/components/ToonCard.kt`: flat surface card; interactive use requires an accessibility label.
+- [x] `ui/components/ToonInput.kt`: visible label, hint, focus, keyboard type and multiline field.
+- [x] `ui/components/ToonDialog.kt`: MaterialAlertDialogBuilder wrapper.
+- [x] `ui/components/ToonBottomSheet.kt`: Material BottomSheetDialog wrapper.
+- [x] `ui/components/ToonToast.kt`: persistent in-layout notice shim; not Android Toast.
+- [x] `ui/components/ToonStateView.kt`: loading / empty / error / offline / permission primitive.
+- [x] Paper colors under `res/values/colors.xml`.
+- [x] Charcoal colors under `res/values-night/colors.xml`.
+- [x] Material Components theme overlays and night system-bar override.
+- [x] Material Components dependency pinned to `1.12.0` to avoid an AGP/compileSdk upgrade in this group.
+- [x] `DESIGN_SYSTEM.md` written from the uploaded ROADMAP and board spec.
+- [~] Kotlin/Android resource compile and unit test.
+- [ ] Contrast, TalkBack, focus, 360 dp / 412 dp, and font-scale verification on device.
+- [ ] Baseline component screenshots and G1 summary note.
+- [ ] Codex skill auto-discovery confirmation on the owner's Codex installation.
 
-Branch `ui/design-system`.
-Files: `ToonTheme.kt` (tokens, day/night palettes, 4 mode accents), `ToonComponents.kt`
-(button, icon button, chip, segment, card, list row, toggle row, field, sheet, dialog, snackbar,
-banner, empty/error/loading/skeleton, section header, toolbar), `ToonIcon` extension of `Ic`
-(calendar, pause, play, mic, download, external-link, gallery, crop, translate, history).
+G1 exit gate: build passes, component tokens are reviewed, and both palettes are checked. No screen group starts until this gate is satisfied.
 
-- [x] Design brief + full token spec (`docs/redesign/DESIGN.md`)
-- [ ] Tokens implemented (colors both modes, type scale, space 4/8, radius, border, elevation, motion)
-- [ ] Component library + usage rules; state matrix (default/hover?/pressed/focused/disabled/loading)
-- [ ] Compatibility shim: `UiTheme.*` deprecated aliases → `ToonTheme` so old call sites compile
-- [ ] Skeleton/empty/error primitives
+## G2 — Common overlays
 
-## Group H — Common overlays (first code group)
+Branch: `ui/g2-overlays-migration`
+Reference boards: **14**
 
-Branch `ui/group-h-overlays`.
+Boards:
+- P0: [ ] 13 Notice banner · [ ] 16 Mode sheet · [ ] 17 Re-scan overlay · [ ] 28 Popup patterns
+- P1: [ ] 05 Tasks tray · [ ] 18 Chapter glossary list · [ ] 19 Confirm found names · [ ] 20 Add glossary entry · [ ] 24 Tab options · [ ] 25 Search-result context menu · [ ] 27 Message presentation · [ ] 36 Chatbot row menu · [ ] 44 Delay pickers · [ ] 57 Update/community dialogs
 
-| # | Screen | Source | Prio | Design | Impl | Audit | Polish |
-|---|---|---|---|---|---|---|---|
-| H01 | Sheet frame (handle, title, close, drag-dismiss, safe-area) | `Sheets.create` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H02 | Dialog frame (centre, title/message/actions, destructive variant) | `AlertDialog.Builder` ×36 | P0 | [ ] | [ ] | [ ] | [ ] |
-| H03 | Action list sheet (grouped rows, chevrons, toggles, badges) | `listDialog` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H04 | Searchable list sheet | `searchListDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H05 | Confirm dialog (delete novel / chapter / model) | `novelActions`, `chapterList`, `inpaintDialog` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H06 | Input dialog (bookmark name, rename novel) | `renameNovel`, `saveBookmark` flow | P1 | [ ] | [ ] | [ ] | [ ] |
-| H07 | Prompt editor (multi-line, Save / Reset / Cancel) | `editPrompt`/`editScanPrompt`/`editRealtimePrompt` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H08 | Numeric / settings dialog (send-hold ms, scan direction) | `editSendHold`, `scanDirectionDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H09 | Snackbar (single line, action, queue, error tint) | `showSnack`/`toast`/`hideSnack` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H10 | Banner (inline notice, amber warn/red error/blue info, dismiss) | HTML `Notice.html` — new | P1 | [ ] | [ ] | [ ] | [ ] |
-| H11 | Bottom sheet: reading mode | `showModeSheet` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H12 | Bottom sheet: menu (mode-aware groups, advanced fold) | `menu()` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H13 | Bottom sheet: language (first-run + change) | `showLanguageSheet` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H14 | Bottom sheet: OCR engine picker | `ocrModelsDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H15 | Bottom sheet: chatbot add / login / provider failed | `addBotDialog`, `showProviderFailedDialog`, `showChatLoginPopup` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H16 | Bottom sheet: tabs grid / tab options / history | `showTabGrid`, `showTabOptions`, `browserHistoryDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H17 | Bottom sheet: glossary (list / confirm found names / add) | `glossaryDialog`, `glossaryInput`, `chapterGlossaryDialog`, `Glossary*.html` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H18 | Bottom sheet: site settings & ad-block rules | `siteRulesDialog`, `siteRuleEditor`, `adblockRulesDialog` | P2 | [ ] | [ ] | [ ] | [ ] |
-| H19 | Bottom sheet: model download (detector / mask) | `detectorDialog`, `segModelDialog` | P2 | [ ] | [ ] | [ ] | [ ] |
-| H20 | Re-scan selector overlay (crop frame, six-dot handle, “Read this area”) | `showRescanSelector` + `Rescan.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H21 | Link context menu | `showLinkMenu`, `GoogleMenu.html` | P2 | [ ] | [ ] | [ ] | [ ] |
-| H22 | Update notice / community chooser / early tip | `showUpdateNotice`, `showCommunityChooser`, `maybeShowEarlyTip` | P2 | [ ] | [ ] | [ ] | [ ] |
-| H23 | Activity tray (task list popover) | `ActivityChip` + `Tray.html` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H24 | Tour overlay (coach marks) | `Tour.kt` | P2 | [ ] | [ ] | [ ] | [ ] |
+Runtime dialog inventory (36 source construction sites):
+1. Chapter glossary list
+2. Delete chapter glossary entry
+3. Chapter glossary type picker
+4. Add chapter glossary entry
+5. Community chooser
+6. Community invitation
+7. Update notice
+8. Send-hold duration input
+9. Quick tip
+10. Long-reading help
+11. First prompt choice
+12. Link context menu
+13. Scanning direction picker
+14. OCR engine picker
+15. Remove chatbot confirmation
+16. Add chatbot form
+17. Scan options picker
+18. Translation failed / retry notice
+19. AI provider chooser
+20. “What the app learned” site explanation
+21. AdBlock rules editor
+22. Site settings chooser
+23. Site rule editor
+24. Global glossary menu
+25. Delete all glossary confirmation
+26. Add glossary entry
+27. Delete AI text-eraser model confirmation
+28. Bubble detector details / model action
+29. Balloon mask model details / action
+30. Novel actions
+31. Delete novel confirmation
+32. Delete chapter confirmation
+33. Rename novel
+34. Edit Novel prompt
+35. Edit Scanning prompt
+36. Edit Real-time prompt
 
-## Group I — States
+Also migrate the 7 `Sheets.create` construction points and 1 custom chat-login `Dialog`. Convert each user-visible flow to the correct dialog/sheet/banner/log pattern. Classify the 191 toast call-sites; do not blindly turn all of them into banners.
 
-Branch `ui/group-i-states`.
+- [ ] Extract overlays from MainActivity into `ui/screens/overlays/`.
+- [ ] Migrate each dialog/sheet separately; one user-visible flow per commit.
+- [ ] No behavior/callback/permission change.
+- [ ] Vercel UX guideline subset audit adapted for native Android; report non-applicable web checks.
+- [ ] Save baseline screenshots/notes for every overlay board.
 
-| # | State screen | Where | Prio | Design | Impl | Audit | Polish |
-|---|---|---|---|---|---|---|---|
-| I01 | Page loading (2 dp bar + progress %) | `BookwormProgress`, `showNavLoading`, `applyLayout` top | P0 | [ ] | [ ] | [ ] | [ ] |
-| I02 | Slow-connection banner | new, `Loading.html` “Slow” | P1 | [ ] | [ ] | [ ] | [ ] |
-| I03 | Page failed (mascot, message, Retry) | `showReaderFallback`, `onReceivedError` paths | P0 | [ ] | [ ] | [ ] | [ ] |
-| I04 | Offline state | new | P1 | [ ] | [ ] | [ ] | [ ] |
-| I05 | Skeleton loaders (home list, library, tabs) | new — `Loading.html` | P1 | [ ] | [ ] | [ ] | [ ] |
-| I06 | Empty: library | `libraryNovels` (“Library is empty…toast”) | P0 | [ ] | [ ] | [ ] | [ ] |
-| I07 | Empty: bookmarks | `bookmarkList` toast | P1 | [ ] | [ ] | [ ] | [ ] |
-| I08 | Empty: search / tabs / history | `showTabGrid`, `browserHistoryDialog` | P2 | [ ] | [ ] | [ ] | [ ] |
-| I09 | Empty: glossary | `glossaryDialog` | P2 | [ ] | [ ] | [ ] | [ ] |
-| I10 | Translation progress card (stages, ring, stop) | `progressBox`, `ExtractButton` ring, `ActivityChip` dots | P0 | [ ] | [ ] | [ ] | [ ] |
-| I11 | Permission states (overlay, storage/export, notifications) | `checkOverlay`, export SAF | P1 | [ ] | [ ] | [ ] | [ ] |
-| I12 | Error: chatbot not logged in / provider failed | `showProviderFailedDialog`, `Notice.html` | P1 | [ ] | [ ] | [ ] | [ ] |
+## G3 — State views
 
-## Group A — Navigation & Home
+Branch: `ui/g3-state-views`
+Reference boards: **2**, plus non-visual state variants.
 
-Branch `ui/group-a-navigation-redesign`.
+- P0 [ ] Board 26: Loading / Slow / Failed.
+- P0 [ ] Board 46: Library Empty.
+- P0 [ ] Offline / network unavailable.
+- P0 [ ] Permission required / denied / rationale.
+- P1 [ ] Retry / recover / no-results sub-states where existing logic supports them.
 
-| # | Screen | Source | Prio | Design | Impl | Audit | Polish |
-|---|---|---|---|---|---|---|---|
-| A01 | Cold start / splash (mascot, wordmark) | new — `Splash.html` | P1 | [ ] | [ ] | [ ] | [ ] |
-| A02 | Home (4 mode entry chips, recent, sites, search bar) | `Home.kt` `render()` | P0 | [ ] | [ ] | [ ] | [ ] |
-| A03 | Home empty/first-run (site grid, welcome) | `HomeView.welcome`, `grid` | P0 | [ ] | [ ] | [ ] | [ ] |
-| A04 | Home continue-reading hero + recent rows | `HomeView.hero`, `recentRow` | P1 | [ ] | [ ] | [ ] | [ ] |
-| A05 | Bottom nav (Library · Menu) | new — `Main.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| A06 | Reader top bar (back, URL pill, reload, tabs, more) | `chromeTopView` build | P0 | [ ] | [ ] | [ ] | [ ] |
-| A07 | Site shortcut chips rail | `buildSiteShortcuts`, `chip()` | P1 | [ ] | [ ] | [ ] | [ ] |
-| A08 | Chatbot strip (bot chips, add, login) | `buildStrip`, `botChip()` | P1 | [ ] | [ ] | [ ] | [ ] |
-| A09 | Hub buttons (Taihon / LNReader) | `Hub.kt`, `hubBar()` | P1 | [ ] | [ ] | [ ] | [ ] |
-| A10 | Tab thumbnails grid visuals | `renderTabs`, `tabThumbFile` | P2 | [ ] | [ ] | [ ] | [ ] |
+- [ ] Use the shared `ToonStateView` once; do not create one-off screen-specific state widgets.
+- [ ] Replace fake/indeterminate progress with real stage/counter/time when the task exposes it.
+- [ ] Integrate loading/empty/error/offline/permission states across applicable screens.
+- [ ] Audit every state against TalkBack and dark/light palette.
 
-## Group B — Novel Reader
+## G4 — Home + navigation
 
-Branch `ui/group-b-novel-reader-redesign`.
+Branch: `ui/g4-home-navigation`
+Reference boards: **5**
 
-| # | Screen | Source | Prio | Design | Impl | Audit | Polish |
-|---|---|---|---|---|---|---|---|
-| B01 | Dock bar (mode pill, prev, extract, next, menu, chatbot ring) | `applyLayout` dock, `Reader.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| B02 | Extract button (bolt, 24-tick ring, activity dot, states) | `ExtractButton` | P0 | [ ] | [ ] | [ ] | [ ] |
-| B03 | Mode capsule → segmented mode pill with label | `ModeCapsule`, `refreshModeChip` | P0 | [ ] | [ ] | [ ] | [ ] |
-| B04 | Immersive reading (bars hidden, floating bolt) | `setBarsHidden`, `Working.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| B05 | Offline reader (chapters, TOC, font size, 3 themes) | `ReaderActivity.kt` | P0 | [ ] | [ ] | [ ] | [ ] |
-| B06 | Reader font/theme sheet (reader tray) | new — `Appearance.html` | P1 | [ ] | [ ] | [ ] | [ ] |
-| B07 | Bookmark save + list | `saveBookmark`, `bookmarkList` | P1 | [ ] | [ ] | [ ] | [ ] |
-| B08 | Split view (page | chatbot) + pane size cycle | `setMode`, `applyLayout`, `Cycle.html` | P1 | [ ] | [ ] | [ ] | [ ] |
-| B09 | Chapter transition / mode-switch animation | `ModeSwitchOverlay`, `beginModeTransition` | P2 | [ ] | [ ] | [ ] | [ ] |
-| B10 | Inline translated paragraph styling (web) | `WebNovelWriter`, `Js.kt` | P1 | [ ] | [ ] | [ ] | [ ] |
+- P0 [ ] Board 02: Home.
+- P0 [ ] Board 21: Mode start (Novel).
+- P1 [ ] Board 23: Tabs.
+- P1 [ ] Board 38: Everyday menu.
+- P2 [ ] Board 10: Link → Translate “soon” placeholder only.
 
-## Group C — Scanning Mode
+- [ ] Extract Home builder from MainActivity.
+- [ ] Reuse the shared token-driven search, site shortcut, recent and action components.
+- [ ] Keep deep links, tab history, and browser behavior intact.
+- [ ] No implementation of planned Board 11/12 in this pass.
 
-Branch `ui/group-c-scanning-redesign`.
+## G5 — Reader / browser chrome
 
-| # | Screen | Source | Prio | Design | Impl | Audit | Polish |
-|---|---|---|---|---|---|---|---|
-| C01 | Scanning dock state (mode = Scan, stop/pause) | `setReadMode`, `README` scan | P0 | [ ] | [ ] | [ ] | [ ] |
-| C02 | Scan start options sheet (direction, accurate, ask) | `scanDirectionDialog`, `askScanOptions` | P1 | [ ] | [ ] | [ ] | [ ] |
-| C03 | Scan progress card (panels done/total, stage, ETA-ish) | `webModePct`, `progressTv`, `ScanMode.Progress` | P0 | [ ] | [ ] | [ ] | [ ] |
-| C04 | OCR result overlay on page (bubble placement) | `WebModeWriter`, `WebModeLayout` | P0 | [ ] | [ ] | [ ] | [ ] |
-| C05 | Re-scan an area (crop frame + handle) | H20 reused + `Rescan.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| C06 | OCR language + engine settings | `menuOcrLangLabel`, `ocrModelsDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
-| C07 | Scan failed / provider failed / retry missing bubbles | `showProviderFailedDialog`, `retryMissingScanBubbles`, `handleScanFallback` | P1 | [ ] | [ ] | [ ] | [ ] |
-| C08 | Chapter glossary FAB + sheet | `glossaryFab`, `chapterGlossaryDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
-| C09 | Bubble detector / mask model download | `detectorDialog`, `segModelDialog` | P2 | [ ] | [ ] | [ ] | [ ] |
+Branch: `ui/g5-reader`
+Reference boards: **6**
 
-## Group D — Real-Time Mode
+- P0 [ ] Board 03: Site + dock.
+- P0 [ ] Board 04: Site with controls hidden / immersive.
+- P0 [ ] Board 06: Split with chatbot.
+- P1 [ ] Board 22: Chatbot pane sizes / cycle.
+- P1 [ ] Board 37: Provider tabs.
+- P1 [ ] Board 49: Saved reader.
 
-Branch `ui/group-d-realtime-redesign`.
+- [ ] Extract top bar, dock, split layout, immersive controls and saved reader UI.
+- [ ] Keep `novelWv` and `chatWv` alive; do not replace real websites with native mock content.
+- [ ] Status remains visible when chatbot pane is hidden.
+- [ ] No bottom action bar for temporary modes.
+- [ ] Preserve WebView back, scroll, navigation, renderer recovery and JavaScript bridge behavior.
 
-| # | Screen | Source | Prio | Design | Impl | Audit | Polish |
-|---|---|---|---|---|---|---|---|
-| D01 | Live dock state (mode = Live, Pause/Resume) | `enableRealtimeMode`, `Comic.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| D02 | Translation bubbles over panels (web overlay styling) | `DeepSeekRealtimeTranslation`, `WebModeWriter` | P0 | [ ] | [ ] | [ ] | [ ] |
-| D03 | Activity dots + tool rail (re-scan, glossary) | `activityDotStatuses`, `updateActivityChip`, `reOcrBtn`, `glossaryFab` | P1 | [ ] | [ ] | [ ] | [ ] |
-| D04 | Real-time start/refresh notice | `Notice.html`, `enableRealtimeMode` toasts | P1 | [ ] | [ ] | [ ] | [ ] |
-| D05 | Ahead prefetch chip | `prefetchChip`, `setPrefetchEnabled` | P2 | [ ] | [ ] | [ ] | [ ] |
-| D06 | Settings: real-time prompt, auto-OCR, batch size | `editRealtimePrompt`, `menuRealtimeAutoOcrLabel` | P2 | [ ] | [ ] | [ ] | [ ] |
+## G6 — Mode UI
 
-## Group E — Manual Lite
+Branch: `ui/g6-modes`
+Reference boards: **2**, four functional screen implementations.
 
-Branch `ui/group-e-manual-lite-redesign`.
+- P0 [ ] Board 07: Real-time + tools.
+- P0 [ ] Board 08: Manual Lite + tools.
+- P0 [ ] Extract Novel mode.
+- P0 [ ] Extract Scanning mode.
+- P0 [ ] Extract Real-time mode.
+- P0 [ ] Extract Manual Lite mode.
 
-| # | Screen | Source | Prio | Design | Impl | Audit | Polish |
-|---|---|---|---|---|---|---|---|
-| E01 | Manual Lite dock state (Read button) | `manualExtractOn`, `extractCopy`, `Comic2.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| E02 | Tap-to-crop overlay (region select, mask, confirm) | `ManualExtract/*`, `captureManualRegionLive` | P0 | [ ] | [ ] | [ ] | [ ] |
-| E03 | Result card (translation + copy / re-run) | new from existing bubble insert | P1 | [ ] | [ ] | [ ] | [ ] |
-| E04 | Manual OCR failed / no text | `toast` paths, `OcrDiag` | P1 | [ ] | [ ] | [ ] | [ ] |
-| E05 | Manual history (recent taps this chapter) | new (optional) | P2 | [ ] | [ ] | [ ] | [ ] |
+- [ ] Create separate `NovelModeScreen.kt`, `ScanningModeScreen.kt`, `RealTimeModeScreen.kt`, `ManualLiteModeScreen.kt`.
+- [ ] Preserve mode state machine, OCR, batching, pause/resume, manual crop/read, and callback wiring.
+- [ ] Manual Lite = Real-time with Auto OFF.
+- [ ] No new OCR engine and no duplicate OCR control state.
 
-## Group F — Library & Search
+## G7 — Settings + Library + Search
 
-Branch `ui/group-f-library-search-redesign`.
+Branch: `ui/g7-settings-and-library`
+Reference boards: **19**
 
-| # | Screen | Source | Prio | Design | Impl | Audit | Polish |
-|---|---|---|---|---|---|---|---|
-| F01 | Library home (novels list, covers, chapter count) | `libraryNovels` | P0 | [ ] | [ ] | [ ] | [ ] |
-| F02 | Novel actions (chapter list / export / rename / delete) | `novelActions` | P0 | [ ] | [ ] | [ ] | [ ] |
-| F03 | Chapter list (long-press delete) | `chapterList` | P0 | [ ] | [ ] | [ ] | [ ] |
-| F04 | Bookmarks list | `bookmarkList` | P1 | [ ] | [ ] | [ ] | [ ] |
-| F05 | Browser history | `browserHistoryDialog` | P2 | [ ] | [ ] | [ ] | [ ] |
-| F06 | Tabs grid (search, thumbnails, close) | `showTabGrid`, `TabsGrid.html` | P1 | [ ] | [ ] | [ ] | [ ] |
-| F07 | Tab options (close others / all, reload) | `showTabOptions`, `TabsSheet.html` | P2 | [ ] | [ ] | [ ] | [ ] |
-| F08 | Home search bar states (URL vs query, clear, go) | `HomeView.buildSearchBar` | P1 | [ ] | [ ] | [ ] | [ ] |
-| F09 | Export flow (SAF, success/fail snack) | `exportAll`, `onActivityResult` | P2 | [ ] | [ ] | [ ] | [ ] |
+Settings boards:
+- P0 [ ] Board 14: Appearance.
+- P0 [ ] Board 15: OCR engine.
+- P1 [ ] Board 34: Chatbots list.
+- P1 [ ] Board 35: Add chatbot.
+- P1 [ ] Board 39: Advanced home.
+- P1 [ ] Board 40: Translation settings.
+- P1 [ ] Board 41: Webtoon tools.
+- P1 [ ] Board 42: Browser settings.
+- P1 [ ] Board 43: Diagnostics.
+- P1 [ ] Board 52: Prompts.
+- P1 [ ] Board 53: Novel glossary.
+- P1 [ ] Board 54: Site settings.
+- P1 [ ] Board 55: Edit site settings.
+- P1 [ ] Board 56: Chatbot login.
 
-## Group G — Settings
+Library/search boards:
+- P0 [ ] Board 45: Library list.
+- P1 [ ] Board 47: Library / novel actions.
+- P1 [ ] Board 48: Chapters.
+- P1 [ ] Board 50: Bookmarks.
+- P1 [ ] Board 51: History.
 
-Branch `ui/group-g-settings-redesign`.
+- [ ] Extract settings, about, library, browser history and search builders.
+- [ ] Preserve existing preference keys and saved language/provider values.
+- [ ] No new feature switches without a matching board or owner instruction.
+- [ ] Use trailing trash/delete affordance rather than long-press-only deletion.
 
-| # | Screen | Source | Prio | Design | Impl | Audit | Polish |
-|---|---|---|---|---|---|---|---|
-| G01 | Settings / menu home (mode-aware groups) | `menu()` daily/advanced | P0 | [ ] | [ ] | [ ] | [ ] |
-| G02 | Reading mode sheet (4 modes, description each) | `showModeSheet`, `ModeSheet.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| G03 | Language sheet (source/target, download font) | `showLanguageSheet`, `downloadLanguageFont` | P0 | [ ] | [ ] | [ ] | [ ] |
-| G04 | Appearance (theme Paper/Charcoal/Custom, accent, text spacing) | `applyDark`, `darkMode`, `Appearance.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| G05 | OCR settings (engine, language, scan dir, rescan, debug) | `chooseOcrEngine`, `scanDirectionDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
-| G06 | Translation settings (chatbot, prompt, glossary, batch, hold) | `addBotDialog`, prompts, `editSendHold` | P1 | [ ] | [ ] | [ ] | [ ] |
-| G07 | Browsing settings (bars mode, force-load, ad block, site settings) | `applyFloatingBars`, `siteRulesDialog`, `AdBlock` | P1 | [ ] | [ ] | [ ] | [ ] |
-| G08 | Advanced / diagnostics fold | `menu()` advanced | P2 | [ ] | [ ] | [ ] | [ ] |
-| G09 | About / updates / community | `showUpdateNotice`, `showCommunityChooser`, `Updater` | P2 | [ ] | [ ] | [ ] | [ ] |
-| G10 | First-run setup (prompt choice → language → tour) | `showFirstPromptChoice`, `startTour` | P1 | [ ] | [ ] | [ ] | [ ] |
+## G8 — Splash + Permission Onboarding
 
-## Group P — Planned screens (out of scope)
+Branch: `ui/g8-onboarding-splash`
+Reference boards: **6**
 
-| # | Screen | Reference | Status |
-|---|---|---|---|
-| P01 | Link → Translate (Soon + running) | `LinkSoon.html`, `LinkRun.html` | `[-]` — feature does not exist in source (`Hub.urlFromIntent` only opens URLs). Design kept in DESIGN.md §10 for later. |
-| P02 | Preview reader | `Preview.html` | `[-]` — no preview mode in source. |
-| P03 | Chatbot pane size cycle | `Cycle.html` | Merged into B08 (split view states). |
+- P0 [ ] Board 01: Splash.
+- P0 [ ] Board 29: First-run language.
+- P0 [ ] Board 30: First-run OCR engine.
+- P1 [ ] Board 31: Tips.
+- P1 [ ] Board 32: Chat tour.
+- P1 [ ] Board 33: Re-scan / glossary tour.
+- P0 [ ] Notification permission states: ask / allowed / denied, following Android lifecycle and existing capability checks.
 
----
+- [ ] Existing users do not see first-run language/OCR screens again.
+- [ ] Preserve selected language and OCR engine.
+- [ ] Tour spotlight is static; no pulse or breathing animation.
 
-## Branch plan
+## MainActivity extraction plan
 
-| Order | Branch | Base | Deliverable |
-|---|---|---|---|
-| 1 | `ui/design-system` | target branch | tokens + components + DESIGN.md |
-| 2 | `ui/group-h-overlays` | design-system | all dialogs/sheets/snackbar/banners |
-| 3 | `ui/group-i-states` | group-h | loading/empty/error/offline/skeletons |
-| 4 | `ui/group-a-navigation-redesign` | group-i | splash, home, bottom nav, top bar |
-| 5 | `ui/group-b-novel-reader-redesign` | group-a | dock, extract button, immersive, offline reader |
-| 6 | `ui/group-c-scanning-redesign` | group-b | scan flow, progress, rescan |
-| 7 | `ui/group-d-realtime-redesign` | group-c | live overlays, tool rail |
-| 8 | `ui/group-e-manual-lite-redesign` | group-d | manual crop + result |
-| 9 | `ui/group-f-library-search-redesign` | group-e | library, tabs, search |
-| 10 | `ui/group-g-settings-redesign` | group-f | settings, appearance, language |
-| 11 | `ui/final-polish` | group-g | global audit, FINAL_REPORT.md |
+The target is `MainActivity.kt < 1,500 lines`, containing navigation + wiring only.
 
-Each group closes with: baseline notes committed → implementation commits (one per screen) →
-Vercel-style audit table in the branch summary → push (no PR).
+- [ ] Overlays and dialog builders.
+- [ ] Shared state views and notice/status integration.
+- [ ] Home.
+- [ ] Reader/browser chrome.
+- [ ] Four modes.
+- [ ] Settings, library, history, search.
+- [ ] Remaining lifecycle/navigation wiring.
+- [ ] Record line count after every extraction; it must decrease.
 
-## Open decisions
+No new View construction code goes into MainActivity after G1. Each extraction receives its own commit and preserves behavior.
 
-- [x] Architecture: View-layer refactor (no Compose migration).
-- [x] Four visible modes on Home: Novel · Scanning · Real-time · Manual Lite.
-- [ ] Manual Lite placement in `ReadMode` enum vs derived from `manualExtractOn()` — decide in group E
-      (prefer derived, no enum change → no persistence migration).
-- [ ] Light theme for app chrome requires a theme switch UI (G04) and web `prefers-color-scheme` bridge
-      (B10). Decide: follow system by default, override in Appearance.
+## Branch and commit rules
+
+1. One branch per group, strictly in the order above.
+2. One visible screen/dialog/component per commit where practical.
+3. Commit format: `ui(<group>): <action> — <screen/component>`.
+4. Push only; do not open a PR.
+5. Store baseline screenshot/note and branch summary per group.
+6. Run applicable audit/build checks before moving on.
+7. Never edit the source branch directly.
+8. Never introduce tokens outside `DESIGN_SYSTEM.md`.
+9. Never modify WebView, services, OCR, translation, permissions or persistence behavior as part of visual work.
+
+## Current gate
+
+- [x] Correct source branch verified.
+- [x] Uploaded roadmap/board inventory inspected.
+- [x] Codex project skill files added on working branch.
+- [x] G1 component and token source files committed.
+- [x] DESIGN_SYSTEM.md created.
+- [~] Android Gradle build and runtime verification — not yet run in this environment.
+- [ ] Finish G1 verification before starting G2.
