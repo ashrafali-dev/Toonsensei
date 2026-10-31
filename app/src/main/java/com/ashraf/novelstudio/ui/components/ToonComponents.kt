@@ -74,6 +74,25 @@ object ToonComponents {
         setLineSpacing(0f, lineSpacingMultiplier)
     }
 
+    fun applyFocusOutline(
+        view: View,
+        context: Context,
+        shape: GradientDrawable,
+        restingStroke: Int
+    ) {
+        fun update(focused: Boolean) {
+            shape.setStroke(
+                ToonTheme.dp(
+                    context,
+                    if (focused) ToonTheme.Metrics.focusStrokeDp else ToonTheme.Metrics.hairlineDp
+                ),
+                if (focused) ToonTheme.colors(context).focus else restingStroke
+            )
+        }
+        update(view.hasFocus())
+        view.setOnFocusChangeListener { _, focused -> update(focused) }
+    }
+
     fun exposeAsButton(view: View) {
         view.accessibilityDelegate = object : View.AccessibilityDelegate() {
             override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
