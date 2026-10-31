@@ -63,6 +63,7 @@ Branch: `ui/g1-theme-and-components`
 - [x] `ui/components/ToonComponents.kt`: shared shape, ripple, text, focus and touch helpers.
 - [x] `ui/components/ToonButton.kt`: primary / secondary / ghost / danger and compact / regular variants.
 - [x] `ui/components/ToonChip.kt`: selected / unselected / disabled chip.
+- [x] `ui/components/ToonBadge.kt`: neutral / accent / success / warning / error badge.
 - [x] `ui/components/ToonCard.kt`: flat surface card; interactive use requires an accessibility label.
 - [x] `ui/components/ToonInput.kt`: visible label, hint, focus, keyboard type and multiline field.
 - [x] `ui/components/ToonDialog.kt`: MaterialAlertDialogBuilder wrapper.
@@ -74,6 +75,7 @@ Branch: `ui/g1-theme-and-components`
 - [x] Material Components theme overlays and night system-bar override.
 - [x] Material Components dependency pinned to `1.12.0` to avoid an AGP/compileSdk upgrade in this group.
 - [x] `DESIGN_SYSTEM.md` written from the uploaded ROADMAP and board spec.
+- [x] `docs/redesign/G1_SUMMARY.md` records G1 branch changes and unverified checks.
 - [~] Kotlin/Android resource compile and unit test.
 - [ ] Contrast, TalkBack, focus, 360 dp / 412 dp, and font-scale verification on device.
 - [ ] Baseline component screenshots and G1 summary note.
