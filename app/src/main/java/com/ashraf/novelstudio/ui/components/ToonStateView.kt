@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
-import android.widget.TextView
 import com.ashraf.novelstudio.ui.theme.ToonTheme
 
 object ToonStateView {
