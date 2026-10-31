@@ -152,8 +152,10 @@ The app owns only its own chrome and saved-content UI. Do not inject these typef
 | `bodyLarge` | 17 sp | 400 | Emphasized / high-readability body |
 | `bodyLine` | 22 sp | — | Body baseline line-height target |
 | `reader` | 19 sp | 400 | Saved translation reading |
-| `title` | 20 sp | 500 | Screen and sheet titles |
-| `titleLarge` | 22 sp | 500 | Major heading |
+| `bengaliReader` | 19 sp | 400 | App-owned Bengali saved text |
+| `bengaliLineSpacingMultiplier` | 2.05 | — | Bengali reader leading target |
+| `title` | 22 sp | 500 | Screen and sheet titles |
+| `titleLarge` | 24 sp | 500 | Major heading |
 | `display` | 26 sp | 600 | Wordmark / primary editorial heading |
 
 Font rules:
@@ -193,6 +195,7 @@ Font rules:
 
 - Stroke: 1 dp neutral border; 2 dp accent focus ring.
 - Elevation: 0 dp for app-owned surfaces; use a scrim and border for modal separation.
+- `Metrics`: 1 dp hairline, 2 dp focus stroke, 48 dp target, 24 dp badge, 144 × 3 dp progress track, 24 dp dialog/sheet radii; XML shape dimensions come from `dimens.xml`.
 - Interactive targets: at least 48 × 48 dp in the base components; never below the roadmap's 44 dp minimum.
 - Keep 8 dp spacing between adjacent touch targets.
 
@@ -207,7 +210,7 @@ Only motion that communicates a user action or state transition is allowed.
 | `exitMs` | 150 ms | Dismiss / return |
 | `maxMs` | 200 ms | Hard cap for G1 motion |
 
-Allowed: subtle scale/opacity or small translation on direct user interaction, easing out, with the final state rendered immediately when system animations are disabled.
+Allowed: ripple/pressed feedback plus a subtle fade or small translation on a direct user action, easing out, with the final state rendered immediately when system animations are disabled. G1 buttons use ripple only; no scale animation.
 
 Banned: infinite animation, spring/overshoot, pulse/blink/bounce, shimmer, spinning progress decoration, animated layout dimensions, and movement that is not backed by real work. Real task progress may update only when actual task state changes.
 
@@ -289,5 +292,6 @@ A component/screen is not done until:
 - `res/values/colors.xml` and `res/values-night/colors.xml` — Paper / Charcoal palettes.
 - `res/values/styles.xml` and `res/values-night/styles.xml` — Material Components theme overlays.
 - `res/values/dimens.xml` — shared XML shape/stroke dimensions.
+- G1 component code was statically scanned for hard-coded dp text sizes and raw hex colors outside the theme; no matches were found in the 11 component/theme Kotlin files.
 
 G1 does not migrate existing `AlertDialog.Builder` call sites, restyle screens, or alter MainActivity. Those tasks belong to later groups.
