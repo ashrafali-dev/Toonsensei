@@ -63,10 +63,10 @@ banner, empty/error/loading/skeleton, section header, toolbar), `ToonIcon` exten
 (calendar, pause, play, mic, download, external-link, gallery, crop, translate, history).
 
 - [x] Design brief + full token spec (`docs/redesign/DESIGN.md`)
-- [ ] Tokens implemented (colors both modes, type scale, space 4/8, radius, border, elevation, motion)
-- [ ] Component library + usage rules; state matrix (default/hover?/pressed/focused/disabled/loading)
-- [ ] Compatibility shim: `UiTheme.*` deprecated aliases → `ToonTheme` so old call sites compile
-- [ ] Skeleton/empty/error primitives
+- [x] Tokens implemented (colors both modes, type scale, space 4/8, radius, border, elevation, motion)
+- [x] Component library + usage rules; state matrix (default/hover?/pressed/focused/disabled/loading)
+- [x] Compatibility shim: `UiTheme.*` deprecated aliases → `ToonTheme` so old call sites compile
+- [x] Skeleton/empty/error primitives
 
 ## Group H — Common overlays (first code group)
 
