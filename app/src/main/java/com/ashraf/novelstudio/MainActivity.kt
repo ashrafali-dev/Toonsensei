@@ -3005,6 +3005,7 @@ return t.length>=40?'TXT:'+t:'';
         progressStopBtn?.setImageDrawable(IconDrawable(Ic.CLOSE, p.muted))
         if (::prefetchChip.isInitialized) prefetchChip.setTextColor(p.onInk)
         if (::togglePill.isInitialized) togglePill.setTextColor(p.onInk)
+        if (::pageError.isInitialized) pageError.background = ColorDrawable(p.bg)
         if (::progressBox.isInitialized) progressBox.background = GradientDrawable().apply {
             cornerRadius = dp(ToonTheme.Radius.card).toFloat()
             setColor(p.surface)
@@ -3594,6 +3595,54 @@ return t.length>=40?'TXT:'+t:'';
         }
     }
 
+    private lateinit var pageError: View
+    private var pageErrorAction: (() -> Unit)? = null
+
+    /** Paper & Seal failed-page state: mascot, reason, Retry. Shown by NovelClient.onReceivedError. */
+    private fun pageErrorBlock(): View {
+        val c = UiTheme.palette
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(c.bg)
+            visibility = View.GONE
+            setPadding(dp(28), dp(28), dp(28), dp(28))
+        }
+        box.addView(MascotView(this, 96), LinearLayout.LayoutParams(dp(96), dp(96)))
+        val title = TextView(this).apply {
+            text = "Couldn't open this page"
+            textSize = 17f
+            typeface = boldMedium
+            setTextColor(c.title)
+            gravity = Gravity.CENTER
+            setPadding(0, dp(12), 0, dp(4))
+        }
+        val body = TextView(this).apply {
+            text = "Check the connection and try again."
+            textSize = ToonTheme.Type.label
+            setTextColor(c.muted)
+            gravity = Gravity.CENTER
+        }
+        box.addView(title)
+        box.addView(body)
+        val retry = Toon.buttonPrimary(this, c, "Retry") { pageErrorAction?.invoke() }
+        box.addView(retry, LinearLayout.LayoutParams(dp(160), dp(48)).also { it.topMargin = dp(20); it.gravity = Gravity.CENTER_HORIZONTAL })
+        return box
+    }
+
+    private fun showPageError(desc: String, retry: () -> Unit) {
+        if (!::pageError.isInitialized) return
+        pageErrorAction = retry
+        val body = (pageError as? LinearLayout)?.getChildAt(2) as? TextView
+        body?.text = if (desc.isBlank()) "Check the connection and try again." else desc
+        pageError.visibility = View.VISIBLE
+        pageError.bringToFront()
+    }
+
+    private fun hidePageError() {
+        if (::pageError.isInitialized) pageError.visibility = View.GONE
+    }
+
     private fun hideSnack() {
         if (!::snackView.isInitialized) return
         snackView.animate().alpha(0f).translationY(dp(10).toFloat()).setDuration(170)
@@ -3643,8 +3692,18 @@ return t.length>=40?'TXT:'+t:'';
                 override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean =
                     handleRendererGone(detail)
 
+                override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
+                    super.onReceivedError(view, request, error)
+                    if (view !== novelWv || request?.isForMainFrame != true) return
+                    val desc = error?.description?.toString().orEmpty()
+                    val bad = error ?: return
+                    if (bad.errorCode == android.webkit.WebViewClient.ERROR_UNSUPPORTED_SCHEME) return
+                    showPageError(desc.ifBlank { "Check the connection and try again." }) { hidePageError(); view.loadUrl(request.url.toString()) }
+                }
+
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    if (view === novelWv) hidePageError()
                     if (!prefetchLoading || url.isNullOrBlank()) return
                     val token = prefetchToken
                     if (prefetchWtrSpaPending) {
@@ -4137,6 +4196,8 @@ return t.length>=40?'TXT:'+t:'';
                 visibility = View.GONE
                 setOnClickListener { showRescanSelector() }
             }
+            pageError = pageErrorBlock()
+            addView(pageError, FrameLayout.LayoutParams(MP, MP).also { it.topMargin = dp(56) })
             addView(reOcrBtn, FrameLayout.LayoutParams(dp(42), dp(42), Gravity.BOTTOM or Gravity.END).also {
                 it.setMargins(0, 0, dp(12), dp(134))
             })
@@ -4270,19 +4331,18 @@ return t.length>=40?'TXT:'+t:'';
         dockWrap.addOnLayoutChangeListener(barSizeWatcher)
 
         snackView = TextView(this).apply {
-            textSize = 13f
+            textSize = ToonTheme.Type.caption
             typeface = medium
-            setTextColor(UiTheme.text)
+            setTextColor(UiTheme.palette.onInk)
             maxWidth = dp(330)
             setPadding(dp(18), dp(12), dp(18), dp(12))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(0xF2292D3F.toInt(), 0xF2181B28.toInt())
-            ).apply {
-                cornerRadius = dp(22).toFloat()
-                setStroke(dp(1), 0x38FFFFFF)
+            background = GradientDrawable().apply {
+                cornerRadius = dp(ToonTheme.Radius.field).toFloat()
+                setColor(UiTheme.palette.ink)
             }
-            elevation = dp(16).toFloat()
+            contentDescription = "Message"
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+            elevation = dp(6).toFloat()
             visibility = View.GONE
             setOnClickListener { hideSnack() }
         }
