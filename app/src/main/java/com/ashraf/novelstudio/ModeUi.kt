@@ -386,7 +386,7 @@ class ModeSwitchOverlay(ctx: Context) : View(ctx) {
 
     private fun drawNovel(c: Canvas, col: Int, dl: Float, dt: Float, dw: Float, dh: Float) {
         rect.set(dl, dt, dl + dw, dt + dh)
-        p.color = 0x10FFFFFF
+        p.color = ToonTheme.withAlpha(UiTheme.palette.title, 0x0F)
         c.drawRoundRect(rect, 9f * dens, 9f * dens, p)
         st.color = col
         st.strokeWidth = 2.2f * dens
@@ -427,9 +427,9 @@ class ModeSwitchOverlay(ctx: Context) : View(ctx) {
         val beamY = dt + dh * smooth
 
         rect.set(dl, dt, dl + dw, dt + dh)
-        p.color = 0x0CFFFFFF
+        p.color = ToonTheme.withAlpha(UiTheme.palette.title, 0x0A)
         c.drawRoundRect(rect, 9f * dens, 9f * dens, p)
-        st.color = 0x40FFFFFF
+        st.color = ToonTheme.withAlpha(UiTheme.palette.title, 0x40)
         st.strokeWidth = 2f * dens
         c.drawRoundRect(rect, 9f * dens, 9f * dens, st)
 

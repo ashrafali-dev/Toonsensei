@@ -389,13 +389,9 @@ class ExtractButton(ctx: Context) : View(ctx) {
     private val dens = ctx.resources.displayMetrics.density
     private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
     private val disc = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val ringBg = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 3f * dens; color = 0x2EFFFFFF }
-    private val ringFg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = 3f * dens; strokeCap = Paint.Cap.ROUND; color = Color.WHITE
-    }
+    private val ringBg = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 3f * dens; color = UiTheme.stroke }
     private val badge = Paint(Paint.ANTI_ALIAS_FLAG)
     private val bolt = IconDrawable(Ic.BOLT, Color.WHITE)
-    private val oval = RectF()
     private var rot = 0f
 
     /** 0 = Novel, 1 = Scan, 2 = Live. Tints the disc and the idle ticks (see [ModeUi]). */

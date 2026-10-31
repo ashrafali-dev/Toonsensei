@@ -33,6 +33,8 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -3009,6 +3011,11 @@ return t.length>=40?'TXT:'+t:'';
         if (::prefetchChip.isInitialized) prefetchChip.setTextColor(p.onInk)
         if (::togglePill.isInitialized) togglePill.setTextColor(p.onInk)
         if (::pageError.isInitialized) pageError.background = ColorDrawable(p.bg)
+        snackAnchor?.background = GradientDrawable().apply {
+            cornerRadius = dp(ToonTheme.Radius.field).toFloat()
+            setColor(p.ink)
+        }
+        (snackAnchor as? TextView)?.setTextColor(p.onInk)
         if (::progressBox.isInitialized) progressBox.background = GradientDrawable().apply {
             cornerRadius = dp(ToonTheme.Radius.card).toFloat()
             setColor(p.surface)
@@ -3023,6 +3030,8 @@ return t.length>=40?'TXT:'+t:'';
     }
     private lateinit var snackView: TextView
     private var snackHide: Runnable? = null
+    /** Copy of the snack view, kept so the bottom margin can follow the on-screen keyboard. */
+    private var snackAnchor: View? = null
     private var progressShown = false
     private var pulse: ValueAnimator? = null
 
@@ -4390,6 +4399,7 @@ return t.length>=40?'TXT:'+t:'';
             onMode = { i -> selectMode(i) }
             currentMode = { currentModeIndex() }
         }
+        val sn = snackView
         val root = FrameLayout(this).apply {
             background = appBackground()
             addView(main, FrameLayout.LayoutParams(MP, MP))
@@ -4398,9 +4408,27 @@ return t.length>=40?'TXT:'+t:'';
             addView(modeOverlay, FrameLayout.LayoutParams(dp(230), dp(230), Gravity.CENTER))
             addView(floatBoltHost, FrameLayout.LayoutParams(dp(60), dp(60), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).also { it.bottomMargin = dp(20) })
             addView(snackView, FrameLayout.LayoutParams(WC, WC, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).also { it.bottomMargin = dp(106) })
+            snackAnchor = sn
             addView(tourOverlay, FrameLayout.LayoutParams(MP, MP))
         }
         setContentView(root)
+        // Keep the floating message above the keyboard: the root gets an inset listener instead of a
+        // fixed 106 dp lift, which used to hide it behind the IME during translation.
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val ime = if (Build.VERSION.SDK_INT >= 30) insets.getInsets(WindowInsetsCompat.Type.ime()).bottom else 0
+            val nav = if (Build.VERSION.SDK_INT >= 30) insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom else 0
+            snackAnchor?.let { v ->
+                (v.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+                    val target = if (ime > 0) ime + dp(12) else dp(106) + nav
+                    if (lp.bottomMargin != target) {
+                        lp.bottomMargin = target
+                        v.layoutParams = lp
+                    }
+                }
+            }
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
         handler.post(scanIndicatorRunnable)
         installManualExtractHost()
 
@@ -5140,6 +5168,7 @@ return t.length>=40?'TXT:'+t:'';
         val cardH = (colW * 1.34f).toInt()
 
         lateinit var dialog: Dialog
+        val sn = snackView
         val root = FrameLayout(this).apply { setBackgroundColor(0xEB07080D.toInt()) }
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
 
