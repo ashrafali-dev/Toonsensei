@@ -74,30 +74,30 @@ Branch `ui/group-h-overlays`.
 
 | # | Screen | Source | Prio | Design | Impl | Audit | Polish |
 |---|---|---|---|---|---|---|---|
-| H01 | Sheet frame (handle, title, close, drag-dismiss, safe-area) | `Sheets.create` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H02 | Dialog frame (centre, title/message/actions, destructive variant) | `AlertDialog.Builder` ×36 | P0 | [ ] | [ ] | [ ] | [ ] |
-| H03 | Action list sheet (grouped rows, chevrons, toggles, badges) | `listDialog` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H04 | Searchable list sheet | `searchListDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H05 | Confirm dialog (delete novel / chapter / model) | `novelActions`, `chapterList`, `inpaintDialog` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H06 | Input dialog (bookmark name, rename novel) | `renameNovel`, `saveBookmark` flow | P1 | [ ] | [ ] | [ ] | [ ] |
-| H07 | Prompt editor (multi-line, Save / Reset / Cancel) | `editPrompt`/`editScanPrompt`/`editRealtimePrompt` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H08 | Numeric / settings dialog (send-hold ms, scan direction) | `editSendHold`, `scanDirectionDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H09 | Snackbar (single line, action, queue, error tint) | `showSnack`/`toast`/`hideSnack` | P0 | [ ] | [ ] | [ ] | [ ] |
+| H01 | Sheet frame (handle, title, close, drag-dismiss, safe-area) | `Sheets.create` | P0 | [x]| [x]| [x]| [x]|
+| H02 | Dialog frame (centre, title/message/actions, destructive variant) | `AlertDialog.Builder` ×36 | P0 | [x]| [x]| [x]| [x]|
+| H03 | Action list sheet (grouped rows, chevrons, toggles, badges) | `listDialog` | P0 | [x]| [x]| [x]| [x]|
+| H04 | Searchable list sheet | `searchListDialog` | P1 | [x]| [x]| [x]| [x]|
+| H05 | Confirm dialog (delete novel / chapter / model) | `novelActions`, `chapterList`, `inpaintDialog` | P0 | [x]| [x]| [x]| [x]|
+| H06 | Input dialog (bookmark name, rename novel) | `renameNovel`, `saveBookmark` flow | P1 | [x]| [x]| [x]| [x]|
+| H07 | Prompt editor (multi-line, Save / Reset / Cancel) | `editPrompt`/`editScanPrompt`/`editRealtimePrompt` | P1 | [x]| [x]| [x]| [x]|
+| H08 | Numeric / settings dialog (send-hold ms, scan direction) | `editSendHold`, `scanDirectionDialog` | P1 | [x]| [x]| [x]| [x]|
+| H09 | Snackbar (single line, action, queue, error tint) | `showSnack`/`toast`/`hideSnack` | P0 | [x]| [x]| [x]| [x]|
 | H10 | Banner (inline notice, amber warn/red error/blue info, dismiss) | HTML `Notice.html` — new | P1 | [ ] | [ ] | [ ] | [ ] |
-| H11 | Bottom sheet: reading mode | `showModeSheet` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H12 | Bottom sheet: menu (mode-aware groups, advanced fold) | `menu()` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H13 | Bottom sheet: language (first-run + change) | `showLanguageSheet` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H14 | Bottom sheet: OCR engine picker | `ocrModelsDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H15 | Bottom sheet: chatbot add / login / provider failed | `addBotDialog`, `showProviderFailedDialog`, `showChatLoginPopup` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H16 | Bottom sheet: tabs grid / tab options / history | `showTabGrid`, `showTabOptions`, `browserHistoryDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H17 | Bottom sheet: glossary (list / confirm found names / add) | `glossaryDialog`, `glossaryInput`, `chapterGlossaryDialog`, `Glossary*.html` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H18 | Bottom sheet: site settings & ad-block rules | `siteRulesDialog`, `siteRuleEditor`, `adblockRulesDialog` | P2 | [ ] | [ ] | [ ] | [ ] |
-| H19 | Bottom sheet: model download (detector / mask) | `detectorDialog`, `segModelDialog` | P2 | [ ] | [ ] | [ ] | [ ] |
+| H11 | Bottom sheet: reading mode | `showModeSheet` | P0 | [x]| [x]| [x]| [x]|
+| H12 | Bottom sheet: menu (mode-aware groups, advanced fold) | `menu()` | P0 | [x]| [x]| [ ]| [ ]|
+| H13 | Bottom sheet: language (first-run + change) | `showLanguageSheet` | P0 | [x]| [x]| [x]| [x]|
+| H14 | Bottom sheet: OCR engine picker | `ocrModelsDialog` | P1 | [x]| [x]| [x]| [x]|
+| H15 | Bottom sheet: chatbot add / login / provider failed | `addBotDialog`, `showProviderFailedDialog`, `showChatLoginPopup` | P1 | [x]| [x]| [x]| [x]|
+| H16 | Bottom sheet: tabs grid / tab options / history | `showTabGrid`, `showTabOptions`, `browserHistoryDialog` | P1 | [x]| [x]| [ ]| [ ]|
+| H17 | Bottom sheet: glossary (list / confirm found names / add) | `glossaryDialog`, `glossaryInput`, `chapterGlossaryDialog`, `Glossary*.html` | P1 | [x]| [x]| [x]| [x]|
+| H18 | Bottom sheet: site settings & ad-block rules | `siteRulesDialog`, `siteRuleEditor`, `adblockRulesDialog` | P2 | [x]| [x]| [x]| [x]|
+| H19 | Bottom sheet: model download (detector / mask) | `detectorDialog`, `segModelDialog` | P2 | [x]| [x]| [x]| [x]|
 | H20 | Re-scan selector overlay (crop frame, six-dot handle, “Read this area”) | `showRescanSelector` + `Rescan.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| H21 | Link context menu | `showLinkMenu`, `GoogleMenu.html` | P2 | [ ] | [ ] | [ ] | [ ] |
-| H22 | Update notice / community chooser / early tip | `showUpdateNotice`, `showCommunityChooser`, `maybeShowEarlyTip` | P2 | [ ] | [ ] | [ ] | [ ] |
+| H21 | Link context menu | `showLinkMenu`, `GoogleMenu.html` | P2 | [x]| [x]| [x]| [x]|
+| H22 | Update notice / community chooser / early tip | `showUpdateNotice`, `showCommunityChooser`, `maybeShowEarlyTip` | P2 | [x]| [x]| [x]| [x]|
 | H23 | Activity tray (task list popover) | `ActivityChip` + `Tray.html` | P1 | [ ] | [ ] | [ ] | [ ] |
-| H24 | Tour overlay (coach marks) | `Tour.kt` | P2 | [ ] | [ ] | [ ] | [ ] |
+| H24 | Tour overlay (coach marks) | `Tour.kt` | P2 | [x]| [x]| [x]| [x]|
 
 ## Group I — States
 
@@ -105,14 +105,14 @@ Branch `ui/group-i-states`.
 
 | # | State screen | Where | Prio | Design | Impl | Audit | Polish |
 |---|---|---|---|---|---|---|---|
-| I01 | Page loading (2 dp bar + progress %) | `BookwormProgress`, `showNavLoading`, `applyLayout` top | P0 | [ ] | [ ] | [ ] | [ ] |
+| I01 | Page loading (2 dp bar + progress %) | `BookwormProgress`, `showNavLoading`, `applyLayout` top | P0 | [x]| [x]| [ ]| [ ]|
 | I02 | Slow-connection banner | new, `Loading.html` “Slow” | P1 | [ ] | [ ] | [ ] | [ ] |
-| I03 | Page failed (mascot, message, Retry) | `showReaderFallback`, `onReceivedError` paths | P0 | [ ] | [ ] | [ ] | [ ] |
+| I03 | Page failed (mascot, message, Retry) | `showReaderFallback`, `onReceivedError` paths | P0 | [x]| [x]| [x]| [x]|
 | I04 | Offline state | new | P1 | [ ] | [ ] | [ ] | [ ] |
-| I05 | Skeleton loaders (home list, library, tabs) | new — `Loading.html` | P1 | [ ] | [ ] | [ ] | [ ] |
-| I06 | Empty: library | `libraryNovels` (“Library is empty…toast”) | P0 | [ ] | [ ] | [ ] | [ ] |
-| I07 | Empty: bookmarks | `bookmarkList` toast | P1 | [ ] | [ ] | [ ] | [ ] |
-| I08 | Empty: search / tabs / history | `showTabGrid`, `browserHistoryDialog` | P2 | [ ] | [ ] | [ ] | [ ] |
+| I05 | Skeleton loaders (home list, library, tabs) | new — `Loading.html` | P1 | [x]| [ ]| [ ]| [ ]|
+| I06 | Empty: library | `libraryNovels` (“Library is empty…toast”) | P0 | [x]| [x]| [x]| [x]|
+| I07 | Empty: bookmarks | `bookmarkList` toast | P1 | [x]| [x]| [x]| [x]|
+| I08 | Empty: search / tabs / history | `showTabGrid`, `browserHistoryDialog` | P2 | [x]| [x]| [x]| [x]|
 | I09 | Empty: glossary | `glossaryDialog` | P2 | [ ] | [ ] | [ ] | [ ] |
 | I10 | Translation progress card (stages, ring, stop) | `progressBox`, `ExtractButton` ring, `ActivityChip` dots | P0 | [ ] | [ ] | [ ] | [ ] |
 | I11 | Permission states (overlay, storage/export, notifications) | `checkOverlay`, export SAF | P1 | [ ] | [ ] | [ ] | [ ] |
@@ -125,11 +125,11 @@ Branch `ui/group-a-navigation-redesign`.
 | # | Screen | Source | Prio | Design | Impl | Audit | Polish |
 |---|---|---|---|---|---|---|---|
 | A01 | Cold start / splash (mascot, wordmark) | new — `Splash.html` | P1 | [ ] | [ ] | [ ] | [ ] |
-| A02 | Home (4 mode entry chips, recent, sites, search bar) | `Home.kt` `render()` | P0 | [ ] | [ ] | [ ] | [ ] |
-| A03 | Home empty/first-run (site grid, welcome) | `HomeView.welcome`, `grid` | P0 | [ ] | [ ] | [ ] | [ ] |
+| A02 | Home (4 mode entry chips, recent, sites, search bar) | `Home.kt` `render()` | P0 | [x]| [x]| [x]| [x]|
+| A03 | Home empty/first-run (site grid, welcome) | `HomeView.welcome`, `grid` | P0 | [x]| [x]| [x]| [x]|
 | A04 | Home continue-reading hero + recent rows | `HomeView.hero`, `recentRow` | P1 | [ ] | [ ] | [ ] | [ ] |
-| A05 | Bottom nav (Library · Menu) | new — `Main.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| A06 | Reader top bar (back, URL pill, reload, tabs, more) | `chromeTopView` build | P0 | [ ] | [ ] | [ ] | [ ] |
+| A05 | Bottom nav (Library · Menu) | new — `Main.html` | P0 | [x]| [x]| [x]| [x]|
+| A06 | Reader top bar (back, URL pill, reload, tabs, more) | `chromeTopView` build | P0 | [x]| [x]| [x]| [x]|
 | A07 | Site shortcut chips rail | `buildSiteShortcuts`, `chip()` | P1 | [ ] | [ ] | [ ] | [ ] |
 | A08 | Chatbot strip (bot chips, add, login) | `buildStrip`, `botChip()` | P1 | [ ] | [ ] | [ ] | [ ] |
 | A09 | Hub buttons (Taihon / LNReader) | `Hub.kt`, `hubBar()` | P1 | [ ] | [ ] | [ ] | [ ] |
@@ -141,11 +141,11 @@ Branch `ui/group-b-novel-reader-redesign`.
 
 | # | Screen | Source | Prio | Design | Impl | Audit | Polish |
 |---|---|---|---|---|---|---|---|
-| B01 | Dock bar (mode pill, prev, extract, next, menu, chatbot ring) | `applyLayout` dock, `Reader.html` | P0 | [ ] | [ ] | [ ] | [ ] |
+| B01 | Dock bar (mode pill, prev, extract, next, menu, chatbot ring) | `applyLayout` dock, `Reader.html` | P0 | [x]| [x]| [x]| [x]|
 | B02 | Extract button (bolt, 24-tick ring, activity dot, states) | `ExtractButton` | P0 | [ ] | [ ] | [ ] | [ ] |
-| B03 | Mode capsule → segmented mode pill with label | `ModeCapsule`, `refreshModeChip` | P0 | [ ] | [ ] | [ ] | [ ] |
+| B03 | Mode capsule → segmented mode pill with label | `ModeCapsule`, `refreshModeChip` | P0 | [x]| [x]| [x]| [x]|
 | B04 | Immersive reading (bars hidden, floating bolt) | `setBarsHidden`, `Working.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| B05 | Offline reader (chapters, TOC, font size, 3 themes) | `ReaderActivity.kt` | P0 | [ ] | [ ] | [ ] | [ ] |
+| B05 | Offline reader (chapters, TOC, font size, 3 themes) | `ReaderActivity.kt` | P0 | [x]| [x]| [ ]| [ ]|
 | B06 | Reader font/theme sheet (reader tray) | new — `Appearance.html` | P1 | [ ] | [ ] | [ ] | [ ] |
 | B07 | Bookmark save + list | `saveBookmark`, `bookmarkList` | P1 | [ ] | [ ] | [ ] | [ ] |
 | B08 | Split view (page | chatbot) + pane size cycle | `setMode`, `applyLayout`, `Cycle.html` | P1 | [ ] | [ ] | [ ] | [ ] |
@@ -199,12 +199,12 @@ Branch `ui/group-f-library-search-redesign`.
 
 | # | Screen | Source | Prio | Design | Impl | Audit | Polish |
 |---|---|---|---|---|---|---|---|
-| F01 | Library home (novels list, covers, chapter count) | `libraryNovels` | P0 | [ ] | [ ] | [ ] | [ ] |
-| F02 | Novel actions (chapter list / export / rename / delete) | `novelActions` | P0 | [ ] | [ ] | [ ] | [ ] |
-| F03 | Chapter list (long-press delete) | `chapterList` | P0 | [ ] | [ ] | [ ] | [ ] |
-| F04 | Bookmarks list | `bookmarkList` | P1 | [ ] | [ ] | [ ] | [ ] |
-| F05 | Browser history | `browserHistoryDialog` | P2 | [ ] | [ ] | [ ] | [ ] |
-| F06 | Tabs grid (search, thumbnails, close) | `showTabGrid`, `TabsGrid.html` | P1 | [ ] | [ ] | [ ] | [ ] |
+| F01 | Library home (novels list, covers, chapter count) | `libraryNovels` | P0 | [x]| [x]| [x]| [x]|
+| F02 | Novel actions (chapter list / export / rename / delete) | `novelActions` | P0 | [x]| [x]| [x]| [x]|
+| F03 | Chapter list (long-press delete) | `chapterList` | P0 | [x]| [x]| [x]| [x]|
+| F04 | Bookmarks list | `bookmarkList` | P1 | [x]| [x]| [x]| [x]|
+| F05 | Browser history | `browserHistoryDialog` | P2 | [x]| [x]| [x]| [x]|
+| F06 | Tabs grid (search, thumbnails, close) | `showTabGrid`, `TabsGrid.html` | P1 | [x]| [x]| [x]| [x]|
 | F07 | Tab options (close others / all, reload) | `showTabOptions`, `TabsSheet.html` | P2 | [ ] | [ ] | [ ] | [ ] |
 | F08 | Home search bar states (URL vs query, clear, go) | `HomeView.buildSearchBar` | P1 | [ ] | [ ] | [ ] | [ ] |
 | F09 | Export flow (SAF, success/fail snack) | `exportAll`, `onActivityResult` | P2 | [ ] | [ ] | [ ] | [ ] |
@@ -215,9 +215,9 @@ Branch `ui/group-g-settings-redesign`.
 
 | # | Screen | Source | Prio | Design | Impl | Audit | Polish |
 |---|---|---|---|---|---|---|---|
-| G01 | Settings / menu home (mode-aware groups) | `menu()` daily/advanced | P0 | [ ] | [ ] | [ ] | [ ] |
-| G02 | Reading mode sheet (4 modes, description each) | `showModeSheet`, `ModeSheet.html` | P0 | [ ] | [ ] | [ ] | [ ] |
-| G03 | Language sheet (source/target, download font) | `showLanguageSheet`, `downloadLanguageFont` | P0 | [ ] | [ ] | [ ] | [ ] |
+| G01 | Settings / menu home (mode-aware groups) | `menu()` daily/advanced | P0 | [x]| [x]| [x]| [x]|
+| G02 | Reading mode sheet (4 modes, description each) | `showModeSheet`, `ModeSheet.html` | P0 | [x]| [x]| [x]| [x]|
+| G03 | Language sheet (source/target, download font) | `showLanguageSheet`, `downloadLanguageFont` | P0 | [x]| [x]| [x]| [x]|
 | G04 | Appearance (theme Paper/Charcoal/Custom, accent, text spacing) | `applyDark`, `darkMode`, `Appearance.html` | P0 | [ ] | [ ] | [ ] | [ ] |
 | G05 | OCR settings (engine, language, scan dir, rescan, debug) | `chooseOcrEngine`, `scanDirectionDialog` | P1 | [ ] | [ ] | [ ] | [ ] |
 | G06 | Translation settings (chatbot, prompt, glossary, batch, hold) | `addBotDialog`, prompts, `editSendHold` | P1 | [ ] | [ ] | [ ] | [ ] |
