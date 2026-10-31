@@ -127,8 +127,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
     private var riseIndex = 0
 
     private val palette = intArrayOf(
-        0xFF7F77DD.toInt(), 0xFF1D9E75.toInt(), 0xFFD4537E.toInt(), 0xFFBA7517.toInt(),
-        0xFF378ADD.toInt(), 0xFF639922.toInt(), 0xFFD85A30.toInt(), 0xFF534AB7.toInt()
+        UiTheme.accent, UiTheme.ok, UiTheme.surfaceAlt, UiTheme.dim
     )
 
     init {
@@ -199,10 +198,11 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             })
         }
         val go = ImageView(ctx).apply {
-            setImageDrawable(IconDrawable(Ic.FORWARD, Color.WHITE))
+            setImageDrawable(IconDrawable(Ic.FORWARD, UiTheme.onAccent))
             setPadding(ctx.dpi(11), ctx.dpi(11), ctx.dpi(11), ctx.dpi(11))
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(UiTheme.accentA, UiTheme.accentB)).apply {
+            background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
+                setColor(UiTheme.accent)
             }
             isClickable = true
             contentDescription = "Go"
@@ -213,7 +213,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(ctx.dpi(16), 0, ctx.dpi(6), 0)
             background = Glass.solid(ctx, UiTheme.sheet, 27, UiTheme.stroke)
-            elevation = ctx.dpf(10)
+            elevation = 0f
             addView(searchIcon, LinearLayout.LayoutParams(ctx.dpi(20), ctx.dpi(20)).also { it.marginEnd = ctx.dpi(10) })
             addView(input, LinearLayout.LayoutParams(0, wc, 1f))
             addView(go, LinearLayout.LayoutParams(ctx.dpi(42), ctx.dpi(42)))
@@ -281,10 +281,11 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
         val size = ctx.dpi(sizeDp)
         val frame = FrameLayout(ctx)
         val base = colorFor(site.name)
-        frame.background = GradientDrawable(
-            GradientDrawable.Orientation.TL_BR,
-            intArrayOf(base, ModeUi.lerp(base, Color.BLACK, 0.3f))
-        ).apply { cornerRadius = ctx.dpf(radiusDp) }
+        frame.background = GradientDrawable().apply {
+            setColor(base)
+            cornerRadius = ctx.dpf(radiusDp)
+            setStroke(ctx.dpi(1), UiTheme.strokeSoft)
+        }
         val letter = TextView(ctx).apply {
             text = site.name.take(1).uppercase()
             setTextColor(Color.WHITE)
@@ -306,7 +307,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             Favicons.load(ctx, host) { bmp ->
                 if (bmp != null && mine == token) {
                     frame.background = GradientDrawable().apply {
-                        setColor(0xFFF4F6FB.toInt())
+                        setColor(UiTheme.sheet)
                         cornerRadius = ctx.dpf(radiusDp)
                     }
                     img.setImageBitmap(bmp)
@@ -330,7 +331,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
         val menu = ImageView(ctx).apply {
             setImageDrawable(IconDrawable(Ic.DOTS, UiTheme.iconIdle))
             setPadding(ctx.dpi(10), ctx.dpi(10), ctx.dpi(10), ctx.dpi(10))
-            background = Glass.solid(ctx, 0x14FFFFFF, 20, UiTheme.strokeSoft)
+            background = Glass.solid(ctx, UiTheme.sheet, 20, UiTheme.strokeSoft)
             contentDescription = "Menu"
         }
         pressable(menu) { onMenu() }
@@ -437,10 +438,11 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             typeface = bold
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(base, ModeUi.lerp(base, Color.BLACK, 0.3f))
-            ).apply { cornerRadius = ctx.dpf(radiusDp) }
+            background = GradientDrawable().apply {
+                setColor(base)
+                cornerRadius = ctx.dpf(radiusDp)
+                setStroke(ctx.dpi(1), UiTheme.strokeSoft)
+            }
             layoutParams = LinearLayout.LayoutParams(ctx.dpi(wDp), ctx.dpi(hDp))
         }
     }
@@ -477,10 +479,10 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             text = "Continue  \u203A"
             textSize = 13f
             typeface = bold
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.onAccent)
             setPadding(ctx.dpi(14), ctx.dpi(7), ctx.dpi(14), ctx.dpi(7))
             background = GradientDrawable().apply {
-                setColor(base)
+                setColor(UiTheme.accent)
                 cornerRadius = ctx.dpf(18)
             }
         }
@@ -545,9 +547,9 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             textSize = 15f
             typeface = bold
             gravity = Gravity.CENTER
-            setTextColor(if (primary) Color.WHITE else UiTheme.text)
+            setTextColor(if (primary) UiTheme.onAccent else UiTheme.text)
             background = if (primary)
-                GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(UiTheme.accentA, UiTheme.accentB)).apply { cornerRadius = ctx.dpf(22) }
+                GradientDrawable().apply { setColor(UiTheme.accent); cornerRadius = ctx.dpf(22) }
             else Glass.solid(ctx, UiTheme.sheet, 22, UiTheme.stroke)
         }
         pressable(t) { onHub(part) }
