@@ -3145,31 +3145,25 @@ return t.length>=40?'TXT:'+t:'';
 
     /** Realtime: how long to wait after the text lands in the chat box before pressing Send (0 = instant). */
     private fun editSendHold(onChanged: () -> Unit) {
-        val et = EditText(this).apply {
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            setText(sendHoldPref().toString())
-            hint = "milliseconds (0 = instant)"
-            setSelection(text.length)
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Pause before Send", "0 presses Send as soon as the text is in the box. Higher values wait that long first. Maximum 15000 ms.")
+        val et = Toon.field(this, c, "Milliseconds (0 = instant)")
+        et.inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        et.setText(sendHoldPref().toString())
+        et.setSelection(et.text.length)
+        d.addContent(et)
+        d.addAction("Save") {
+            val v = (et.text.toString().trim().toLongOrNull() ?: 0L).coerceIn(0L, 15_000L)
+            Prefs.put(this, "sendHoldMs", v.toString())
+            Js.sendHoldMs = v
+            onChanged()
+            toast(if (v == 0L) "Send: instant" else "Send after $v ms")
+            d.dismiss()
         }
-        AlertDialog.Builder(this)
-            .setTitle("Pause before Send click (ms)")
-            .setMessage("0 = press Send as soon as the text is in the box and the button is enabled. Higher = wait that long first. Max 15000.")
-            .setView(et)
-            .setPositiveButton("Save") { _, _ ->
-                val v = (et.text.toString().trim().toLongOrNull() ?: 0L).coerceIn(0L, 15_000L)
-                Prefs.put(this, "sendHoldMs", v.toString())
-                Js.sendHoldMs = v
-                onChanged()
-                toast(if (v == 0L) "Send: instant" else "Send after $v ms")
-            }
-            .setNeutralButton("Instant") { _, _ ->
-                Prefs.put(this, "sendHoldMs", "0")
-                Js.sendHoldMs = 0L
-                onChanged()
-                toast("Send: instant")
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        d.addAction("Set instant", style = 1) {
+            Prefs.put(this, "sendHoldMs", "0"); Js.sendHoldMs = 0L; onChanged(); toast("Send: instant"); d.dismiss()
+        }
+        d.show()
     }
 
     private fun forceLoadOn(): Boolean = Prefs.get(this, "forceLoadImages", "0") == "1"
@@ -5980,21 +5974,39 @@ return t.length>=40?'TXT:'+t:'';
         return "Scan direction: $short" + if (ScanMode.askBefore(this)) " (asks each time)" else ""
     }
 
-    /** Menu: pick the scan direction for good and decide whether ⚡ asks before every scan. */
+    /** Paper & Seal radio list: returns the group plus a selection getter. */
+    private fun radioGroup(items: List<String>, selected: Int, onPick: (Int) -> Unit): LinearLayout {
+        val c = UiTheme.palette
+        val group = Toon.group(this, c)
+        var sel = selected
+        val checks = ArrayList<ImageView>()
+        fun restyle() { checks.forEachIndexed { i, v -> v.setImageDrawable(ToonIconDrawable(if (i == sel) ToonIc.CIRCLE_CHECK else ToonIc.CIRCLE_CROSS, if (i == sel) c.accent else c.disabled)) } }
+        items.forEachIndexed { i, label ->
+            val check = ImageView(this).apply { setImageDrawable(ToonIconDrawable(ToonIc.CIRCLE_CHECK, c.accent)) }
+            checks.add(check)
+            val row = Toon.listRow(this, c, label, chevron = false, onClick = { sel = i; restyle(); onPick(i) })
+            row.addView(check, LinearLayout.LayoutParams(dp(20), dp(20)).also { it.marginStart = dp(12) })
+            group.addView(row)
+            if (i != items.lastIndex) group.addView(Toon.divider(this, c))
+        }
+        restyle()
+        return group
+    }
+
+    /** Menu: pick the scan direction for good and decide whether the bolt asks before every scan. */
     private fun scanDirectionDialog(onDone: () -> Unit) {
         val dirs = ScanDirection.values()
         var sel = dirs.indexOf(ScanMode.direction(this)).coerceAtLeast(0)
-        AlertDialog.Builder(this)
-            .setTitle("Scanning direction")
-            .setSingleChoiceItems(dirs.map { it.label }.toTypedArray(), sel) { _, which -> sel = which }
-            .setPositiveButton("Save & ask each time") { d, _ ->
-                ScanMode.setDirection(this, dirs[sel]); Prefs.putBool(this, ScanMode.PREF_ASK, true); d.dismiss(); onDone()
-            }
-            .setNeutralButton("Save, don't ask") { d, _ ->
-                ScanMode.setDirection(this, dirs[sel]); Prefs.putBool(this, ScanMode.PREF_ASK, false); d.dismiss(); onDone()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Scanning direction")
+        sheet.shell.addContent(radioGroup(dirs.map { it.label }, sel) { sel = it }, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        sheet.shell.footer.addView(Toon.buttonSecondary(this, c, "Save, don't ask") {
+            ScanMode.setDirection(this, dirs[sel]); Prefs.putBool(this, ScanMode.PREF_ASK, false); sheet.close(); onDone()
+        }, LinearLayout.LayoutParams(0, dp(48), 1f).also { it.marginEnd = dp(8) })
+        sheet.shell.footer.addView(Toon.buttonPrimary(this, c, "Save and ask") {
+            ScanMode.setDirection(this, dirs[sel]); Prefs.putBool(this, ScanMode.PREF_ASK, true); sheet.close(); onDone()
+        }, LinearLayout.LayoutParams(0, dp(48), 1f))
+        sheet.show()
     }
 
     private fun menuRealtimeAutoOcrLabel(): String =
@@ -6027,16 +6039,22 @@ return t.length>=40?'TXT:'+t:'';
             "Google Lens — online; reads text and layout from the image (falls back to ML Kit if it fails)"
         )
         val selected = keys.indexOf(Prefs.get(this, "ocrEngine", "mlkit")).coerceAtLeast(0)
-        AlertDialog.Builder(this)
-            .setTitle("OCR Engine")
-            .setSingleChoiceItems(labels, selected) { dialog, which ->
-                Prefs.put(this, "ocrEngine", keys[which])
-                dialog.dismiss()
-                toast("OCR engine: " + labels[which].substringBefore(" — ") +
-                    (if (keys[which] == "lens") ". Needs internet; the pictures being read are uploaded to Google." else "."))
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "OCR engine")
+        val group = Toon.group(this, c)
+        labels.forEachIndexed { i, label ->
+            val active = i == selected
+            group.addView(Toon.listRow(this, c, label.substringBefore(" — "), valueText = if (active) "Selected" else null,
+                detail = label.substringAfter(" — "), chevron = false, onClick = {
+                    Prefs.put(this, keys[i])
+                    sheet.close()
+                    toast("OCR engine: " + label.substringBefore(" — ") +
+                        (if (keys[i] == "lens") ". Needs internet; images are sent to Google." else "."))
+                }))
+            if (i != labels.lastIndex) group.addView(Toon.divider(this, c))
+        }
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        sheet.show()
     }
 
     private fun ocrModelsDialog() {
@@ -7104,22 +7122,22 @@ return t.length>=40?'TXT:'+t:'';
     private fun askScanOptions(onChosen: () -> Unit) {
         val dirs = ScanDirection.values()
         var sel = dirs.indexOf(ScanMode.direction(this)).coerceAtLeast(0)
-        AlertDialog.Builder(this)
-            .setTitle("How should this chapter be scanned?")
-            .setSingleChoiceItems(dirs.map { it.label }.toTypedArray(), sel) { _, which -> sel = which }
-            .setPositiveButton("Start scan") { d, _ ->
-                ScanMode.setDirection(this, dirs[sel])
-                d.dismiss()
-                onChosen()
-            }
-            .setNeutralButton("Don't ask again") { d, _ ->
-                ScanMode.setDirection(this, dirs[sel])
-                Prefs.putBool(this, ScanMode.PREF_ASK, false)
-                d.dismiss()
-                onChosen()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Scan this chapter")
+        sheet.shell.addContent(TextView(this).apply {
+            text = "Choose how panels are read. You can change this later in Settings."
+            textSize = ToonTheme.Type.caption
+            setTextColor(c.muted)
+            setPadding(dp(16), 0, dp(16), dp(8))
+        })
+        sheet.shell.addContent(radioGroup(dirs.map { it.label }, sel) { sel = it }, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        sheet.shell.footer.addView(Toon.buttonGhost(this, c, "Don't ask again", c.muted) {
+            ScanMode.setDirection(this, dirs[sel]); Prefs.putBool(this, ScanMode.PREF_ASK, false); sheet.close(); onChosen()
+        }, LinearLayout.LayoutParams(0, dp(48), 1f))
+        sheet.shell.footer.addView(Toon.buttonPrimary(this, c, "Start scan") {
+            ScanMode.setDirection(this, dirs[sel]); sheet.close(); onChosen()
+        }, LinearLayout.LayoutParams(0, dp(48), 1f).also { it.marginStart = dp(8) })
+        sheet.show()
     }
 
     private fun startWebModeExtract(
