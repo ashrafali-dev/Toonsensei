@@ -51,6 +51,7 @@ object ToonToast {
             )
             isFocusable = true
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
         val body = ToonComponents.text(
             context,
@@ -71,8 +72,8 @@ object ToonToast {
                 typeface = ToonTheme.Type.mediumTypeface()
                 setTextColor(ink)
                 gravity = Gravity.CENTER
-                minHeight = ToonTheme.dp(context, 48)
-                minWidth = ToonTheme.dp(context, 48)
+                minHeight = ToonTheme.dp(context, ToonTheme.Metrics.minimumTouchDp)
+                minWidth = ToonTheme.dp(context, ToonTheme.Metrics.minimumTouchDp)
                 setPadding(
                     ToonTheme.dp(context, ToonTheme.Space.sm),
                     0,
