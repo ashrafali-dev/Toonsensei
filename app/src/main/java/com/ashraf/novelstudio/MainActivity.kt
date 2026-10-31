@@ -3508,7 +3508,7 @@ return t.length>=40?'TXT:'+t:'';
         if (onLong != null) setOnLongClickListener { onLong(); true }
     }
 
-    /** Segment of the chatbot selector; the active one is filled with the accent gradient. */
+    /** Segment of the chatbot selector; the active one uses the selected accent surface. */
     private fun botChip(label: String, active: Boolean, onClick: () -> Unit, onLong: (() -> Unit)?): TextView = TextView(this).apply {
         text = label
         textSize = 12.5f
@@ -4483,9 +4483,10 @@ return t.length>=40?'TXT:'+t:'';
             text = "Save"
             textSize = 16f
             typeface = boldMedium
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.onAccent)
             gravity = Gravity.CENTER
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(UiTheme.accentA, UiTheme.accentB)).apply {
+            background = GradientDrawable().apply {
+                setColor(UiTheme.accent)
                 cornerRadius = dp(26).toFloat()
             }
             isClickable = true
@@ -5573,10 +5574,11 @@ return t.length>=40?'TXT:'+t:'';
         prefetchChip.visibility = if (show) View.VISIBLE else View.GONE
         val on = Prefs.bool(this, "prefetchNextChapter")
         prefetchChip.text = if (on) "Ahead ON" else "Ahead OFF"
+        prefetchChip.setTextColor(if (on) UiTheme.onAccent else UiTheme.text)
         prefetchChip.background = GradientDrawable().apply {
             cornerRadius = dp(14).toFloat()
-            setColor(if (on) 0xEB2FBF8A.toInt() else 0xD92A2E3F.toInt())
-            setStroke(dp(1), 0x38FFFFFF)
+            setColor(if (on) UiTheme.accent else UiTheme.surfaceAlt)
+            setStroke(dp(1), UiTheme.stroke)
         }
     }
 
