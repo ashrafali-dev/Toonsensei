@@ -65,22 +65,22 @@ class TourOverlay(private val ctx: Context) : FrameLayout(ctx) {
         titleTv.apply {
             textSize = 18f
             typeface = bold
-            setTextColor(UiTheme.text)
+            setTextColor(UiTheme.palette.title)
         }
         bodyTv.apply {
             textSize = 14.5f
-            setTextColor(UiTheme.dim)
-            setLineSpacing(0f, 1.15f)
+            setTextColor(UiTheme.palette.muted)
+            setLineSpacing(0f, 1.3f)
             setPadding(0, ctx.dpi(6), 0, ctx.dpi(14))
         }
         countTv.apply {
             textSize = 12f
-            setTextColor(UiTheme.faint)
+            setTextColor(UiTheme.palette.muted)
         }
         skipBtn.apply {
             text = "Skip tour"
             textSize = 14f
-            setTextColor(UiTheme.dim)
+            setTextColor(UiTheme.palette.muted)
             setPadding(ctx.dpi(10), ctx.dpi(8), ctx.dpi(14), ctx.dpi(8))
             isClickable = true
             setOnClickListener { finish() }
@@ -107,7 +107,11 @@ class TourOverlay(private val ctx: Context) : FrameLayout(ctx) {
         card.apply {
             orientation = LinearLayout.VERTICAL
             setPadding(ctx.dpi(20), ctx.dpi(18), ctx.dpi(16), ctx.dpi(14))
-            background = Glass.solid(ctx, UiTheme.sheet, 22, UiTheme.stroke)
+            background = GradientDrawable().apply {
+                cornerRadius = ctx.dpf(ToonTheme.Radius.sheet)
+                setColor(UiTheme.palette.surface)
+                setStroke(ctx.dpi(1), UiTheme.palette.line)
+            }
             elevation = 12f * dens
             addView(titleTv)
             addView(bodyTv)
