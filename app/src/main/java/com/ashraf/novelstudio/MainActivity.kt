@@ -13,7 +13,6 @@ import android.text.TextWatcher
 import android.view.ViewOutlineProvider
 import android.view.GestureDetector
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -142,7 +141,7 @@ class MainActivity : Activity() {
     private val scanFallbackTries = HashMap<String, Int>()
     // The last chapter whose translation failed; tapping the centre ⚡ again sends exactly this text again.
     private var lastFailedChapter: Chapter? = null
-    private var scanFallbackDialog: AlertDialog? = null
+    private var scanFallbackShown = false
     private val failedRetryRunnable = Runnable { retryFailedChapters() }
 
     private fun scheduleFailedRetry(list: List<Chapter>, delayMs: Long = 15_000L) {
@@ -898,49 +897,61 @@ class MainActivity : Activity() {
     private fun chapterGlossaryDialog() {
         val key = pageKey(novelWv.url.orEmpty())
         val items = ChapterGlossary.list(this, key)
-        val labels = items.map { it.type + ": " + it.source + "" + it.value }
-        val b = AlertDialog.Builder(this)
-            .setTitle("Glossary — this chapter")
-            .setPositiveButton("Add") { _, _ -> chapterGlossaryAdd(key) }
-            .setNegativeButton("Close", null)
-        if (labels.isEmpty()) b.setMessage("Names, places and pronouns saved here are added to the prompt only for this chapter.")
-        else b.setItems(labels.toTypedArray()) { _, i ->
-            AlertDialog.Builder(this)
-                .setMessage("Delete \"" + items[i].source + "\"?")
-                .setPositiveButton("Delete") { _, _ -> ChapterGlossary.remove(this, key, i); chapterGlossaryDialog() }
-                .setNegativeButton("Cancel", null)
-                .show()
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Glossary for this chapter")
+        if (items.isEmpty()) {
+            sheet.shell.addContent(Toon.stateBlock(this, c, "Nothing saved yet",
+                "Names, places and pronouns saved here are added to the prompt for this chapter only."))
+        } else {
+            val group = Toon.group(this, c)
+            items.forEachIndexed { i, it ->
+                val row = Toon.listRow(this, c, it.source, valueText = it.value, detail = it.type, chevron = false)
+                row.setOnLongClickListener {
+                    confirmDelete("Delete \"" + it.source + "\"?") { ChapterGlossary.remove(this, key, i); sheet.close(); chapterGlossaryDialog() }
+                    true
+                }
+                group.addView(row)
+                if (i != items.lastIndex) group.addView(Toon.divider(this, c))
+            }
+            sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
         }
-        b.show()
+        sheet.shell.footer.addView(Toon.buttonPrimary(this, c, "Add term") {
+            sheet.close(); chapterGlossaryAdd(key)
+        }, LinearLayout.LayoutParams(MP, dp(48)))
+        sheet.show()
     }
 
     private fun chapterGlossaryAdd(key: String) {
-        AlertDialog.Builder(this)
-            .setTitle("What are you adding?")
-            .setItems(ChapterGlossary.TYPES.toTypedArray()) { _, ti ->
-                val type = ChapterGlossary.TYPES[ti]
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Add to this chapter")
+        val group = Toon.group(this, c)
+        ChapterGlossary.TYPES.forEachIndexed { i, type ->
+            group.addView(Toon.listRow(this, c, type, icon = ToonIc.EDIT, onClick = {
+                sheet.close()
                 val pronoun = type.startsWith("Pronoun")
-                val col = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(dp(20), dp(8), dp(20), 0)
-                }
-                val src = EditText(this).apply { hint = if (pronoun) "Character name" else "Original text, as it appears"; setSingleLine() }
-                val dst = EditText(this).apply { hint = if (pronoun) "he / she / they" else "Translate as"; setSingleLine() }
-                col.addView(src); col.addView(dst)
-                AlertDialog.Builder(this)
-                    .setTitle(type)
-                    .setView(col)
-                    .setPositiveButton("Save") { _, _ ->
-                        val a = src.text.toString().trim()
-                        val v = dst.text.toString().trim()
-                        if (a.isEmpty() || v.isEmpty()) toast("Fill in both fields")
-                        else { ChapterGlossary.add(this, key, ChapterGlossary.Entry(type, a, v)); toast("Added to this chapter's glossary") }
+                val d = Toon.Dialog(this, c, type, null)
+                val src = Toon.field(this, c, if (pronoun) "Character name" else "Original text as it appears")
+                val dst = Toon.field(this, c, if (pronoun) "he / she / they" else "Translate as")
+                d.addContent(src)
+                d.addContent(dst)
+                d.addAction("Save") {
+                    val a = src.text.toString().trim()
+                    val v = dst.text.toString().trim()
+                    if (a.isEmpty() || v.isEmpty()) toast("Fill in both fields")
+                    else {
+                        ChapterGlossary.add(this, key, ChapterGlossary.Entry(type, a, v))
+                        toast("Added to this chapter's glossary")
+                        d.dismiss()
                         chapterGlossaryDialog()
                     }
-                    .setNegativeButton("Cancel", null)
-                    .show()
-            }
-            .show()
+                }
+                d.addAction("Cancel", style = 1) { d.dismiss() }
+                d.show()
+            }))
+            if (i != ChapterGlossary.TYPES.lastIndex) group.addView(Toon.divider(this, c))
+        }
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        sheet.show()
     }
 
     // ------------------------------------------------------------------ community
@@ -951,13 +962,14 @@ class MainActivity : Activity() {
     }
 
     private fun showCommunityChooser() {
-        AlertDialog.Builder(this)
-            .setTitle("Join the community")
-            .setItems(arrayOf("Telegram group", "Reddit community")) { _, i ->
-                openCommunityLink(if (i == 0) communityTelegram else communityReddit)
-            }
-            .setNegativeButton("Close", null)
-            .show()
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Join the community")
+        val group = Toon.group(this, c)
+        group.addView(Toon.listRow(this, c, "Telegram group", icon = ToonIc.CHAT, onClick = { sheet.close(); openCommunityLink(communityTelegram) }))
+        group.addView(Toon.divider(this, c))
+        group.addView(Toon.listRow(this, c, "Reddit community", icon = ToonIc.GLOBE, onClick = { sheet.close(); openCommunityLink(communityReddit) }))
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        sheet.show()
     }
 
     /** Asked once in the lifetime of the install, never again, whatever the answer. */
@@ -970,12 +982,12 @@ class MainActivity : Activity() {
             return
         }
         Prefs.putBool(this, "communityAsked", true)
-        AlertDialog.Builder(this)
-            .setTitle("Join the Novel Studio community?")
-            .setMessage("Get help, share prompts and glossaries, and hear about updates in our Telegram group and on Reddit.")
-            .setPositiveButton("Join now") { _, _ -> showCommunityChooser() }
-            .setNegativeButton("Later", null)
-            .show()
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Join the ToonSensei community?",
+            "Get help, share prompts and glossaries, and hear about updates in our Telegram group and on Reddit.")
+        d.addAction("Join now") { d.dismiss(); showCommunityChooser() }
+        d.addAction("Later", style = 3) { d.dismiss() }
+        d.show()
     }
 
     // ------------------------------------------------------------------ community update notice
@@ -986,15 +998,13 @@ class MainActivity : Activity() {
             mode = analyticsReadMode(),
             provider = currentBotKey
         )
-        AlertDialog.Builder(this)
-            .setTitle("App Updates")
-            .setMessage(
-                "Please keep an eye on our community for updates. A new update is coming very soon!\n\n" +
-                "Novel Studio is completely free, and its future depends on you. Your feedback helps us improve " +
-                "the app and move it forward. Please share your suggestions with the community."
-            )
-            .setPositiveButton("OK", null)
-            .show()
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "App updates",
+            "Watch our community for release notes — a new update is on the way.\n\n" +
+                "ToonSensei is free and its future depends on you. Feedback and suggestions are welcome in the community.")
+        d.addAction("Join the community") { d.dismiss(); showCommunityChooser() }
+        d.addAction("Close", style = 3) { d.dismiss() }
+        d.show()
     }
 
     private fun requestBubbleRetranslate(src: String, cx: Float, cy: Float, w: Float, h: Float) {
@@ -3236,11 +3246,12 @@ return t.length>=40?'TXT:'+t:'';
         if (shown >= due.size || usageMin < due[shown] || isFinishing) return
         if (!Langs.setupDone(this) || (::tourOverlay.isInitialized && tourOverlay.isRunning())) return
         Prefs.put(this, "tipCount", (shown + 1).toString())
-        AlertDialog.Builder(this)
-            .setTitle("Quick tip")
-            .setMessage("If translation fails, text is not placed on the page, or the reading page keeps running for a long time, close the app completely and open it again. That fixes most stuck states.")
-            .setPositiveButton("Got it", null)
-            .show()
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Quick tip",
+            "If translation fails, text is not placed on the page, or the reader keeps working for a long time, " +
+                "close the app completely and open it again. That fixes most stuck states.")
+        d.addAction("Got it") { d.dismiss() }
+        d.show()
     }
 
     // ---- "reading the page" that never ends: point new users to the search (re-scan) button
@@ -3256,11 +3267,13 @@ return t.length>=40?'TXT:'+t:'';
         if (shown >= 2 || usage > 180) return
         readingSinceMs = now + 600_000L   // not again for 10 minutes
         Prefs.put(this, "ocrTipCount", (shown + 1).toString())
-        AlertDialog.Builder(this)
-            .setTitle("Taking a long time?")
-            .setMessage("If the reading animation keeps running, tap the search button on the right side of the screen and frame the bubble, so the model can find it. Not every text sits in a bubble — sometimes it is plain text on the image.")
-            .setPositiveButton("Got it", null)
-            .show()
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Taking a long time?",
+            "If the reading indicator keeps running, tap the search button on the right and frame the bubble so the model can " +
+                "find it. Not every line sits in a bubble — sometimes it is plain text on the image.")
+        d.addAction("Got it") { d.dismiss() }
+        d.addAction("Not now", style = 3) { d.dismiss() }
+        d.show()
     }
     private val communityTelegram = "https://t.me/c/4373541125/2"
     private val communityReddit = "https://www.reddit.com/r/NovelStudio/s/BWuOYCZSUe"
@@ -6226,44 +6239,35 @@ return t.length>=40?'TXT:'+t:'';
     }
 
     private fun removeBot(i: Int) {
-        AlertDialog.Builder(this)
-            .setMessage("Remove this chatbot from the list?")
-            .setPositiveButton("Delete") { _, _ ->
-                val a = bots()
-                a.remove(i)
-                Prefs.put(this, "bots", a.toString())
-                buildStrip()
-            }
-            .setNegativeButton("No", null)
-            .show()
+        confirmDelete("Remove this chatbot from the list?", "Remove chatbot") {
+            val a = bots()
+            a.remove(i)
+            Prefs.put(this, "bots", a.toString())
+            buildStrip()
+        }
     }
 
     private fun addBotDialog() {
-        val n = EditText(this).apply { hint = "Name" }
-        val u = EditText(this).apply {
-            hint = "https://…"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Add chatbot",
+            "Paste the web address of the chat you use. You will sign in to it in the app.")
+        val n = Toon.field(this, c, "Name (optional)")
+        val u = Toon.field(this, c, "https://…")
+        u.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+        d.addContent(n)
+        d.addContent(u)
+        d.addAction("Add") {
+            var url = u.text.toString().trim()
+            if (url.isEmpty()) { toast("Enter the chatbot address"); return@addAction }
+            if (!url.startsWith("http")) url = "https://$url"
+            val a = bots()
+            a.put(bot(n.text.toString().ifBlank { url }, url))
+            Prefs.put(this, "bots", a.toString())
+            buildStrip()
+            d.dismiss()
         }
-        val l = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(8), dp(16), 0)
-            addView(n)
-            addView(u)
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Add Chatbot")
-            .setView(l)
-            .setPositiveButton("Add") { _, _ ->
-                var url = u.text.toString().trim()
-                if (url.isEmpty()) return@setPositiveButton
-                if (!url.startsWith("http")) url = "https://$url"
-                val a = bots()
-                a.put(bot(n.text.toString().ifBlank { url }, url))
-                Prefs.put(this, "bots", a.toString())
-                buildStrip()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        d.addAction("Cancel", style = 1) { d.dismiss() }
+        d.show()
     }
 
     private fun isChatLoginUrl(uri: Uri): Boolean {
@@ -9260,7 +9264,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
     }
 
     private fun showProviderFailedDialog() {
-        if (isFinishing || scanFallbackDialog?.isShowing == true) return
+        if (isFinishing || scanFallbackShown) return
         val names = ArrayList<String>()
         val urls = ArrayList<String>()
         val a = bots()
@@ -9269,21 +9273,26 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             names.add(o.optString("n", o.optString("u")))
             urls.add(o.getString("u"))
         }
-        scanFallbackDialog = AlertDialog.Builder(this)
-            .setTitle("Translation failed")
-            .setMessage("The AI did not return a usable translation for this chapter. Change the AI provider now. The chapter is sent again automatically in 15 seconds.")
-            .setPositiveButton("Change provider") { _, _ ->
-                AlertDialog.Builder(this)
-                    .setTitle("Choose AI provider")
-                    .setItems(names.toTypedArray()) { _, which -> openBot(urls[which]) }
-                    .show()
-            }
-            .setNeutralButton("Retry now") { _, _ ->
-                handler.removeCallbacks(failedRetryRunnable)
-                retryFailedChapters()
-            }
-            .setNegativeButton("Close", null)
-            .show()
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Translation failed",
+            "The chatbot did not return a usable translation for this chapter. Pick another provider, or retry. " +
+                "The chapter is sent again automatically in 15 seconds.")
+        scanFallbackShown = true
+        d.onDismissHook = { scanFallbackShown = false }
+        d.addAction("Retry now") {
+            handler.removeCallbacks(failedRetryRunnable)
+            scanFallbackShown = false
+            retryFailedChapters()
+            d.dismiss()
+        }
+        d.addAction("Change provider", style = 1) {
+            d.dismiss()
+            val p = Toon.Dialog(this, c, "Choose AI provider", null)
+            names.forEachIndexed { i, n -> p.addAction(n, style = 1) { openBot(urls[i]); p.dismiss() } }
+            p.show()
+        }
+        d.addAction("Close", style = 3) { d.dismiss() }
+        d.show()
     }
 
     /** Opens the next chatbot in the list (wrapping around). Returns its name, or null when there is no other one. */
@@ -10273,19 +10282,20 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                 57 -> {
                     dlg.dismiss()
                     val host = try { Uri.parse(novelWv.url.orEmpty()).host.orEmpty().removePrefix("www.") } catch (_: Exception) { "" }
-                    AlertDialog.Builder(this)
-                        .setTitle("What the app learned")
-                        .setMessage(if (host.isBlank()) "Open a comic page first." else SiteLearner.explain(this, host))
-                        .setPositiveButton("OK", null)
-                        .setNeutralButton("Forget this site") { _, _ ->
-                            try {
-                                val o = org.json.JSONObject(Prefs.get(this, "siteLearn2", "{}"))
-                                o.remove(host)
-                                Prefs.put(this, "siteLearn2", o.toString())
-                                toast("Forgotten — the app will learn this site again")
-                            } catch (_: Exception) {}
-                        }
-                        .show()
+                    val c = UiTheme.palette
+                    val d = Toon.Dialog(this, c, "What the app learned",
+                        if (host.isBlank()) "Open a comic page first." else SiteLearner.explain(this, host))
+                    d.addAction("Close") { d.dismiss() }
+                    if (host.isNotBlank()) d.addAction("Forget this site", style = 2) {
+                        try {
+                            val o = org.json.JSONObject(Prefs.get(this, "siteLearn2", "{}"))
+                            o.remove(host)
+                            Prefs.put(this, "siteLearn2", o.toString())
+                            toast("Forgotten — the app will learn this site again")
+                        } catch (_: Exception) {}
+                        d.dismiss()
+                    }
+                    d.show()
                 }
                 35 -> {
                     dlg.dismiss()
@@ -10835,17 +10845,22 @@ ${rows.take(220).joinToString("\n")}
                 android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE or
                 android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
         }
-        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad / 2, pad, 0); addView(box) }
-        AlertDialog.Builder(this)
-            .setTitle("AdBlock Rules")
-            .setView(ScrollView(this).apply { addView(col) })
-            .setPositiveButton("Save") { _, _ ->
-                val w = AdBlock.setRules(this, box.text.toString())
-                toast(if (w == 0) "Rules saved — reload the page" else "Saved, but $w line(s) were not understood — reload the page")
-            }
-            .setNeutralButton("Clear") { _, _ -> AdBlock.setRules(this, ""); toast("Rules cleared") }
-            .setNegativeButton("Cancel", null)
-            .show()
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Ad-block rules")
+        box.setTextColor(c.title)
+        box.setHintTextColor(c.muted)
+        box.background = GradientDrawable().apply { cornerRadius = dp(ToonTheme.Radius.field).toFloat(); setColor(c.surface); setStroke(dp(1), c.lineStrong) }
+        box.setPadding(dp(14), dp(12), dp(14), dp(12))
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), 0, dp(16), dp(8)); addView(box) }
+        sheet.shell.addContent(col, LinearLayout.LayoutParams(MP, WC))
+        sheet.shell.footer.addView(Toon.buttonGhost(this, c, "Clear") { AdBlock.setRules(this, ""); toast("Rules cleared"); sheet.close() },
+            LinearLayout.LayoutParams(0, dp(48), 1f))
+        sheet.shell.footer.addView(Toon.buttonPrimary(this, c, "Save") {
+            val w = AdBlock.setRules(this, box.text.toString())
+            toast(if (w == 0) "Rules saved — reload the page" else "Saved, but $w line(s) were not understood — reload the page")
+            sheet.close()
+        }, LinearLayout.LayoutParams(0, dp(48), 1f))
+        sheet.show()
     }
 
     private fun siteRulesDialog() {
@@ -10859,52 +10874,63 @@ ${rows.take(220).joinToString("\n")}
                 if (it.content.isNotBlank()) "content configured" else null
             ).joinToString(" • "))
         }
-        AlertDialog.Builder(this)
-            .setTitle("Site Settings")
-            .setItems(labels.toTypedArray()) { _, i ->
-                if (i == 0) siteRuleEditor(null) else siteRuleEditor(rules[i - 1])
-            }
-            .setNegativeButton("Close", null)
-            .show()
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Site settings")
+        val group = Toon.group(this, c)
+        group.addView(Toon.listRow(this, c, "Add new site", icon = ToonIc.PLUS, onClick = { sheet.close(); siteRuleEditor(null) }))
+        rules.forEachIndexed { i, r ->
+            group.addView(Toon.divider(this, c))
+            val detail = listOfNotNull(
+                if (r.compat) "Read full page" else null,
+                if (r.noAds) "Ad blocking off" else null,
+                if (r.content.isNotBlank()) "Content selector set" else null
+            ).joinToString(" • ")
+            group.addView(Toon.listRow(this, c, r.host, detail = detail.ifBlank { null }, onClick = { sheet.close(); siteRuleEditor(rules[i]) }))
+        }
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        sheet.show()
     }
 
     private fun siteRuleEditor(old: SiteRules.Rule?) {
-        val pad = (16 * resources.displayMetrics.density).toInt()
-        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad / 2, pad, 0) }
+        val c = UiTheme.palette
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), 0, dp(16), dp(8))
+        }
         val cur = SiteRules.hostOf(novelWv.url ?: "")
-        val host = EditText(this).apply {
-            hint = "Domain, e.g. example.com"
-            setSingleLine(true)
-            setText(old?.host ?: cur)
-        }
-        val compat = CheckBox(this).apply { text = "Read the full page and extract text (for JS sites)"; isChecked = old?.compat ?: true }
-        val noAds = CheckBox(this).apply { text = "Disable ad blocking on this site"; isChecked = old?.noAds ?: true }
-        fun field(h: String, v: String?) = EditText(this).apply { hint = h; setSingleLine(true); setText(v ?: "") }
-        val content = field("content selector (optional), e.g. #chapter-content", old?.content)
-        val next = field("next selector (optional)", old?.next)
-        val prev = field("prev selector (optional)", old?.prev)
-        listOf<View>(host, compat, noAds, content, next, prev).forEach { col.addView(it) }
-        val sv = ScrollView(this).apply { addView(col) }
+        val host = Toon.field(this, c, "Domain, e.g. example.com")
+        host.setText(old?.host ?: cur)
+        var compat = old?.compat ?: true
+        var noAds = old?.noAds ?: true
+        fun field(h: String, v: String?) = Toon.field(this, c, h).apply { setText(v ?: "") }
+        val content = field("Content selector (optional), e.g. #chapter-content", old?.content)
+        val next = field("Next selector (optional)", old?.next)
+        val prev = field("Previous selector (optional)", old?.prev)
+        fun gap(v: View) = LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(10) }
+        col.addView(host)
+        col.addView(Toon.toggleRow(this, c, "Read the full page", "Extracts text from JavaScript-driven sites.", compat) { compat = it }, gap(host))
+        col.addView(Toon.toggleRow(this, c, "Disable ad blocking here", "Some sites break with blocking on.", noAds) { noAds = it }, gap(host))
+        listOf(content, next, prev).forEach { col.addView(it, gap(host)) }
 
-        val b = AlertDialog.Builder(this)
-            .setTitle(if (old == null) "Add Site" else "${old.host}")
-            .setView(sv)
-            .setPositiveButton("Save") { _, _ ->
-                val h = SiteRules.hostOf(host.text.toString())
-                if (h.isEmpty() || !h.contains('.')) { toast("Enter a valid domain"); return@setPositiveButton }
-                if (old != null && old.host != h) SiteRules.remove(this, old.host)
-                SiteRules.upsert(this, SiteRules.Rule(
-                    h, compat.isChecked, noAds.isChecked,
-                    content.text.toString().trim(), next.text.toString().trim(), prev.text.toString().trim()
-                ))
-                toast("Saved — reload the page and tap ")
-            }
-            .setNegativeButton("Cancel", null)
-        if (old != null) b.setNeutralButton("Delete") { _, _ ->
-            SiteRules.remove(this, old.host)
-            toast("Deleted")
-        }
-        b.show()
+        val sheet = Toon.SheetDialog(this, c, if (old == null) "Add site" else old.host)
+        sheet.shell.addContent(col, LinearLayout.LayoutParams(MP, WC))
+        if (old != null) sheet.shell.footer.addView(Toon.buttonGhost(this, c, "Delete", c.dangerInk) {
+            sheet.close(); SiteRules.remove(this, old.host); toast("Site settings deleted")
+        }, LinearLayout.LayoutParams(0, dp(48), 1f))
+        sheet.shell.footer.addView(Toon.buttonGhost(this, c, "Cancel") { sheet.close() },
+            LinearLayout.LayoutParams(0, dp(48), 1f))
+        sheet.shell.footer.addView(Toon.buttonPrimary(this, c, "Save") {
+            val h = SiteRules.hostOf(host.text.toString())
+            if (h.isEmpty() || !h.contains('.')) { toast("Enter a valid domain"); return@buttonPrimary }
+            if (old != null && old.host != h) SiteRules.remove(this, old.host)
+            SiteRules.upsert(this, SiteRules.Rule(
+                h, compat, noAds,
+                content.text.toString().trim(), next.text.toString().trim(), prev.text.toString().trim()
+            ))
+            toast("Saved — reload the page and try again")
+            sheet.close()
+        }, LinearLayout.LayoutParams(0, dp(48), 1f).also { it.minWidth = dp(96) })
+        sheet.show()
     }
 
     private fun menuGlossaryLabel(): String =
@@ -10921,53 +10947,43 @@ ${rows.take(220).joinToString("\n")}
     }
 
     private fun glossaryDialog() {
-        val opts = arrayOf(
-            "Add a word (English = translation)",
-            "Paste multiple words",
-            "Include glossary in prompt: " + onOff(Prefs.glossaryOn(this)),
-            "Copy full glossary",
-            "Delete all"
-        )
-        AlertDialog.Builder(this)
-            .setTitle("Glossary — ${Glossary.count} entries")
-            .setItems(opts) { _, i ->
-                when (i) {
-                    0 -> glossaryInput(false)
-                    1 -> glossaryInput(true)
-                    2 -> {
-                        Prefs.putBool(this, "noGlossary", Prefs.glossaryOn(this))
-                        toast(if (Prefs.glossaryOn(this)) "Glossary enabled" else "Glossary disabled")
-                    }
-                    3 -> { copy(Glossary.read(this)); toast("Glossary copied") }
-                    4 -> AlertDialog.Builder(this)
-                        .setMessage("The entire glossary will be deleted. Continue?")
-                        .setPositiveButton("Delete") { _, _ -> Glossary.write(this, ""); toast("Deleted") }
-                        .setNegativeButton("Cancel", null)
-                        .show()
-                }
-            }
-            .setNegativeButton("Close", null)
-            .show()
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Glossary — ${Glossary.count} terms")
+        sheet.shell.addContent(Toon.toggleRow(this, c, "Include glossary in prompt", "Terms are added to every translation prompt.",
+            Prefs.glossaryOn(this)) { on ->
+            Prefs.putBool(this, "noGlossary", !on)
+            toast(if (on) "Glossary enabled" else "Glossary disabled")
+        }, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        val group = Toon.group(this, c)
+        fun act(label: String, ic: ToonIc, destructive: Boolean = false, run: () -> Unit) {
+            group.addView(Toon.listRow(this, c, label, icon = ic, destructive = destructive, chevron = false, onClick = { sheet.close(); run() }))
+            group.addView(Toon.divider(this, c))
+        }
+        act("Add a word", ToonIc.PLUS) { glossaryInput(false) }
+        act("Paste several words", ToonIc.TEXT) { glossaryInput(true) }
+        act("Copy full glossary", ToonIc.SAVE) { copy(Glossary.read(this)); toast("Glossary copied") }
+        act("Delete all terms", ToonIc.TRASH, true) {
+            confirmDelete("The entire glossary will be deleted. Continue?", "Delete glossary") { Glossary.write(this, ""); toast("Glossary deleted") }
+        }
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        sheet.show()
     }
 
     private fun glossaryInput(bulk: Boolean) {
-        val et = EditText(this).apply {
-            hint = if (bulk) "dantian | dan tian | 丹田 => dantian\n(one entry per line)" else "young master = young master"
-            if (bulk) { minLines = 8; gravity = Gravity.TOP } else setSingleLine(false)
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, if (bulk) "Paste glossary" else "New word",
+            if (bulk) "One entry per line, e.g. 丹田 => dantian" else "Write original = translation")
+        val et = Toon.field(this, c, if (bulk) "original => translation, one per line" else "original = translation", multiLine = true)
+        d.addContent(et)
+        d.addAction("Add") {
+            val text = et.text.toString()
+            if (text.isBlank()) { toast("Nothing to add") } else { Glossary.append(this, text); toast("Glossary updated"); d.dismiss() }
         }
-        val b = AlertDialog.Builder(this)
-            .setTitle(if (bulk) "Paste" else "New word")
-            .setView(et)
-            .setPositiveButton("Add") { _, _ ->
-                Glossary.append(this, et.text.toString())
-                toast("Added")
-            }
-            .setNegativeButton("Cancel", null)
-        if (bulk) b.setNeutralButton("Replace all") { _, _ ->
-            Glossary.write(this, et.text.toString())
-            toast("Glossary updated")
+        if (bulk) d.addAction("Replace all", style = 1) {
+            Glossary.write(this, et.text.toString()); toast("Glossary replaced"); d.dismiss()
         }
-        b.show()
+        d.addAction("Cancel", style = 3) { d.dismiss() }
+        d.show()
     }
 
     private fun onOff(b: Boolean): String = if (b) "On" else "Off"
@@ -11020,11 +11036,9 @@ ${rows.take(220).joinToString("\n")}
     private fun inpaintDialog() {
         if (WebModeInpainter.isDownloading()) { toast("Still downloading…"); return }
         if (WebModeInpainter.isReady(this)) {
-            AlertDialog.Builder(this)
-                .setMessage("Delete the AI text eraser model? Flat bubbles are still cleaned without it.")
-                .setPositiveButton("Delete") { _, _ -> WebModeInpainter.delete(this); toast("AI text eraser deleted") }
-                .setNegativeButton("Cancel", null)
-                .show()
+            confirmDelete("Delete the AI text eraser model? Flat bubbles are still cleaned without it.", "Delete model") {
+                WebModeInpainter.delete(this); toast("AI text eraser deleted")
+            }
             return
         }
         toast("Downloading the AI text eraser…")
@@ -11046,13 +11060,14 @@ ${rows.take(220).joinToString("\n")}
      */
     private fun detectorDialog(onChanged: () -> Unit) {
         val installed = BubbleDetector.isInstalled(this)
-        val b = AlertDialog.Builder(this)
-            .setTitle("Bubble & text detector")
-            .setMessage(BubbleDetector.status(this) +
-                "\n\nThe app already finds bubble shapes without any download. The detector additionally tells bubble lettering " +
-                "from free lettering (sound effects) and keeps lines of different bubbles apart.")
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Bubble and text detector",
+            BubbleDetector.status(this) +
+                "\n\nThe app finds bubble shapes without any download. The detector additionally separates bubble " +
+                "lettering from sound effects and keeps lines of different bubbles apart.")
         if (!installed && !BubbleDetector.isDownloading()) {
-            b.setPositiveButton("Download (≈ 11 MB)") { _, _ ->
+            d.addAction("Download (about 11 MB)") {
+                d.dismiss()
                 toast("Downloading the detector…")
                 BubbleDetector.download(this, { pct ->
                     if (pct % 25 == 0) runOnUiThread { toast("Detector $pct%") }
@@ -11060,35 +11075,36 @@ ${rows.take(220).joinToString("\n")}
                     runOnUiThread {
                         toast(if (err == null) "Detector installed and tested on this phone" else "Detector: $err")
                         onChanged()
+                        detectorDialog(onChanged)
                     }
                 })
             }
         }
         if (installed) {
-            b.setPositiveButton("Mode: " + BubbleDetector.mode(this)) { _, _ ->
+            d.addAction("Mode: " + BubbleDetector.mode(this)) {
                 val next = when (BubbleDetector.mode(this)) { "auto" -> "on"; "on" -> "off"; else -> "auto" }
                 BubbleDetector.setMode(this, next)
                 toast("Bubble detector mode: $next")
                 onChanged()
             }
-            b.setNegativeButton("Remove model") { _, _ -> BubbleDetector.delete(this); toast("Model removed"); onChanged() }
-        } else {
-            b.setNegativeButton("Close", null)
+            d.addAction("Remove model", style = 2) { d.dismiss(); BubbleDetector.delete(this); toast("Model removed"); onChanged() }
         }
-        b.setNeutralButton("Balloon masks…") { _, _ -> segModelDialog(onChanged) }
-        b.show()
+        d.addAction("Balloon masks", style = 1) { d.dismiss(); segModelDialog(onChanged) }
+        d.addAction("Close", style = 3) { d.dismiss() }
+        d.show()
     }
 
     /** Optional second model: only gives the balloons the main detector found their real outline (mask). */
     private fun segModelDialog(onChanged: () -> Unit) {
         val installed = BubbleSegDetector.isInstalled(this)
-        val b = AlertDialog.Builder(this)
-            .setTitle("Balloon mask model")
-            .setMessage(BubbleSegDetector.status(this) +
-                "\n\nThe main detector stays in charge of everything. This model only adds the exact balloon outline so the " +
-                "old lettering is hidden inside the balloon. It runs only while reading ahead, never when memory is low.")
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Balloon mask model",
+            BubbleSegDetector.status(this) +
+                "\n\nThe main detector stays in charge. This model only adds the exact balloon outline so old lettering is " +
+                "hidden inside the balloon. It runs only while reading ahead, never when memory is low.")
         if (!installed && !BubbleSegDetector.isDownloading()) {
-            b.setPositiveButton("Download (≈ 12 MB)") { _, _ ->
+            d.addAction("Download (about 12 MB)") {
+                d.dismiss()
                 toast("Downloading the mask model…")
                 BubbleSegDetector.download(this, { pct ->
                     if (pct % 25 == 0) runOnUiThread { toast("Mask model $pct%") }
@@ -11099,17 +11115,17 @@ ${rows.take(220).joinToString("\n")}
                     }
                 })
             }
-            b.setNegativeButton("Close", null)
         } else if (installed) {
-            b.setPositiveButton("Mode: " + BubbleSegDetector.mode(this)) { _, _ ->
+            d.addAction("Mode: " + BubbleSegDetector.mode(this)) {
                 val next = when (BubbleSegDetector.mode(this)) { "auto" -> "on"; "on" -> "off"; else -> "auto" }
                 BubbleSegDetector.setMode(this, next)
                 toast("Mask model mode: $next")
                 onChanged()
             }
-            b.setNegativeButton("Remove model") { _, _ -> BubbleSegDetector.delete(this); toast("Mask model removed"); onChanged() }
+            d.addAction("Remove model", style = 2) { d.dismiss(); BubbleSegDetector.delete(this); toast("Mask model removed"); onChanged() }
         }
-        b.show()
+        d.addAction("Close", style = 3) { d.dismiss() }
+        d.show()
     }
 
     private fun menuTextRemovalLabel(): String =

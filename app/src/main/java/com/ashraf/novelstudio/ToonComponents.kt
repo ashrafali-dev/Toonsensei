@@ -771,7 +771,11 @@ object Toon {
                 setGravity(Gravity.CENTER)
                 setDimAmount(if (colors.dark) 0.6f else 0.4f)
             }
+            setOnDismissListener { onDismissHook?.invoke() }
         }
+
+        /** Called after the dialog is dismissed for any reason (button, back, app leaving). */
+        var onDismissHook: (() -> Unit)? = null
 
         init { root.addView(actions, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)) }
 
