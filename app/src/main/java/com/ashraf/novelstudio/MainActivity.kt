@@ -3568,11 +3568,15 @@ return t.length>=40?'TXT:'+t:'';
         text = label
         textSize = 12.5f
         typeface = if (active) boldMedium else medium
-        setTextColor(if (active) Color.WHITE else UiTheme.dim)
+        setTextColor(if (active) UiTheme.palette.title else UiTheme.palette.muted)
         gravity = Gravity.CENTER
         setPadding(dp(15), 0, dp(15), 0)
-        background = if (active) Glass.accent(this@MainActivity, 17) else Glass.ripple(this@MainActivity, null, 17)
-        layoutParams = LinearLayout.LayoutParams(WC, dp(34)).also { it.setMargins(dp(3), 0, dp(3), 0) }
+        minimumHeight = dp(36)
+        background = if (active) Glass.ripple(this@MainActivity,
+            GradientDrawable().apply { cornerRadius = dp(18).toFloat(); setColor(UiTheme.palette.surface); setStroke(dp(1), UiTheme.palette.accent) }, 18)
+        else Glass.ripple(this@MainActivity, null, 18)
+        contentDescription = (if (active) "Chatbot: $label, selected" else "Chatbot: $label") + ". Long-press to remove"
+        layoutParams = LinearLayout.LayoutParams(WC, dp(36)).also { it.setMargins(dp(3), 0, dp(3), 0) }
         setOnClickListener { onClick() }
         if (onLong != null) setOnLongClickListener { onLong(); true }
     }
@@ -4085,7 +4089,7 @@ return t.length>=40?'TXT:'+t:'';
             setPadding(dp(6), 0, dp(6), 0)
         }
         val stripScroll = HorizontalScrollView(this).apply {
-            setBackgroundColor(cSurface)
+            setBackgroundColor(UiTheme.palette.surface)
             isHorizontalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
             addView(strip, ViewGroup.LayoutParams(WC, dp(46)))
@@ -6326,7 +6330,7 @@ return t.length>=40?'TXT:'+t:'';
             val active = Uri.parse(u).host != null && Uri.parse(u).host == Uri.parse(cur).host
             strip.addView(botChip(o.getString("n"), active, { openBot(u) }, { removeBot(i) }))
         }
-        strip.addView(botChip("+", false, { addBotDialog() }, null))
+        strip.addView(botChip("+", false, { addBotDialog() }, null).also { it.contentDescription = "Add chatbot" })
     }
 
     private fun botKey(u: String): String = Uri.parse(u).host?.lowercase() ?: u.trim().lowercase()
