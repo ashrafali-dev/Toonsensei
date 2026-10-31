@@ -3697,8 +3697,17 @@ return t.length>=40?'TXT:'+t:'';
     private fun showPageError(desc: String, retry: () -> Unit) {
         if (!::pageError.isInitialized) return
         pageErrorAction = retry
+        hideSlowBanner()
+        pageLoadStartedMs = 0L
+        val offline = try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+            caps == null || !caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        } catch (_: Exception) { false }
+        val title = (pageError as? LinearLayout)?.getChildAt(1) as? TextView
+        title?.text = if (offline) "You are offline" else "Couldn't open this page"
         val body = (pageError as? LinearLayout)?.getChildAt(2) as? TextView
-        body?.text = if (desc.isBlank()) "Check the connection and try again." else desc
+        body?.text = if (offline) "Connect to the internet and try again." else if (desc.isBlank()) "Check the connection and try again." else desc
         pageError.visibility = View.VISIBLE
         pageError.bringToFront()
     }
