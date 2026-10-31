@@ -1,6 +1,7 @@
 package com.ashraf.novelstudio
 
 import android.app.Activity
+import android.widget.Toast
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -199,7 +200,12 @@ class ReaderActivity : Activity() {
 
     private fun go(d: Int) {
         val n = idx + d
-        if (n in list.indices) { idx = n; show() }
+        if (n in list.indices) {
+            idx = n
+            show()
+        } else {
+            Toast.makeText(this, if (d > 0) "You are at the last translated chapter" else "This is the first chapter", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun show() {
