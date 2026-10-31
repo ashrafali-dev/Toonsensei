@@ -146,6 +146,8 @@ class ReaderActivity : Activity() {
             addView(iconBtn(ToonIc.FORWARD, "Next chapter") { go(1) })
         }
 
+        // Theme is chosen by the glyph: sun on paper/white, moon on sepia/dark.
+        themeBtn.setImageDrawable(ToonIconDrawable(if (theme == 2 || theme == 1) ToonIc.MOON else ToonIc.SUN, fg[theme]))
         val inner = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -176,16 +178,20 @@ class ReaderActivity : Activity() {
         body.setTextColor(fg[theme])
         titleTv.setTextColor(fg[theme])
         header.setBackgroundColor(card[theme])
-        countTv.setTextColor(if (theme == 2) accent else accent)
+        countTv.setTextColor(accent)
         countTv.background = pillBg(if (theme == 2) 0xFF242322.toInt() else 0x22000000, 14)
         capsule.background = pillBg(pill[theme], 25)
         for (i in 0 until capsule.childCount) {
             when (val v = capsule.getChildAt(i)) {
                 is TextView -> v.setTextColor(if (theme == 2) 0xFFE8E3D9.toInt() else fg[theme])
-                is android.widget.ImageView -> v.setImageDrawable(
-                    ToonIconDrawable(if (v === themeBtn) ToonIc.MOON else if (capsule.indexOfChild(v) == 0) ToonIc.BACK else ToonIc.FORWARD,
-                        if (theme == 2) 0xFFE8E3D9.toInt() else fg[theme])
-                )
+                is android.widget.ImageView -> {
+                    val ic = when (capsule.indexOfChild(v)) {
+                        0 -> ToonIc.BACK
+                        3 -> if (theme == 1 || theme == 2) ToonIc.MOON else ToonIc.SUN
+                        else -> ToonIc.FORWARD
+                    }
+                    v.setImageDrawable(ToonIconDrawable(ic, if (theme == 2) 0xFFE8E3D9.toInt() else fg[theme]))
+                }
             }
         }
         body.textSize = fs
