@@ -18,6 +18,7 @@ object ToonChip {
         val fill = if (selected) colors.accentTint else colors.surfaceAlt
         val ink = if (selected) colors.accentForeground else colors.body
         val stroke = if (selected) colors.accentForeground else colors.line
+        val shape = ToonComponents.rounded(context, fill, ToonTheme.Radius.pill, stroke)
         return TextView(context).apply {
             text = label
             textSize = ToonTheme.Type.caption
@@ -33,15 +34,13 @@ object ToonChip {
                 ToonTheme.dp(context, ToonTheme.Space.md),
                 ToonTheme.dp(context, ToonTheme.Space.xs)
             )
-            background = ToonComponents.ripple(
-                context,
-                ToonComponents.rounded(context, fill, ToonTheme.Radius.pill, stroke),
-                ToonTheme.Radius.pill
-            )
+            background = ToonComponents.ripple(context, shape, ToonTheme.Radius.pill)
             isEnabled = enabled
             isSelected = selected
             isClickable = onClick != null
-            isFocusable = true
+            isFocusable = onClick != null
+            isFocusableInTouchMode = onClick != null
+            if (onClick != null) ToonComponents.applyFocusOutline(this, context, shape, stroke)
             alpha = if (enabled) 1f else 0.48f
             onClick?.let { action -> setOnClickListener { if (isEnabled) action() } }
             if (onClick != null) ToonComponents.exposeAsButton(this)
