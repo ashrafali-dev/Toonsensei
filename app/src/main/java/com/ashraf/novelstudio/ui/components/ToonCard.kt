@@ -38,7 +38,7 @@ object ToonCard {
             elevation = 0f
             if (content != null) addView(
                 content,
-                LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+                FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT)
             )
             isClickable = isInteractive
             isFocusable = isInteractive
