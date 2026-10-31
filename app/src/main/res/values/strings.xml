@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Novel Studio</string>
+
+    <!-- Shared component-owned labels. Screen copy is added here as each screen is extracted. -->
+    <string name="toon_action_confirm">Confirm</string>
+    <string name="toon_action_cancel">Cancel</string>
+    <string name="toon_action_got_it">Got it</string>
+    <string name="toon_action_dismiss">Dismiss notification</string>
+    <string name="toon_state_loading">Loading</string>
+    <string name="toon_state_empty_eyebrow">NOTHING HERE YET</string>
+    <string name="toon_state_error_eyebrow">SOMETHING WENT WRONG</string>
+    <string name="toon_state_offline_eyebrow">YOU ARE OFFLINE</string>
+    <string name="toon_state_permission_eyebrow">PERMISSION NEEDED</string>
+    <string name="toon_progress_percent">%1$d percent complete</string>
 </resources>
