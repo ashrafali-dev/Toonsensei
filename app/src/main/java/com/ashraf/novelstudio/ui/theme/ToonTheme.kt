@@ -28,6 +28,7 @@ object ToonTheme {
         val lineStrong: Int,
         val accent: Int,
         val accentTint: Int,
+        val accentForeground: Int,
         val onAccent: Int,
         val success: Int,
         val successTint: Int,
@@ -68,6 +69,7 @@ object ToonTheme {
             lineStrong = context.getColor(R.color.toon_line_strong),
             accent = context.getColor(R.color.toon_accent),
             accentTint = context.getColor(R.color.toon_accent_tint),
+            accentForeground = context.getColor(R.color.toon_accent),
             onAccent = context.getColor(R.color.toon_on_accent),
             success = context.getColor(R.color.toon_success),
             successTint = context.getColor(R.color.toon_success_tint),
@@ -104,13 +106,28 @@ object ToonTheme {
         val accent = preset.argb
         val surface = base.surface
         val tint = blend(surface, accent, if (base.dark) 0.22f else 0.12f)
+        // Selected-chip labels and focus rings need contrast against their own surfaces,
+        // not only against the window background. Dark-mode presets are therefore lifted
+        // toward the existing ink token until the selected-fill pair reaches 4.5:1.
+        val accentForeground = if (base.dark) {
+            var candidate = accent
+            var amount = 0.05f
+            while (contrastRatio(candidate, tint) < 4.5 && amount <= 1f) {
+                candidate = blend(accent, base.ink, amount)
+                amount += 0.05f
+            }
+            candidate
+        } else {
+            accent
+        }
         val onAccent = if (contrastRatio(accent, Color.WHITE) >=
             contrastRatio(accent, Color.BLACK)) Color.WHITE else Color.BLACK
         return base.copy(
             accent = accent,
             accentTint = tint,
+            accentForeground = accentForeground,
             onAccent = onAccent,
-            focus = accent,
+            focus = accentForeground,
             ripple = (accent and 0x00FFFFFF) or 0x22000000
         )
     }
@@ -216,6 +233,18 @@ object ToonTheme {
                 true
             }
         }
+    }
+
+    object Metrics {
+        const val hairlineDp = 1
+        const val focusStrokeDp = 2
+        const val minimumTouchDp = 48
+        const val badgeHeightDp = 24
+        const val progressWidthDp = 144
+        const val progressHeightDp = 3
+        const val dialogRadiusDp = 24
+        const val pressScale = 0.985f
+        const val neutralScale = 1f
     }
 
     object Elevation {
