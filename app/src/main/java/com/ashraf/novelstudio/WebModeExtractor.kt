@@ -1636,6 +1636,7 @@ internal class WebModeExtractor(
                 }
                 OcrDiag.log("SCAN_PAGE", "start identity ${if (settledStartKey != 0L) "settled" else "NOT settled"} key=$settledStartKey")
             }
+            val pageSigs = java.util.concurrent.ConcurrentHashMap<Int, ByteArray>()
             var lastShotKey = 0L
             var startKey = 0L          // fingerprint of the first captured page: the identity of the place the scan started
             var distinctPages = 0
@@ -1730,12 +1731,17 @@ internal class WebModeExtractor(
                         shotKey = ScanMode.quickKey(bmp)
                         if (startKey == 0L) startKey = if (settledStartKey != 0L) settledStartKey else shotKey
                     }
-                    if (scanInfo != null && pipelined && readPool != null) {
+                    val repeatOfPrevious = pipelined && shotKey != 0L && shotKey == lastShotKey
+                    if (repeatOfPrevious) {
+                        try { bmp.recycle() } catch (_: Throwable) {}
+                        bmp = null
+                    } else if (scanInfo != null && pipelined && readPool != null) {
                         // Hand the screenshot to the OCR pool; at most 6 shots wait in memory (about 4 MB each).
                         while (pagesPending.get() >= 6 && alive()) { try { Thread.sleep(80L) } catch (_: InterruptedException) { return } }
                         val shot: Bitmap = bmp
                         bmp = null
                         val pageNo = steps
+                        ScanMode.pageSignature(shot)?.let { pageSigs[pageNo] = it }
                         val pageScript = ScriptState(script.current)
                         pagesPending.incrementAndGet()
                         pageFutures.add(readPool.submit(Runnable {
@@ -1805,7 +1811,8 @@ internal class WebModeExtractor(
                     // Which input turns this reader BACK is unknown (some readers read the arrow key and the edge tap as opposite
                     // things). Try each input alone; a method that makes the screen alternate between two pages (A,B,A) or not
                     // change at all is abandoned for the next one. Stops the moment the start page is on screen.
-                    for (how in arrayOf("both", "key", "tap")) {
+                    // Learned from a real log (Shonen Jump+): the arrow key alone turns back correctly, key+tap together fight each other.
+                    for (how in arrayOf("key", "tap", "both")) {
                         if (matched || !alive()) break
                         var older = 0L
                         var prev = curKey
@@ -1857,9 +1864,10 @@ internal class WebModeExtractor(
             }
             val title = meta.title.ifBlank { hostOf(meta.url) }
             val allBubblesRaw = ArrayList<WmBubble>()
-            for (p in panels) allBubblesRaw.addAll(p.bubbles)
+            for (p in panels) allBubblesRaw.addAll(if (p.page >= 0) p.bubbles.map { it.copy(page = p.page) } else p.bubbles)
             val (text, allBubbles) = assembleAlignedBubbles(if (req.visibleOnly) "" else title, allBubblesRaw)
             val titleOffset = if (req.visibleOnly || title.isBlank()) 0 else 1
+            if (pipelined && pageSigs.isNotEmpty()) WebModeLayoutStore.setPageSigs(meta.url, HashMap(pageSigs))
             WebModeLayoutStore.put(wv.context, meta.url, WebModeLayout(titleOffset, allBubbles))
             val ch = Chapter(
                 title = title, text = text, next = meta.next, prev = meta.prev, url = meta.url,
@@ -1998,6 +2006,7 @@ internal class WebModeExtractor(
                     catch (_: Throwable) { continue }
                 val acc = synchronized(accs) { accs.getOrPut(pageKey(src)) { ForceAcc() } }
                 acc.top = if (paged) pageNo * 100_000 + p.optInt("t") else p.optInt("t")
+                if (paged) acc.page = pageNo
                 if (isCanvasPage) canvasCrops++
                 pending.add(
                     PendingCrop(
@@ -3217,7 +3226,7 @@ internal class WebModeExtractor(
     }
     private class BubbleLine(var cy: Float, var text: String)
     private class DecodeException : Exception()
-    private class ForceAcc { var top = 0; val texts = ArrayList<String>(); val bubbles = ArrayList<WmBubble>() }
+    private class ForceAcc { var top = 0; var page = -1; val texts = ArrayList<String>(); val bubbles = ArrayList<WmBubble>() }
     private class PanelOcr(val text: String, val bubbles: List<WmBubble>)
     private class LensPanelOcrAttempt(val panel: PanelOcr?, val error: Throwable?)
     private class PageMeta(val url: String, val lang: String, val title: String, val novel: String, val next: String?, val prev: String?)

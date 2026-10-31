@@ -44,7 +44,13 @@ internal data class WmBubble(
      * True when the bubble/text detector classed this lettering as FREE text (sound effect, narration on artwork), not
      * lettering inside a speech bubble. Such text is only erased when the AI inpainter can do it cleanly.
      */
-    val free: Boolean = false
+    val free: Boolean = false,
+    /**
+     * Page-by-page canvas readers draw EVERY page into the same canvas, so all pages share one [src]. This is the page's
+     * number within the scan (-1 = not a paged scan). Bubbles of different pages are never merged, and only the bubbles of
+     * the page on screen are drawn.
+     */
+    val page: Int = -1
 )
 
 /** The app's own status pill / toasts are never comic lettering. Pure function, shared by every reading mode. */
@@ -75,7 +81,7 @@ internal class WebModeLayout(val titleOffset: Int, val bubbles: List<WmBubble>) 
             .put("fg2", b.fg2).put("sf", b.soft)
             .put("srcText", b.sourceText).put("tr", b.translatedText).put("so", b.stroke)
             .put("tcx", r5(b.tcx)).put("tcy", r5(b.tcy)).put("tbw", r5(b.tbw)).put("tbh", r5(b.tbh))
-            .put("cv", JSONArray().also { arr -> for (v in b.cv) arr.put(r5(v)) }).put("fr", b.free))
+            .put("cv", JSONArray().also { arr -> for (v in b.cv) arr.put(r5(v)) }).put("fr", b.free).put("pg", b.page))
         return JSONObject().put("v", 2).put("to", titleOffset).put("b", a).toString()
     }
 
@@ -99,7 +105,8 @@ internal class WebModeLayout(val titleOffset: Int, val bubbles: List<WmBubble>) 
                     b.optDouble("tcx", 0.0).toFloat(), b.optDouble("tcy", 0.0).toFloat(),
                     b.optDouble("tbw", 0.0).toFloat(), b.optDouble("tbh", 0.0).toFloat(),
                     b.optJSONArray("cv")?.let { ja -> List(ja.length()) { k -> ja.optDouble(k, 0.0).toFloat() } } ?: emptyList(),
-                    b.optBoolean("fr", false)
+                    b.optBoolean("fr", false),
+                    b.optInt("pg", -1)
                 ))
             }
             WebModeLayout(o.optInt("to", 1), list)
@@ -540,6 +547,15 @@ internal object WebModeLayoutStore {
     @Synchronized
     fun setScan(url: String, layout: WebModeLayout) { scans[key(url)] = layout }
 
+    // Fingerprints of the pages of a page-by-page scan (taken with our overlay hidden), by page number. Memory only.
+    private val pageSigs = HashMap<String, Map<Int, ByteArray>>()
+
+    @Synchronized
+    fun setPageSigs(url: String, sigs: Map<Int, ByteArray>) { pageSigs[key(url)] = sigs }
+
+    @Synchronized
+    fun getPageSigs(url: String): Map<Int, ByteArray>? = pageSigs[key(url)]
+
     @Synchronized
     fun getScan(url: String): WebModeLayout? = scans[key(url)]
 
@@ -661,6 +677,7 @@ internal object WebModeLayoutStore {
      * real bubble silently vanished. Different bubbles are at least a bubble-height apart; a re-read only jitters.
      */
     internal fun samePosition(a: WmBubble, b: WmBubble): Boolean {
+        if (a.page >= 0 && b.page >= 0 && a.page != b.page) return false
         if (!sameCanvasSource(a.src, b.src)) return false
         val maxW = maxOf(a.w, b.w); val maxH = maxOf(a.h, b.h)
         if (maxW <= 0f || maxH <= 0f) return false
@@ -681,6 +698,7 @@ internal object WebModeLayoutStore {
 
     /** A later OCR pass may grow a tight text box into the full speech-balloon interior. */
     private fun sameBubbleReading(a: WmBubble, b: WmBubble): Boolean {
+        if (a.page >= 0 && b.page >= 0 && a.page != b.page) return false
         if (!sameCanvasSource(a.src, b.src)) return false
         val x = WebModeLayout.normalizeOcrText(a.sourceText)
         val y = WebModeLayout.normalizeOcrText(b.sourceText)
@@ -695,6 +713,7 @@ internal object WebModeLayoutStore {
      */
     private fun ghostOf(big: WmBubble, small: WmBubble): Boolean {
         if (big === small || !sameCanvasSource(big.src, small.src)) return false
+        if (big.page >= 0 && small.page >= 0 && big.page != small.page) return false
         val bigArea = big.w * big.h
         val smallArea = small.w * small.h
         if (smallArea <= 0f || bigArea < smallArea * 1.8f) return false

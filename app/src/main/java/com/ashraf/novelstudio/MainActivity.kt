@@ -7132,6 +7132,8 @@ return t.length>=40?'TXT:'+t:'';
         })
         val jobSeq = ++webModeJobSerial
         scanStopRequested = false
+        trackedPage = 0
+        handler.removeCallbacks(pageTracker)
         webModeHandle?.cancel()
         webModeLastProgressAtMs = android.os.SystemClock.elapsedRealtime()
         webModePct = 1
@@ -9477,6 +9479,80 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
         }
     }
 
+    // ---- page-by-page (canvas manga) scans: every page lives in the same <canvas>, so only the bubbles of the page
+    // that is on screen may be drawn. The page on screen is recognised from a small picture of the screen.
+    private var trackedPage = 0
+    private var pageTrackUrl = ""
+    private var pageTrackBusy = false
+
+    private fun layoutHasPages(l: WebModeLayout?): Boolean = l != null && l.bubbles.any { it.page >= 0 }
+
+    /** The bubbles (and translations) to draw for [page]; the whole layout when it is not a paged scan. */
+    private fun pageView(l: WebModeLayout, values: List<String?>, page: Int): Pair<WebModeLayout, List<String?>> {
+        if (!layoutHasPages(l)) return l to values
+        val idx = l.bubbles.indices.filter { l.bubbles[it].page < 0 || l.bubbles[it].page == page }
+        return WebModeLayout(l.titleOffset, idx.map { l.bubbles[it] }) to idx.map { values.getOrNull(it) }
+    }
+
+    private fun drawPageOverlay(url: String) {
+        val layout = WebModeLayoutStore.get(this, url) ?: return
+        val values = layout.bubbles.map { it.translatedText.takeIf { v -> v.isNotBlank() } }
+        val (lay, vals) = pageView(layout, values, trackedPage)
+        val script = if (lay.bubbles.none { it.sourceText.isNotBlank() } || vals.none { it != null })
+            WebModeWriter.clearCanvasOverlayScript()
+        else WebModeWriter.bubbleScript(lay, vals, Prefs.fontFile(this), pageKey(url))
+        val placementId = beginTranslationPlacement()
+        novelWv.evaluateJavascript(script) { finishTranslationPlacement(placementId) }
+    }
+
+    private fun captureWebSignature(cb: (ByteArray?) -> Unit) {
+        try {
+            val w = novelWv.width; val h = novelWv.height
+            if (w < 64 || h < 64 || !novelWv.isShown) { cb(null); return }
+            val loc = IntArray(2)
+            novelWv.getLocationInWindow(loc)
+            val bmp = Bitmap.createBitmap(w / 4, h / 4, Bitmap.Config.ARGB_8888)
+            android.view.PixelCopy.request(window, android.graphics.Rect(loc[0], loc[1], loc[0] + w, loc[1] + h), bmp, { res ->
+                val sig = if (res == android.view.PixelCopy.SUCCESS) ScanMode.pageSignature(bmp) else null
+                try { bmp.recycle() } catch (_: Throwable) {}
+                cb(sig)
+            }, handler)
+        } catch (_: Throwable) { cb(null) }
+    }
+
+    private val pageTracker = object : Runnable {
+        override fun run() {
+            val url = pageTrackUrl
+            if (url.isBlank() || !webModeOn() || cleanUrl(novelWv.url.orEmpty()) != cleanUrl(url)) return
+            val sigs = WebModeLayoutStore.getPageSigs(url)
+            if (sigs.isNullOrEmpty() || !layoutHasPages(WebModeLayoutStore.get(this@MainActivity, url))) return
+            if (!shownTranslated || pageTrackBusy || activePlacementIds.isNotEmpty() || webModeHandle != null) {
+                handler.postDelayed(this, 800L)
+                return
+            }
+            pageTrackBusy = true
+            captureWebSignature { sig ->
+                pageTrackBusy = false
+                if (sig != null) {
+                    val page = ScanMode.nearestPage(sig, sigs)
+                    if (page != null && page != trackedPage) {
+                        OcrDiag.log("PAGE_TRACK", "page $trackedPage -> $page")
+                        trackedPage = page
+                        drawPageOverlay(url)
+                    }
+                }
+                handler.postDelayed(this, 700L)
+            }
+        }
+    }
+
+    private fun startPageTracker(url: String) {
+        handler.removeCallbacks(pageTracker)
+        pageTrackUrl = url
+        if (WebModeLayoutStore.getPageSigs(url).isNullOrEmpty()) return
+        handler.postDelayed(pageTracker, 700L)
+    }
+
     /** Background bubble-shape refinement finished a batch: redraw the translation with the improved shapes. */
     private fun redrawRefinedOverlay(url: String) {
         if (!webModeOn()) return
@@ -9490,9 +9566,10 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
         val layout = WebModeLayoutStore.get(this, url) ?: return
         val values = layout.bubbles.map { it.translatedText.takeIf { v -> v.isNotBlank() } }
         if (values.none { it != null }) return
+        val (viewLayout, viewValues) = pageView(layout, values, trackedPage)
         val placementId = beginTranslationPlacement()
         novelWv.evaluateJavascript(
-            WebModeWriter.bubbleScript(layout, values, Prefs.fontFile(this), pageKey(url))
+            WebModeWriter.bubbleScript(viewLayout, viewValues, Prefs.fontFile(this), pageKey(url))
         ) { finishTranslationPlacement(placementId) }
     }
 
@@ -9561,7 +9638,8 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             } else if (wmLayout != null && wmPlaced != null) {
                 val translatedLayout = WebModeLayout.translated(wmLayout, wmPlaced)
                 WebModeLayoutStore.replace(this, ch.url, translatedLayout)
-                wmScript = WebModeWriter.bubbleScript(wmLayout, wmPlaced, Prefs.fontFile(this), pageKey(ch.url))
+                val (viewLayout, viewValues) = pageView(wmLayout, wmPlaced, trackedPage)
+                wmScript = WebModeWriter.bubbleScript(viewLayout, viewValues, Prefs.fontFile(this), pageKey(ch.url))
             } else {
                 // Scanning mode has no reader-view fallback: tell the user briefly (English) and point to Realtime mode.
                 toast("Something went wrong. Please use Realtime mode.")
@@ -9584,7 +9662,10 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                     hasTr = true
                     shownTranslated = true
                     updatePill()
-                    if (!livePanelBatch && wmLayout != null && wmPlaced != null) retryMissingScanBubbles(ch, wmLayout, wmPlaced)
+                    if (!livePanelBatch && wmLayout != null && wmPlaced != null) {
+                        retryMissingScanBubbles(ch, wmLayout, wmPlaced)
+                        if (layoutHasPages(wmLayout)) startPageTracker(ch.url)
+                    }
                 } else {
                     if (livePanelBatch) releaseDeepSeekHashBatch(ch)
                     toast("⚠️ Could not show the translation on this page; it is saved in the library")

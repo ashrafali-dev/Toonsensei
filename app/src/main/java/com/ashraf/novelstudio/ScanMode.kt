@@ -213,6 +213,56 @@ internal object ScanMode {
     }
 
     /** Cheap fingerprint of a screenshot (32x32 sample). Two equal keys in a row = the page did not change. */
+    const val SIG = 16
+
+    /**
+     * Identity of the page on screen: the CENTRAL part of the picture (the app's own buttons, bars and toasts sit at the
+     * edges) reduced to 16x16 grey values, each rescaled so the brightest/darkest cells span 0..255 (survives small
+     * brightness changes and our own translation overlay better than an exact hash).
+     */
+    fun pageSignature(bmp: Bitmap): ByteArray? {
+        var crop: Bitmap? = null
+        var small: Bitmap? = null
+        return try {
+            val w = bmp.width; val h = bmp.height
+            if (w < 16 || h < 16) return null
+            val x0 = (w * 0.10f).toInt(); val y0 = (h * 0.22f).toInt()
+            val cw = (w * 0.80f).toInt().coerceAtLeast(8); val ch = (h * 0.50f).toInt().coerceAtLeast(8)
+            crop = Bitmap.createBitmap(bmp, x0, y0, cw.coerceAtMost(w - x0), ch.coerceAtMost(h - y0))
+            small = Bitmap.createScaledBitmap(crop, SIG, SIG, true)
+            val px = IntArray(SIG * SIG)
+            small.getPixels(px, 0, SIG, 0, 0, SIG, SIG)
+            val g = IntArray(px.size) { i -> (((px[i] shr 16) and 255) * 3 + ((px[i] shr 8) and 255) * 6 + (px[i] and 255)) / 10 }
+            val mn = g.minOrNull() ?: 0; val mx = g.maxOrNull() ?: 255
+            val span = (mx - mn).coerceAtLeast(1)
+            ByteArray(g.size) { i -> (((g[i] - mn) * 255) / span).toByte() }
+        } catch (_: Throwable) {
+            null
+        } finally {
+            try { if (small != null && small !== crop) small.recycle() } catch (_: Throwable) {}
+            try { if (crop != null && crop !== bmp) crop.recycle() } catch (_: Throwable) {}
+        }
+    }
+
+    /** Mean absolute difference of two signatures, 0 (identical) .. 255. */
+    fun sigDistance(a: ByteArray, b: ByteArray): Float {
+        if (a.size != b.size || a.isEmpty()) return 255f
+        var sum = 0L
+        for (i in a.indices) sum += Math.abs((a[i].toInt() and 255) - (b[i].toInt() and 255))
+        return sum.toFloat() / a.size
+    }
+
+    /** The stored page that looks most like [sig]; null when two pages look about equally close (do not guess). */
+    fun nearestPage(sig: ByteArray, pages: Map<Int, ByteArray>): Int? {
+        var best = -1; var bestD = Float.MAX_VALUE; var second = Float.MAX_VALUE
+        for ((p, s) in pages) {
+            val d = sigDistance(sig, s)
+            if (d < bestD) { second = bestD; bestD = d; best = p } else if (d < second) second = d
+        }
+        if (best < 0) return null
+        return if (pages.size == 1 || bestD <= second * 0.85f) best else null
+    }
+
     fun quickKey(bmp: Bitmap): Long {
         var small: Bitmap? = null
         return try {
