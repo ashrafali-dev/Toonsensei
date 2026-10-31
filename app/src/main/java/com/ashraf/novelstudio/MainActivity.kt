@@ -4435,102 +4435,91 @@ return t.length>=40?'TXT:'+t:'';
     // ------------------------------------------------------------------ translation language
 
     private fun showLanguageSheet(firstRun: Boolean) {
-        lateinit var dlg: Dialog
         var src = Langs.source(this)
         var tgt = Langs.target(this)
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, if (firstRun) "What are you translating?" else "Translation language")
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = Sheets.sheetBackground(this@MainActivity)
-            setPadding(dp(18), dp(10), dp(18), dp(24))
+            setPadding(dp(16), 0, dp(16), dp(8))
         }
-        col.addView(sheetHandle())
         col.addView(TextView(this).apply {
-            text = if (firstRun) "What are you translating?" else "Translation language"
-            textSize = 20f
-            typeface = boldMedium
-            setTextColor(UiTheme.text)
-            setPadding(dp(4), dp(4), dp(4), dp(4))
-        })
-        col.addView(TextView(this).apply {
-            text = "Choose once. The translation prompt follows your choice, and you can change it any time in the menu."
-            textSize = 13.5f
-            setTextColor(UiTheme.dim)
-            setPadding(dp(4), 0, dp(4), dp(14))
+            text = if (firstRun) "Pick a language pair once. The translation prompt follows your choice; you can change it any time."
+            else "The translation prompt follows this choice unless you wrote your own."
+            textSize = ToonTheme.Type.caption
+            setTextColor(c.muted)
+            setLineSpacing(0f, 1.3f)
+            setPadding(0, 0, 0, dp(12))
         })
         fun picker(caption: String, options: List<String>, get: () -> String, set: (String) -> Unit): View {
             val value = TextView(this).apply {
                 text = get()
-                textSize = 16f
+                textSize = 17f
                 typeface = boldMedium
-                setTextColor(UiTheme.text)
+                setTextColor(c.title)
             }
             val cap = TextView(this).apply {
                 text = caption
-                textSize = 12f
-                setTextColor(UiTheme.faint)
+                textSize = ToonTheme.Type.micro
+                typeface = boldMedium
+                letterSpacing = ToonTheme.SECTION_TRACK
+                setTextColor(c.muted)
             }
             val texts = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(cap)
                 addView(value)
             }
-            val chev = ImageView(this).apply { setImageDrawable(IconDrawable(Ic.CHEVRON, UiTheme.faint)) }
             return LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(16), dp(12), dp(14), dp(12))
-                background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, 0x14FFFFFF, 16, UiTheme.strokeSoft), 16)
+                minimumHeight = dp(60)
+                setPadding(dp(16), dp(10), dp(12), dp(10))
+                background = Glass.ripple(this@MainActivity, null, 12)
                 isClickable = true
+                contentDescription = "$caption, currently " + get()
                 setOnClickListener {
                     searchListDialog(caption, options) { picked -> set(picked); value.text = get() }
                 }
                 addView(texts, LinearLayout.LayoutParams(0, WC, 1f))
-                addView(chev, LinearLayout.LayoutParams(dp(18), dp(18)))
+                addView(ImageView(this@MainActivity).apply { setImageDrawable(IconDrawable(Ic.CHEVRON, c.muted)) },
+                    LinearLayout.LayoutParams(dp(16), dp(16)))
             }
         }
-        col.addView(picker("Translate from", Langs.SOURCES, { src }, { src = it }), LinearLayout.LayoutParams(MP, WC))
-        col.addView(
-            picker("Translate to", Langs.TARGETS, { tgt }, { tgt = it }),
-            LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(10) }
-        )
+        val group = Toon.group(this, c)
+        group.addView(picker("Translate from", Langs.SOURCES, { src }, { src = it }))
+        group.addView(Toon.divider(this, c))
+        group.addView(picker("Translate to", Langs.TARGETS, { tgt }, { tgt = it }))
+        col.addView(group, LinearLayout.LayoutParams(MP, WC))
         if (Langs.hasCustomPrompt(this)) {
             col.addView(TextView(this).apply {
-                text = "You edited a prompt by hand, so it stays as it is. Clear it in Edit Prompt to follow this setting."
-                textSize = 12.5f
-                setTextColor(UiTheme.faint)
+                text = "You edited a prompt by hand, so it stays as it is. Clear it in Edit prompt to follow this setting."
+                textSize = ToonTheme.Type.caption
+                setTextColor(c.muted)
                 setPadding(dp(4), dp(12), dp(4), 0)
             })
         }
-        val save = TextView(this).apply {
-            text = "Save"
-            textSize = 16f
-            typeface = boldMedium
-            setTextColor(UiTheme.palette.onInk)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                cornerRadius = dp(26).toFloat()
-                setColor(UiTheme.palette.ink)
-            }
-            isClickable = true
-            setOnClickListener {
-                Langs.save(this@MainActivity, src, tgt)
-                NovelStudioAnalytics.track(
-                    this@MainActivity, "target_language_selected",
-                    mode = analyticsReadMode(),
-                    targetLanguage = tgt,
-                    provider = currentBotKey
-                )
-                dlg.dismiss()
-                toast("Translating " + (if (src == Langs.AUTO) "any language" else src) + " to " + tgt)
-                downloadLanguageFont(tgt)
-                if (firstRun) Handler(Looper.getMainLooper()).postDelayed({ if (!isFinishing && !isDestroyed) showFirstPromptChoice() }, 400L)
-            }
+        sheet.shell.addContent(col, LinearLayout.LayoutParams(MP, WC))
+        val save = Toon.buttonPrimary(this, c, if (firstRun) "Continue" else "Save") {
+            Langs.save(this, src, tgt)
+            NovelStudioAnalytics.track(
+                this, "target_language_selected",
+                mode = analyticsReadMode(),
+                targetLanguage = tgt,
+                provider = currentBotKey
+            )
+            sheet.close()
+            toast("Translating " + (if (src == Langs.AUTO) "any language" else src) + " to " + tgt)
+            downloadLanguageFont(tgt)
+            if (firstRun) Handler(Looper.getMainLooper()).postDelayed({ if (!isFinishing && !isDestroyed) showFirstPromptChoice() }, 400L)
         }
-        col.addView(save, LinearLayout.LayoutParams(MP, dp(52)).also { it.topMargin = dp(18) })
-        dlg = Sheets.create(this, col)
-        dlg.show()
+        val footerRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        footerRow.addView(save, LinearLayout.LayoutParams(0, dp(48), 1f))
+        if (!firstRun) footerRow.addView(Toon.buttonGhost(this, c, "Cancel") { sheet.close() },
+            LinearLayout.LayoutParams(WC, dp(48)).also { it.marginStart = dp(8) })
+        sheet.shell.footer.addView(footerRow, LinearLayout.LayoutParams(MP, WC))
+        sheet.show()
     }
-
 
     /** Fetches the font of the target language (once) so translated text looks right. */
     private fun downloadLanguageFont(lang: String) {
