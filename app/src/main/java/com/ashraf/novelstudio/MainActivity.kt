@@ -5169,7 +5169,7 @@ return t.length>=40?'TXT:'+t:'';
 
         lateinit var dialog: Dialog
         val sn = snackView
-        val root = FrameLayout(this).apply { setBackgroundColor(0xEB07080D.toInt()) }
+        val root = FrameLayout(this).apply { setBackgroundColor(UiTheme.palette.bg) }
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
 
         // ---- header: "Tabs" + count, options, close
@@ -5183,9 +5183,9 @@ return t.length>=40?'TXT:'+t:'';
             textSize = 12.5f
             typeface = boldMedium
             gravity = Gravity.CENTER
-            setTextColor(0xFFCFD5FF.toInt())
+            setTextColor(UiTheme.palette.muted)
             setPadding(dp(10), 0, dp(10), 0)
-            background = Glass.solid(this@MainActivity, 0x387B8CFF, 11)
+            background = Glass.solid(this@MainActivity, 0x14FFFFFF, 11)
             layoutParams = LinearLayout.LayoutParams(WC, dp(22)).also { it.marginStart = dp(10) }
         }
         val optionsBtn = iconButton(Ic.DOTS, "Tab options", 22, 44) { showTabOptions(dialog) }
@@ -5256,15 +5256,15 @@ return t.length>=40?'TXT:'+t:'';
             text = "New tab"
             textSize = 15f
             typeface = boldMedium
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.palette.onInk)
             gravity = Gravity.CENTER
-            setPadding(dp(20), 0, dp(26), 0)
+            setPadding(dp(20), 0, dp(24), 0)
             compoundDrawablePadding = dp(8)
-            val pi = IconDrawable(Ic.PLUS, Color.WHITE, 2.2f)
+            val pi = IconDrawable(Ic.PLUS, UiTheme.palette.onInk, 2.2f)
             pi.setBounds(0, 0, dp(20), dp(20))
             setCompoundDrawablesRelative(pi, null, null, null)
             background = Glass.accent(this@MainActivity, 27)
-            elevation = dp(12).toFloat()
+            elevation = dp(6).toFloat()
             setOnClickListener {
                 dialog.dismiss()
                 newBrowserTab("https://www.google.com/")
@@ -5287,7 +5287,7 @@ return t.length>=40?'TXT:'+t:'';
                 loadTabThumbnail(tab)
 
                 val card = FrameLayout(this).apply {
-                    background = Glass.solid(this@MainActivity, 0xFF12141D.toInt(), 22)
+                    background = Glass.solid(this@MainActivity, UiTheme.palette.surface, 22)
                     clipToOutline = true
                     elevation = dp(if (active) 10 else 3).toFloat()
                     layoutParams = GridLayout.LayoutParams().apply {
@@ -5312,7 +5312,7 @@ return t.length>=40?'TXT:'+t:'';
                     card.addView(FrameLayout(this).apply {
                         background = GradientDrawable(
                             GradientDrawable.Orientation.TL_BR,
-                            intArrayOf(tabHue(tab), 0xFF0E1018.toInt())
+                            intArrayOf(tabHue(tab), UiTheme.palette.surface)
                         )
                         addView(TextView(this@MainActivity).apply {
                             text = tabInitial(tab)
@@ -5320,7 +5320,7 @@ return t.length>=40?'TXT:'+t:'';
                             typeface = boldMedium
                             gravity = Gravity.CENTER
                             setTextColor(Color.WHITE)
-                            background = Glass.oval(0x2EFFFFFF)
+                            background = Glass.oval(0x33FFFFFF)
                         }, FrameLayout.LayoutParams(dp(58), dp(58), Gravity.CENTER).also { it.bottomMargin = dp(26) })
                     }, FrameLayout.LayoutParams(MP, MP))
                 }
@@ -5328,7 +5328,7 @@ return t.length>=40?'TXT:'+t:'';
                 card.addView(View(this).apply {
                     background = GradientDrawable(
                         GradientDrawable.Orientation.TOP_BOTTOM,
-                        intArrayOf(0x0007080D, 0xF207080D.toInt())
+                        intArrayOf(0x00000000, UiTheme.palette.surface)
                     )
                 }, FrameLayout.LayoutParams(MP, dp(84), Gravity.BOTTOM))
 
@@ -5353,18 +5353,18 @@ return t.length>=40?'TXT:'+t:'';
                     })
                 }, FrameLayout.LayoutParams(MP, WC, Gravity.BOTTOM))
 
-                card.addView(iconButton(Ic.CLOSE, "Close tab", 12, 30, Color.WHITE) {
+                card.addView(iconButton(Ic.CLOSE, "Close tab", 13, 32, UiTheme.palette.muted) {
                     closeBrowserTab(i)
                     refreshCards(searchInput.text.toString().trim())
                 }.also {
-                    it.background = Glass.ripple(this, Glass.oval(0x8C0A0C12.toInt(), 0x33FFFFFF, dp(1)))
-                }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.TOP or Gravity.END).also { it.setMargins(0, dp(8), dp(8), 0) })
+                    it.background = Glass.ripple(this, Glass.oval(UiTheme.palette.surface, UiTheme.palette.line, dp(1)))
+                }, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.END).also { it.setMargins(0, dp(8), dp(8), 0) })
 
                 // border drawn above the content so the thumbnail cannot cover it
                 card.addView(View(this).apply {
                     background = Glass.solid(
                         this@MainActivity, 0x00000000, 22,
-                        if (active) UiTheme.accent else 0x24FFFFFF, if (active) 2.5f else 1f
+                        if (active) UiTheme.accent else UiTheme.palette.line, if (active) 2.5f else 1f
                     )
                     isClickable = false
                 }, FrameLayout.LayoutParams(MP, MP))
@@ -5434,7 +5434,14 @@ return t.length>=40?'TXT:'+t:'';
 
     private fun browserHistoryDialog() {
         val h = Store.history(this)
-        if (h.isEmpty()) return toast("History is empty")
+        if (h.isEmpty()) {
+            val c = UiTheme.palette
+            val sheet = Toon.SheetDialog(this, c, "Browser history")
+            sheet.shell.addContent(Toon.stateBlock(this, c, "No pages yet",
+                "Pages you open in the app are listed here, newest first."))
+            sheet.show()
+            return
+        }
         val labels = h.map {
             val host = Uri.parse(it.url).host ?: it.url
             "${it.title.ifBlank { host }}\n$host"
