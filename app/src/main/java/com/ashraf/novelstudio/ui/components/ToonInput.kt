@@ -51,7 +51,7 @@ object ToonInput {
                 context,
                 colors.surfaceAlt,
                 ToonTheme.Radius.field,
-                colors.line
+                colors.lineStrong
             )
             contentDescription = label.toString()
             setSelectAllOnFocus(false)
@@ -66,7 +66,7 @@ object ToonInput {
             context,
             ToonTheme.Radius.field,
             colors.surfaceAlt,
-            colors.line
+            colors.lineStrong
         )
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
