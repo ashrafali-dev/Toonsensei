@@ -164,10 +164,12 @@ object ToonTheme {
         const val meta = 13f
         const val label = 14f
         const val body = 15f
+        const val bodyLarge = 17f
         const val bodyLine = 22f
         const val reader = 19f
         const val section = 12f
         const val title = 20f
+        const val titleLarge = 22f
         const val display = 26f
 
         fun uiTypeface(): Typeface = Typeface.create("sans-serif", Typeface.NORMAL)
