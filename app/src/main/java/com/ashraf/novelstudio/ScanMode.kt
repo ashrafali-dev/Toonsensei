@@ -235,6 +235,60 @@ internal object ScanMode {
      * 2) otherwise the reader's own controls are used: arrow key and a tap on the "next" side.
      * Returns {"moved":bool}. The Kotlin side decides "end of chapter" from the screenshot, not from this flag.
      */
+    /** Finds the sideways-scrolling container of a page-by-page reader (same search jsPageTurn uses). */
+    private const val JS_H_FIND = """
+function nsHFind(){
+  var de0=document.documentElement,all=document.querySelectorAll('*'),best=null,bestA=0;
+  for(var i=0;i<all.length;i++){
+    var e=all[i],cs=getComputedStyle(e);
+    if((cs.overflowX==='auto'||cs.overflowX==='scroll')&&e.scrollWidth>e.clientWidth+8){
+      var a=e.clientWidth*e.clientHeight;if(a>bestA){best=e;bestA=a;}
+    }
+  }
+  if(!best&&de0.scrollWidth>(window.innerWidth||0)+8)best=document.scrollingElement||de0;
+  return best;
+}
+"""
+
+    /** Remember where a page-by-page scan starts (like the long-scroll scan remembers scrollTop). */
+    fun jsHSave(): String = JS_H_FIND + """
+try{
+  var b=nsHFind();
+  window.__nsWmHX=b?b.scrollLeft:null;
+  window.__nsWmHHref=location.href;
+  window.__nsWmHHash=location.hash;
+}catch(e){}
+return '1';
+"""
+
+    /**
+     * Jump straight back to where the scan started - no page-by-page walking. A sideways scroller is set to the saved
+     * offset; a reader that keeps the page in the URL hash gets the saved hash; a canvas reader with neither gets
+     * the "Home" key (first page), which page readers bind to "go to the first page".
+     */
+    fun jsHRestore(): String = JS_H_FIND + """
+var done='none';
+try{
+  var b=nsHFind();
+  if(b&&window.__nsWmHX!==undefined&&window.__nsWmHX!==null){
+    b.scrollLeft=window.__nsWmHX;done='scroll';
+  }
+  if(done==='none'&&window.__nsWmHHref&&location.hash!==window.__nsWmHHash&&
+     location.href.split('#')[0]===window.__nsWmHHref.split('#')[0]){
+    location.hash=window.__nsWmHHash||'';done='hash';
+  }
+  if(done==='none'){
+    ['keydown','keyup'].forEach(function(t){
+      var ev=new KeyboardEvent(t,{key:'Home',code:'Home',keyCode:36,which:36,bubbles:true,cancelable:true});
+      document.dispatchEvent(ev);if(document.body)document.body.dispatchEvent(ev);
+    });
+    done='home';
+  }
+  try{delete window.__nsWmHX;delete window.__nsWmHHref;delete window.__nsWmHHash;}catch(e){}
+}catch(err){}
+return done;
+"""
+
     fun jsPageTurn(rtl: Boolean): String = """
 var rtl=${if (rtl) "true" else "false"},moved=false,mode='none';
 try{

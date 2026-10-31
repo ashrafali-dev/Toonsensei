@@ -1620,7 +1620,9 @@ internal class WebModeExtractor(
             val pageFutures = ArrayList<java.util.concurrent.Future<*>>()
             val pagesPending = java.util.concurrent.atomic.AtomicInteger(0)
             val pageOcrError = java.util.concurrent.atomic.AtomicReference<OcrUnavailableException?>(null)
+            if (pipelined) evalWait(wrap(ScanMode.jsHSave())) { null }
             var lastShotKey = 0L
+            var startKey = 0L          // fingerprint of the first captured page: the identity of the place the scan started
             var distinctPages = 0
             var stable = 0
             var driftRetries = 0
@@ -1709,7 +1711,10 @@ internal class WebModeExtractor(
                         Log.w(TAG, "JS_FORCE_INFO returned no data; OCRing the visible WebView bitmap directly")
                         JSONObject().put("vw", bmp.width.toFloat()).put("imgs", JSONArray())
                     } else null
-                    if (scanHorizontal) shotKey = ScanMode.quickKey(bmp)
+                    if (scanHorizontal) {
+                        shotKey = ScanMode.quickKey(bmp)
+                        if (startKey == 0L && shotKey != 0L) startKey = shotKey
+                    }
                     if (scanInfo != null && pipelined && readPool != null) {
                         // Hand the screenshot to the OCR pool; at most 6 shots wait in memory (about 4 MB each).
                         while (pagesPending.get() >= 6 && alive()) { try { Thread.sleep(80L) } catch (_: InterruptedException) { return } }
@@ -1764,16 +1769,27 @@ internal class WebModeExtractor(
                 if (stable >= 2) break
                 steps++
             }
-            // Go back to the page the scan started on: one opposite page turn per page that was really turned forward.
-            // (Only pages whose screenshot differed from the previous one count, so a turn that went nowhere is never undone.)
+            // Jump straight back to where the scan started (saved before the first page turn), no walking back page by page.
             if (pipelined && distinctPages > 1 && alive()) {
-                val back = distinctPages - 1
-                for (k in 0 until back) {
-                    if (!alive()) break
-                    evalWait(wrap(LIB + ScanMode.jsPageTurn(scanDir != ScanDirection.RTL))) { null }
-                    try { Thread.sleep(450L) } catch (_: InterruptedException) { break }
+                val how = evalWait(wrap(ScanMode.jsHRestore())) { it }
+                OcrDiag.log("SCAN_PAGE", "jumped back to the start position: $how")
+                // Verify by identity: the first page's fingerprint was taken before the scan. If the screen is not that page,
+                // turn back until it is (never more than the pages that were turned, plus two).
+                if (startKey != 0L) {
+                    var matched = false
+                    var turnsBack = 0
+                    while (alive()) {
+                        try { Thread.sleep(550L) } catch (_: InterruptedException) { break }
+                        val cur = try { captureView() } catch (_: Throwable) { null }
+                        val curKey = if (cur != null) ScanMode.quickKey(cur) else 0L
+                        try { cur?.recycle() } catch (_: Throwable) {}
+                        if (curKey == startKey) { matched = true; break }
+                        if (turnsBack >= distinctPages + 2) break
+                        evalWait(wrap(LIB + ScanMode.jsPageTurn(scanDir != ScanDirection.RTL))) { null }
+                        turnsBack++
+                    }
+                    OcrDiag.log("SCAN_PAGE", "start page identity ${if (matched) "MATCHED" else "NOT matched"} after $turnsBack extra turns back")
                 }
-                OcrDiag.log("SCAN_PAGE", "returned to the first page with $back opposite turns")
             }
             evalWait(wrap(LIB + JS_RESTORE)) { null }
             if (!req.visibleOnly) evalWait(wrap(JS_FORCE_SHOW)) { null }
