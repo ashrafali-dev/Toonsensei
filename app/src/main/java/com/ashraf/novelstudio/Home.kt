@@ -323,6 +323,27 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
         return frame
     }
 
+    /** Skeleton rows while recents load (A02 loading state). */
+    fun showLoading() {
+        token++
+        content.removeAllViews()
+        val c = UiTheme.palette
+        content.addView(header(), LinearLayout.LayoutParams(mp, wc))
+        repeat(3) { i ->
+            val card = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(ctx.dpi(14), ctx.dpi(14), ctx.dpi(14), ctx.dpi(14))
+                background = GradientDrawable().apply { cornerRadius = ctx.dpf(ToonTheme.Radius.card); setColor(c.surface); setStroke(ctx.dpi(1), c.line) }
+                addView(Toon.Skeleton(ctx, c, 10), LinearLayout.LayoutParams(ctx.dpi(54), ctx.dpi(72)))
+                val lines = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+                lines.addView(Toon.Skeleton(ctx, c, 6), LinearLayout.LayoutParams(ctx.dpi(180), ctx.dpi(14)))
+                lines.addView(Toon.Skeleton(ctx, c, 6), LinearLayout.LayoutParams(ctx.dpi(120), ctx.dpi(10)).also { it.topMargin = ctx.dpi(8) })
+                addView(lines, LinearLayout.LayoutParams(0, wc, 1f).also { it.marginStart = ctx.dpi(14) })
+            }
+            content.addView(card, LinearLayout.LayoutParams(mp, wc).also { it.setMargins(ctx.dpi(14), ctx.dpi(6), ctx.dpi(14), ctx.dpi(6)) })
+        }
+    }
+
     // ---------------------------------------------------------------- pieces
 
     private fun header(): View {
