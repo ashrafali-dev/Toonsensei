@@ -4401,6 +4401,7 @@ return t.length>=40?'TXT:'+t:'';
             onMenu = { menu() }
             onHub = { part -> Hub.open(this@MainActivity, part) }
             onMode = { i -> selectMode(i) }
+            onTour = { startTour(manual = true) }
             currentMode = { currentModeIndex() }
         }
         val sn = snackView

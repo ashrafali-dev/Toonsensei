@@ -114,6 +114,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
     var onMenu: () -> Unit = {}
     var onHub: (Hub.Part) -> Unit = {}
     var onMode: (Int) -> Unit = {}
+    var onTour: () -> Unit = {}
     var currentMode: () -> Int = { 0 }
 
     private val mp = ViewGroup.LayoutParams.MATCH_PARENT
@@ -346,26 +347,27 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
 
     // ---------------------------------------------------------------- pieces
 
+    /** Paper & Seal header: mascot + serif wordmark, help + menu to the right (A02). */
     private fun header(): View {
+        val c = UiTheme.palette
         val title = TextView(ctx).apply {
             text = "ToonSensei"
-            textSize = 22f
-            typeface = bold
-            setTextColor(UiTheme.text)
+            textSize = ToonTheme.Type.display
+            typeface = Typeface.create("serif", Typeface.NORMAL)
+            letterSpacing = 0.02f
+            setTextColor(c.title)
+            includeFontPadding = false
         }
-        val menu = ImageView(ctx).apply {
-            setImageDrawable(IconDrawable(Ic.DOTS, UiTheme.iconIdle))
-            setPadding(ctx.dpi(10), ctx.dpi(10), ctx.dpi(10), ctx.dpi(10))
-            background = Glass.solid(ctx, 0x14FFFFFF, 20, UiTheme.strokeSoft)
-            contentDescription = "Menu"
-        }
-        pressable(menu) { onMenu() }
         return LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(ctx.dpi(18), ctx.dpi(14), ctx.dpi(14), ctx.dpi(4))
-            addView(title, LinearLayout.LayoutParams(0, wc, 1f))
-            addView(menu, LinearLayout.LayoutParams(ctx.dpi(40), ctx.dpi(40)))
+            setPadding(ctx.dpi(18), ctx.dpi(12), ctx.dpi(10), ctx.dpi(2))
+            addView(MascotView(ctx, 44), LinearLayout.LayoutParams(ctx.dpi(44), ctx.dpi(44)))
+            addView(title, LinearLayout.LayoutParams(0, wc, 1f).also { it.marginStart = ctx.dpi(10) })
+            addView(Toon.iconButton(ctx, c, ToonIc.INFO, "Help and tour", c.muted) { onTour() },
+                LinearLayout.LayoutParams(ctx.dpi(44), ctx.dpi(44)))
+            addView(Toon.iconButton(ctx, c, ToonIc.MENU, "Menu", c.text) { onMenu() },
+                LinearLayout.LayoutParams(ctx.dpi(44), ctx.dpi(44)))
         }
     }
 
