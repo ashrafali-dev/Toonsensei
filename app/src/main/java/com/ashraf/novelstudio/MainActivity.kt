@@ -10169,9 +10169,8 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             labelView.setTextColor(if (active) Color.WHITE else UiTheme.iconIdle)
             box.background = Glass.ripple(
                 this,
-                if (active) GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0x597B8CFF, 0x47B27CFF)).apply {
-                    cornerRadius = dp(20).toFloat(); setStroke(dp(1), UiTheme.accent)
-                } else Glass.solid(this, 0x12FFFFFF, 20, UiTheme.strokeSoft),
+                if (active) Glass.solid(this, UiTheme.accentTint, 20, UiTheme.accent, 1)
+                else Glass.solid(this, UiTheme.sheet, 20, UiTheme.strokeSoft),
                 20
             )
         }
