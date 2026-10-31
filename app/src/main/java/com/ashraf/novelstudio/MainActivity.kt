@@ -3654,6 +3654,12 @@ return t.length>=40?'TXT:'+t:'';
     }
 
     private lateinit var pageError: View
+    private var slowBanner: View? = null
+    private var slowBannerShown = false
+    private var pageLoadStartedMs = 0L
+    private val slowBannerRunnable = Runnable {
+        if (pageLoadStartedMs > 0L && !homeVisible()) showSlowBanner()
+    }
     private var pageErrorAction: (() -> Unit)? = null
 
     /** Paper & Seal failed-page state: mascot, reason, Retry. Shown by NovelClient.onReceivedError. */
@@ -3695,6 +3701,31 @@ return t.length>=40?'TXT:'+t:'';
         body?.text = if (desc.isBlank()) "Check the connection and try again." else desc
         pageError.visibility = View.VISIBLE
         pageError.bringToFront()
+    }
+
+    /** I02: a page that has been loading for 8 s gets a quiet warning, dismissed on load. */
+    private fun showSlowBanner() {
+        if (slowBannerShown || !::content.isInitialized) return
+        slowBannerShown = true
+        val c = UiTheme.palette
+        val banner = Toon.banner(this, c, 0, "Still loading. The connection is slow.", "Stop") {
+            try { novelWv.stopLoading() } catch (_: Exception) {}
+            hideSlowBanner()
+        }
+        slowBanner = banner
+        content.addView(banner, FrameLayout.LayoutParams(MP, WC, Gravity.TOP).also { it.setMargins(dp(10), dp(64), dp(10), 0) })
+        banner.alpha = 0f
+        banner.animate().alpha(1f).setDuration(Toon.dur(this, ToonTheme.Motion.base)).start()
+    }
+
+    private fun hideSlowBanner() {
+        val b = slowBanner ?: return
+        slowBanner = null
+        slowBannerShown = false
+        if (!::content.isInitialized) return
+        b.animate().alpha(0f).setDuration(Toon.dur(this, ToonTheme.Motion.base)).withEndAction {
+            (b.parent as? ViewGroup)?.removeView(b)
+        }.start()
     }
 
     private fun hidePageError() {
@@ -3762,7 +3793,12 @@ return t.length>=40?'TXT:'+t:'';
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
-                    if (view === novelWv) hidePageError()
+                    if (view === novelWv) {
+                        hidePageError()
+                        pageLoadStartedMs = 0L
+                        handler.removeCallbacks(slowBannerRunnable)
+                        if (slowBannerShown) hideSlowBanner()
+                    }
                     if (!prefetchLoading || url.isNullOrBlank()) return
                     val token = prefetchToken
                     if (prefetchWtrSpaPending) {
@@ -6671,6 +6707,12 @@ return t.length>=40?'TXT:'+t:'';
         }
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            if (view === novelWv && !homeVisible()) {
+                pageLoadStartedMs = android.os.SystemClock.elapsedRealtime()
+                slowBannerShown = false
+                handler.removeCallbacks(slowBannerRunnable)
+                handler.postDelayed(slowBannerRunnable, 8_000L)
+            }
             if (view === novelWv && url != null) {
                 AdBlock.pageHost = Uri.parse(url).host?.lowercase()
                 // Processed images belong to the current page only; never reuse them on another chapter.
