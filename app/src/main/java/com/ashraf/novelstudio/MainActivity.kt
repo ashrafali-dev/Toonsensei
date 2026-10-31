@@ -2970,6 +2970,43 @@ return t.length>=40?'TXT:'+t:'';
     private lateinit var shortcutScroll: HorizontalScrollView
     private lateinit var addressBox: LinearLayout
     private lateinit var progressPct: TextView
+    /** Stop button of the translation card; restyled when the system theme flips. */
+    private var progressStopBtn: ImageView? = null
+
+    /**
+     * Paper & Seal: re-tint the chrome when the system light/dark setting changes while the app is
+     * open. configChanges keeps the activity alive, so nothing is rebuilt; only colours are rewritten.
+     */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyPaperTheme()
+    }
+
+    private fun applyPaperTheme() {
+        val p = UiTheme.palette
+        val onPaper = ToonTheme.dark(this)
+        val mode = if (Build.VERSION.SDK_INT >= 23) View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR else 0
+        window?.decorView?.systemUiVisibility = if (!onPaper) (window?.decorView?.systemUiVisibility ?: 0) or mode else (window?.decorView?.systemUiVisibility ?: 0) and mode.inv()
+        window?.statusBarColor = p.bg
+        window?.navigationBarColor = p.bg
+        if (::contentHolderView.isInitialized) contentHolderView.background = appBackground()
+        if (::progressTv.isInitialized) progressTv.setTextColor(p.title)
+        if (::progressPct.isInitialized) progressPct.setTextColor(p.accent)
+        progressStopBtn?.setImageDrawable(IconDrawable(Ic.CLOSE, p.muted))
+        if (::prefetchChip.isInitialized) prefetchChip.setTextColor(p.onInk)
+        if (::togglePill.isInitialized) togglePill.setTextColor(p.onInk)
+        if (::progressBox.isInitialized) progressBox.background = GradientDrawable().apply {
+            cornerRadius = dp(ToonTheme.Radius.card).toFloat()
+            setColor(p.surface)
+            setStroke(dp(1), p.line)
+        }
+        if (::snackView.isInitialized) snackView.background = GradientDrawable().apply {
+            cornerRadius = dp(ToonTheme.Radius.field).toFloat()
+            setColor(p.ink)
+        }
+        if (::snackView.isInitialized) snackView.setTextColor(p.onInk)
+        if (isFinishing.not() && homeVisible()) refreshHome()
+    }
     private lateinit var snackView: TextView
     private var snackHide: Runnable? = null
     private var progressShown = false
@@ -3526,19 +3563,8 @@ return t.length>=40?'TXT:'+t:'';
             it.layoutParams = LinearLayout.LayoutParams(0, dp(46), 1f)
         }
 
-    private fun appBackground(): Drawable {
-        fun glow(cx: Float, cy: Float, color: Int, radiusDp: Int) = GradientDrawable().apply {
-            gradientType = GradientDrawable.RADIAL_GRADIENT
-            gradientRadius = dp(radiusDp).toFloat()
-            setGradientCenter(cx, cy)
-            colors = intArrayOf(color, color and 0x00FFFFFF)
-        }
-        return LayerDrawable(arrayOf(
-            ColorDrawable(UiTheme.bg),
-            glow(0.05f, 0.0f, 0x387B8CFF, 340),
-            glow(1.0f, 1.0f, 0x2EB27CFF, 380)
-        ))
-    }
+    /** Paper & Seal: flat paper, no glow. */
+    private fun appBackground(): Drawable = ColorDrawable(UiTheme.bg)
 
     // ---- floating message (replaces the system Toast, which cannot be styled)
     private fun showSnack(msg: String) {
@@ -3998,12 +4024,13 @@ return t.length>=40?'TXT:'+t:'';
         progressPct = TextView(this).apply {
             textSize = 13.5f
             typeface = boldMedium
-            setTextColor(0xFFCFD5FF.toInt())
+            setTextColor(UiTheme.palette.accent)
         }
-        val progStop = iconButton(Ic.CLOSE, "Stop translation", 13, 28, UiTheme.iconIdle) { cancelAll() }.apply {
-            background = Glass.ripple(this@MainActivity, Glass.oval(0x1FFFFFFF))
+        val progStop = iconButton(Ic.CLOSE, "Stop translation", 13, 32, UiTheme.palette.muted) { cancelAll() }.apply {
+            background = Glass.ripple(this@MainActivity, null)
         }
-        val progIcon = ImageView(this).apply { setImageDrawable(IconDrawable(Ic.GLOBE, UiTheme.accent)) }
+        progressStopBtn = progStop
+        val progIcon = ImageView(this).apply { setImageDrawable(IconDrawable(Ic.GLOBE, UiTheme.palette.muted)) }
         val progRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -4017,12 +4044,10 @@ return t.length>=40?'TXT:'+t:'';
             visibility = View.GONE
             clipChildren = false // lets the mascot's sparkles overshoot the bar a little
             setPadding(dp(14), dp(10), dp(10), dp(6))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(0xF2282C3E.toInt(), 0xF2181B28.toInt())
-            ).apply {
-                cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), 0x668C9CFF)
+            background = GradientDrawable().apply {
+                cornerRadius = dp(ToonTheme.Radius.card).toFloat()
+                setColor(UiTheme.palette.surface)
+                setStroke(dp(1), UiTheme.palette.line)
             }
             elevation = dp(10).toFloat()
             addView(progRow, LinearLayout.LayoutParams(MP, WC))
@@ -4032,18 +4057,15 @@ return t.length>=40?'TXT:'+t:'';
         togglePill = TextView(this).apply {
             textSize = 12.5f
             typeface = boldMedium
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.palette.onInk)
             gravity = Gravity.CENTER
             setPadding(dp(14), 0, dp(17), 0)
             compoundDrawablePadding = dp(8)
-            val gi = IconDrawable(Ic.GLOBE, Color.WHITE)
+            val gi = IconDrawable(Ic.GLOBE, UiTheme.palette.onInk)
             gi.setBounds(0, 0, dp(16), dp(16))
             setCompoundDrawablesRelative(gi, null, null, null)
             visibility = View.GONE
-            background = GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(0xEB7B8CFF.toInt(), 0xEBB27CFF.toInt())
-            ).apply { cornerRadius = dp(19).toFloat() }
+            background = GradientDrawable().apply { cornerRadius = dp(19).toFloat(); setColor(UiTheme.palette.ink) }
             elevation = dp(8).toFloat()
             setOnClickListener { toggleView() }
         }
@@ -4052,11 +4074,11 @@ return t.length>=40?'TXT:'+t:'';
         prefetchChip = TextView(this).apply {
             textSize = 11f
             typeface = boldMedium
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.palette.onInk)
             gravity = Gravity.CENTER
             setPadding(dp(10), 0, dp(12), 0)
             compoundDrawablePadding = dp(5)
-            val bi = IconDrawable(Ic.BOLT, Color.WHITE)
+            val bi = IconDrawable(Ic.BOLT, UiTheme.palette.onInk)
             bi.setBounds(0, 0, dp(12), dp(12))
             setCompoundDrawablesRelative(bi, null, null, null)
             elevation = dp(8).toFloat()
@@ -4098,7 +4120,7 @@ return t.length>=40?'TXT:'+t:'';
                 setImageDrawable(IconDrawable(Ic.SEARCH, UiTheme.iconIdle))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(0xEE232739.toInt())
+                    setColor(UiTheme.palette.surface)
                     setStroke(dp(1), UiTheme.stroke)
                 }
                 val pad = dp(10)
@@ -4116,7 +4138,7 @@ return t.length>=40?'TXT:'+t:'';
                 setImageDrawable(IconDrawable(Ic.BOOK, UiTheme.iconIdle))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(0xEE232739.toInt())
+                    setColor(UiTheme.palette.surface)
                     setStroke(dp(1), UiTheme.stroke)
                 }
                 val pad = dp(9)
@@ -6049,9 +6071,10 @@ return t.length>=40?'TXT:'+t:'';
 
     /** Dark translucent pill used behind the top bar and the dock (readable over any page). */
     private fun floatingBarBg(radiusDp: Int): GradientDrawable =
-        GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xEE232739.toInt(), 0xEE141726.toInt())).apply {
+        GradientDrawable().apply {
             cornerRadius = dp(radiusDp).toFloat()
-            setStroke(dp(1), UiTheme.stroke)
+            setColor(UiTheme.palette.surface)
+            setStroke(dp(1), UiTheme.palette.line)
         }
 
     /**
@@ -9938,20 +9961,20 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
 
     // ---------------------------------------------------------------- bottom-sheet building blocks
     private fun sheetHandle(): View = View(this).apply {
-        background = Glass.solid(this@MainActivity, 0x47FFFFFF, 2)
-        layoutParams = LinearLayout.LayoutParams(dp(40), dp(4)).also {
+        background = Glass.solid(this@MainActivity, UiTheme.palette.lineStrong, 2)
+        layoutParams = LinearLayout.LayoutParams(dp(36), dp(4)).also {
             it.gravity = Gravity.CENTER_HORIZONTAL
             it.bottomMargin = dp(12)
         }
     }
 
     private fun sectionLabel(t: String): TextView = TextView(this).apply {
-        text = t
-        textSize = 11.5f
+        text = t.uppercase()
+        textSize = ToonTheme.Type.section
         typeface = boldMedium
-        letterSpacing = 0.12f
-        setTextColor(UiTheme.faint)
-        setPadding(dp(6), dp(16), dp(6), dp(7))
+        letterSpacing = ToonTheme.SECTION_TRACK
+        setTextColor(UiTheme.palette.muted)
+        setPadding(dp(6), dp(18), dp(6), dp(8))
     }
 
     /** Folded menu section: title + row count + a chevron that springs open when tapped. */

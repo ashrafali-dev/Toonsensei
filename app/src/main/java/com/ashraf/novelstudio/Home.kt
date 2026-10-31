@@ -268,10 +268,10 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
     }
 
     private fun label(t: String): TextView = TextView(ctx).apply {
-        text = t
+        text = t.uppercase()
         textSize = 12f
-        letterSpacing = 0.04f
-        setTextColor(UiTheme.faint)
+        letterSpacing = ToonTheme.SECTION_TRACK
+        setTextColor(UiTheme.palette.muted)
         typeface = bold
         setPadding(ctx.dpi(18), ctx.dpi(16), ctx.dpi(18), ctx.dpi(8))
     }
@@ -322,7 +322,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
 
     private fun header(): View {
         val title = TextView(ctx).apply {
-            text = "Novel Studio"
+            text = "ToonSensei"
             textSize = 22f
             typeface = bold
             setTextColor(UiTheme.text)
