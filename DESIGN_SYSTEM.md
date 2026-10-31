@@ -196,7 +196,7 @@ Font rules:
 - Stroke: 1 dp neutral border; 2 dp accent focus ring.
 - Elevation: 0 dp for app-owned surfaces; use a scrim and border for modal separation.
 - `Metrics`: 1 dp hairline, 2 dp focus stroke, 48 dp target, 24 dp badge, 144 × 3 dp progress track, 24 dp dialog/sheet radii; XML shape dimensions come from `dimens.xml`.
-- Interactive targets: at least 48 × 48 dp in the base components; never below the roadmap's 44 dp minimum.
+- Interactive targets: at least 48 × 48 dp in the base components; clickable cards get a 48 dp minimum as well; never below the roadmap's 44 dp minimum.
 - Keep 8 dp spacing between adjacent touch targets.
 
 ## 6. Motion
@@ -216,7 +216,7 @@ Banned: infinite animation, spring/overshoot, pulse/blink/bounce, shimmer, spinn
 
 ## 7. Component contracts
 
-All new app-owned UI uses these factories. A screen may compose them but may not introduce a private color, type, spacing, radius, or motion value. Component-owned default labels are in `res/values/strings.xml`; screen text moves there as its screen is extracted.
+All new app-owned UI uses these factories. A screen may compose them but may not introduce a private color, type, spacing, radius, or motion value. Interactive buttons, chips, cards and notice actions expose a 2 dp accent focus outline; input fields use the same focus token in their border. Component-owned default labels are in `res/values/strings.xml`; screen text moves there as its screen is extracted.
 
 | Component | Contract |
 |---|---|
@@ -292,6 +292,6 @@ A component/screen is not done until:
 - `res/values/colors.xml` and `res/values-night/colors.xml` — Paper / Charcoal palettes.
 - `res/values/styles.xml` and `res/values-night/styles.xml` — Material Components theme overlays.
 - `res/values/dimens.xml` — shared XML shape/stroke dimensions.
-- G1 component code was statically scanned for hard-coded dp text sizes and raw hex colors outside the theme; no matches were found in the 11 component/theme Kotlin files.
+- G1 component code was statically scanned for hard-coded dp text sizes and raw hex colors outside the theme; no matches were found in the 11 component/theme Kotlin files. Interactive component focus outlines and 48 dp clickable-card minimums are part of the base contract.
 
 G1 does not migrate existing `AlertDialog.Builder` call sites, restyle screens, or alter MainActivity. Those tasks belong to later groups.
