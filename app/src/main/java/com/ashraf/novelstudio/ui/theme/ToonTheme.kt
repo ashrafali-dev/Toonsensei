@@ -35,13 +35,18 @@ object ToonTheme {
         val warning: Int,
         val warningTint: Int,
         val warningLine: Int,
+        val warningRing: Int,
         val danger: Int,
         val dangerTint: Int,
         val scrim: Int,
         val focus: Int,
         val ripple: Int,
         val dark: Boolean
-    )
+    ) {
+        val primary: Int get() = accent
+        val secondary: Int get() = muted
+        val error: Int get() = danger
+    }
 
     fun colors(context: Context): Colors {
         val base = baseColors(context)
@@ -70,6 +75,7 @@ object ToonTheme {
             warning = context.getColor(R.color.toon_warning),
             warningTint = context.getColor(R.color.toon_warning_tint),
             warningLine = context.getColor(R.color.toon_warning_line),
+            warningRing = context.getColor(R.color.toon_warning_ring),
             danger = context.getColor(R.color.toon_danger),
             dangerTint = context.getColor(R.color.toon_danger_tint),
             scrim = context.getColor(R.color.toon_scrim),
