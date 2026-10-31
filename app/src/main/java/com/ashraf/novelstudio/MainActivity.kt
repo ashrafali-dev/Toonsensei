@@ -4813,7 +4813,7 @@ return t.length>=40?'TXT:'+t:'';
                 textSize = 10f
                 typeface = boldMedium
                 gravity = Gravity.CENTER
-                setTextColor(Color.WHITE)
+                setTextColor(UiTheme.foregroundFor(tabHue(tab)))
                 background = Glass.oval(tabHue(tab))
                 layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).also { it.marginEnd = dp(7) }
             }
@@ -5133,8 +5133,7 @@ return t.length>=40?'TXT:'+t:'';
                             textSize = 26f
                             typeface = boldMedium
                             gravity = Gravity.CENTER
-                            setTextColor(Color.WHITE)
-                            background = Glass.oval(0x2EFFFFFF)
+                            setTextColor(UiTheme.foregroundFor(tabHue(tab)))
                         }, FrameLayout.LayoutParams(dp(58), dp(58), Gravity.CENTER).also { it.bottomMargin = dp(26) })
                     }, FrameLayout.LayoutParams(MP, MP))
                 }
