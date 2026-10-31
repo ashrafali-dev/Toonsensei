@@ -47,7 +47,7 @@ object ToonDialog {
     fun choices(
         context: Context,
         title: CharSequence,
-        labels: Array<CharSequence>,
+        labels: Array<out CharSequence>,
         onChoice: (Int) -> Unit
     ): AlertDialog = builder(context)
         .setTitle(title)
