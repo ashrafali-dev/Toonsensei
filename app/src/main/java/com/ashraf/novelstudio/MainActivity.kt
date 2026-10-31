@@ -11470,8 +11470,19 @@ ${rows.take(220).joinToString("\n")}
     private fun saveBookmark() {
         val u = novelWv.url ?: return
         val name = (novelWv.title ?: "").ifBlank { Uri.parse(u).host ?: u }
-        Store.addBookmark(this, Bookmark(name, u, u, ""))
-        toast("Saved: $name")
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Save bookmark", "Saved with this title. You can rename it here.")
+        val et = Toon.field(this, c, "Bookmark name")
+        et.setText(name)
+        d.addContent(et)
+        d.addAction("Save") {
+            val title = et.text.toString().trim().ifBlank { name }
+            Store.addBookmark(this, Bookmark(title, u, u, ""))
+            d.dismiss()
+            toast("Bookmark saved")
+        }
+        d.addAction("Cancel", style = 1) { d.dismiss() }
+        d.show()
     }
 
     private fun bookmarkList() {
