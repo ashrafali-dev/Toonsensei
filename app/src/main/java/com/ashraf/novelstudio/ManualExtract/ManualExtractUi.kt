@@ -1,7 +1,7 @@
 package com.ashraf.novelstudio.manualextract
 
 import android.graphics.Canvas
-import android.graphics.Color
+import com.ashraf.novelstudio.ToonTheme
 import android.graphics.Paint
 import android.graphics.RectF
 
@@ -18,7 +18,7 @@ internal object ManualExtractUi {
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 3f
-        color = Color.argb(200, 0x4D, 0xC3, 0xFF)   // accent blue
+        color = ToonTheme.day.manual   // Manual Lite seal (paper palette)
     }
 
     /** Draws a thin highlight around the tapped region (in the capture bitmap's pixel space). */
