@@ -19,6 +19,7 @@
     <color name="toon_warning">#5E3F0B</color>
     <color name="toon_warning_tint">#F5ECD8</color>
     <color name="toon_warning_line">#E3CFA3</color>
+    <color name="toon_warning_ring">#B7791F</color>
     <color name="toon_danger">#9C3D2E</color>
     <color name="toon_danger_tint">#F0E1DB</color>
     <color name="toon_scrim">#571F1D1A</color>
