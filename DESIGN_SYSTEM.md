@@ -72,6 +72,7 @@ All screen code reads semantic resources through `ToonTheme.Colors`. The light a
 | `toon_warning` | `#5E3F0B` | Warning text |
 | `toon_warning_tint` | `#F5ECD8` | Warning surface |
 | `toon_warning_line` | `#E3CFA3` | Warning edge |
+| `toon_warning_ring` | `#B7791F` | Warning state on the Chat control |
 | `toon_danger` | `#9C3D2E` | Destructive/error action |
 | `toon_danger_tint` | `#F0E1DB` | Destructive soft surface |
 | `toon_scrim` | `#571F1D1A` | Modal backdrop |
@@ -100,6 +101,7 @@ All screen code reads semantic resources through `ToonTheme.Colors`. The light a
 | `toon_warning` | `#C9AE7C` | Warning text |
 | `toon_warning_tint` | `#3A3328` | Warning surface |
 | `toon_warning_line` | `#6B5F46` | Warning edge |
+| `toon_warning_ring` | `#C9AE7C` | Warning state on the Chat control |
 | `toon_danger` | `#E5826F` | Destructive/error action |
 | `toon_danger_tint` | `#432923` | Destructive soft surface |
 | `toon_scrim` | `#991C1B19` | Modal backdrop |
@@ -276,6 +278,7 @@ A component/screen is not done until:
 - `ui/components/ToonComponents.kt` — base shapes, ripples, text, focus, touch.
 - `ui/components/ToonButton.kt`
 - `ui/components/ToonChip.kt`
+- `ui/components/ToonBadge.kt`
 - `ui/components/ToonCard.kt`
 - `ui/components/ToonInput.kt`
 - `ui/components/ToonDialog.kt`
