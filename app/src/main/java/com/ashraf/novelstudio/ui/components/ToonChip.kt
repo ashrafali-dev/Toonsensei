@@ -1,0 +1,49 @@
+package com.ashraf.novelstudio.ui.components
+
+import android.content.Context
+import android.graphics.Color
+import android.widget.TextView
+import android.view.Gravity
+import com.ashraf.novelstudio.ui.theme.ToonTheme
+
+object ToonChip {
+    fun create(
+        context: Context,
+        label: CharSequence,
+        selected: Boolean = false,
+        enabled: Boolean = true,
+        onClick: (() -> Unit)? = null
+    ): TextView {
+        val colors = ToonTheme.colors(context)
+        val fill = if (selected) colors.accentTint else colors.surfaceAlt
+        val ink = if (selected) colors.accent else colors.body
+        val stroke = if (selected) colors.accent else colors.line
+        return TextView(context).apply {
+            text = label
+            textSize = ToonTheme.Type.caption
+            typeface = ToonTheme.Type.mediumTypeface()
+            setTextColor(ink)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            minHeight = ToonTheme.dp(context, 48)
+            minWidth = ToonTheme.dp(context, 48)
+            setPadding(
+                ToonTheme.dp(context, ToonTheme.Space.md),
+                ToonTheme.dp(context, ToonTheme.Space.xs),
+                ToonTheme.dp(context, ToonTheme.Space.md),
+                ToonTheme.dp(context, ToonTheme.Space.xs)
+            )
+            background = ToonComponents.ripple(
+                context,
+                ToonComponents.rounded(context, fill, ToonTheme.Radius.pill, stroke),
+                ToonTheme.Radius.pill
+            )
+            isEnabled = enabled
+            isClickable = onClick != null
+            isFocusable = true
+            alpha = if (enabled) 1f else 0.48f
+            onClick?.let { action -> setOnClickListener { if (isEnabled) action() } }
+            stateListAnimator = null
+        }
+    }
+}
