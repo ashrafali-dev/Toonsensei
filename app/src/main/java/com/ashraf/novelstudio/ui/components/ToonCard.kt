@@ -44,6 +44,7 @@ object ToonCard {
             isFocusable = isInteractive
             contentDescription = accessibilityLabel?.toString()
             if (onClick != null) {
+                ToonComponents.exposeAsButton(this)
                 background = ToonComponents.ripple(
                     context,
                     ToonComponents.rounded(context, colors.surface, radiusDp, colors.line),
