@@ -88,23 +88,7 @@ object ToonButton {
             onClick?.let { action -> setOnClickListener { if (isEnabled) action() } }
             if (onClick != null) ToonComponents.exposeAsButton(this)
             stateListAnimator = null
-            setOnTouchListener { target, event ->
-                if (!isEnabled || !ToonTheme.Motion.enabled(context)) return@setOnTouchListener false
-                when (event.actionMasked) {
-                    android.view.MotionEvent.ACTION_DOWN -> {
-                        target.animate().cancel()
-                        target.animate().scaleX(ToonTheme.Metrics.pressScale).scaleY(ToonTheme.Metrics.pressScale)
-                            .setDuration(ToonTheme.Motion.pressMs).start()
-                    }
-                    android.view.MotionEvent.ACTION_UP,
-                    android.view.MotionEvent.ACTION_CANCEL -> {
-                        target.animate().cancel()
-                        target.animate().scaleX(ToonTheme.Metrics.neutralScale).scaleY(ToonTheme.Metrics.neutralScale)
-                            .setDuration(ToonTheme.Motion.exitMs).start()
-                    }
-                }
-                false
-            }
+
         }
         return view
     }
