@@ -104,8 +104,8 @@ object ToonToast {
                     ToonTheme.dp(context, ToonTheme.Space.md),
                     ToonTheme.dp(context, ToonTheme.Space.md)
                 )
-                minWidth = ToonTheme.dp(context, 48)
-                minHeight = ToonTheme.dp(context, 48)
+                setMinimumWidth(ToonTheme.dp(context, ToonTheme.Metrics.minimumTouchDp))
+                setMinimumHeight(ToonTheme.dp(context, ToonTheme.Metrics.minimumTouchDp))
                 isFocusable = true
                 background = ToonComponents.ripple(
                     context,
