@@ -15,11 +15,12 @@
     </queries>
 
     <application
-        android:label="Novel Studio"
         android:icon="@mipmap/novel_studio_icon"
         android:roundIcon="@mipmap/novel_studio_icon"
         android:usesCleartextTraffic="true"
         android:hardwareAccelerated="true"
+        android:forceDarkAllowed="false"
+        android:label="ToonSensei"
         android:theme="@style/AppTheme">
 
         <activity
