@@ -5437,15 +5437,17 @@ return t.length>=40?'TXT:'+t:'';
 
     /** Bulk actions for the tab switcher. */
     private fun showTabOptions(parentDialog: Dialog) {
-        lateinit var sheet: Dialog
-        val col = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(10), dp(14), dp(18))
-            background = Sheets.sheetBackground(this@MainActivity)
-            addView(sheetHandle())
-            val group = sheetGroup()
-            group.addView(sheetRow(Ic.CLOSE, "Close other tabs", false) {
-                sheet.dismiss()
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Tab options")
+        val group = Toon.group(this, c)
+        var first = true
+        fun row(label: String, ic: ToonIc, destructive: Boolean = false, run: () -> Unit) {
+            if (!first) group.addView(Toon.divider(this, c))
+            first = false
+            group.addView(Toon.listRow(this, c, label, icon = ic, destructive = destructive, chevron = false, onClick = { sheet.close(); run() }))
+        }
+        run {
+            row("Close other tabs", ToonIc.CLOSE) {
                 val keep = browserTabs[activeTabIndex]
                 browserTabs.filter { it !== keep }.forEach { deleteTabThumbnail(it) }
                 browserTabs.clear()
@@ -5455,9 +5457,10 @@ return t.length>=40?'TXT:'+t:'';
                 renderTabs()
                 parentDialog.dismiss()
                 showTabGrid()
-            }.view)
-            group.addView(sheetRow(Ic.CLOSE, "Close all tabs", true) {
-                sheet.dismiss()
+            }
+        }
+        run {
+            row("Close all tabs", ToonIc.CLOSE, destructive = true) {
                 browserTabs.forEach { deleteTabThumbnail(it) }
                 browserTabs.clear()
                 browserTabs.add(BrowserTab("New Tab", "https://www.google.com/"))
@@ -5467,10 +5470,19 @@ return t.length>=40?'TXT:'+t:'';
                 renderTabs()
                 parentDialog.dismiss()
                 showTabGrid()
-            }.view)
-            addView(group, LinearLayout.LayoutParams(MP, WC))
+            }
         }
-        sheet = Sheets.create(this, col)
+        row("Reload this tab", ToonIc.RELOAD) { reloadPage() }
+        row("Share this page", ToonIc.SHARE) {
+            val currentUrl = novelWv.url ?: browserTabs.getOrNull(activeTabIndex)?.url.orEmpty()
+            if (currentUrl.isNotBlank()) {
+                startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, currentUrl)
+                }, "Share page"))
+            }
+        }
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
         sheet.show()
     }
 
