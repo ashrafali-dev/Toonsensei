@@ -29,6 +29,7 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import android.widget.ImageView
 import android.widget.ScrollView
+import com.ashraf.novelstudio.ui.theme.ToonTheme
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -39,19 +40,59 @@ import kotlin.math.sin
  * with its progress ring, and the bottom-sheet / full-screen dialog helpers.
  */
 object UiTheme {
-    val bg = 0xFF07080D.toInt()
-    val sheet = 0xFF10121B.toInt()
-    val text = 0xFFF4F6FB.toInt()
-    val dim = 0xFF9AA3B8.toInt()
-    val faint = 0xFF6B7488.toInt()
-    val iconIdle = 0xFFC9D0E4.toInt()
-    val accentA = 0xFF7B8CFF.toInt()
-    val accentB = 0xFFB27CFF.toInt()
-    val accent = 0xFF8C9CFF.toInt()
-    val ok = 0xFF4ADE80.toInt()
-    val danger = 0xFFFF6B7A.toInt()
-    const val stroke = 0x2EFFFFFF
-    const val strokeSoft = 0x1AFFFFFF
+    var bg = 0xFF0B0F0D.toInt()
+        private set
+    var sheet = 0xFF1F2A1F.toInt()
+        private set
+    var surfaceAlt = 0xFF3E5A3F.toInt()
+        private set
+    var text = 0xFFE9E7DE.toInt()
+        private set
+    var dim = 0xFF8CA98C.toInt()
+        private set
+    var faint = 0xFF6B7F67.toInt()
+        private set
+    var iconIdle = 0xFFE9E7DE.toInt()
+        private set
+    var accentA = 0xFFD9C7A3.toInt()
+        private set
+    var accentB = 0xFFD9C7A3.toInt()
+        private set
+    var accent = 0xFFD9C7A3.toInt()
+        private set
+    var accentTint = 0xFF3E5A3F.toInt()
+        private set
+    var onAccent = 0xFF0B0F0D.toInt()
+        private set
+    var ok = 0xFF8CA98C.toInt()
+        private set
+    var danger = 0xFFE58C79.toInt()
+        private set
+    var stroke = 0xFF6B7F67.toInt()
+        private set
+    var strokeSoft = 0xFF3E5A3F.toInt()
+        private set
+
+    /** Bridge the app's legacy View UI to the shared G1 semantic palette. */
+    fun apply(context: Context) {
+        val c = ToonTheme.colors(context)
+        bg = c.background
+        sheet = c.surface
+        surfaceAlt = c.surfaceAlt
+        text = c.ink
+        dim = c.muted
+        faint = c.faint
+        iconIdle = c.ink
+        accentA = c.accent
+        accentB = c.accent
+        accent = c.accent
+        accentTint = c.accentTint
+        onAccent = c.onAccent
+        ok = c.success
+        danger = c.danger
+        stroke = c.lineStrong
+        strokeSoft = c.line
+    }
 }
 
 internal fun Context.dpi(v: Number): Int = (v.toFloat() * resources.displayMetrics.density + 0.5f).toInt()
@@ -249,24 +290,23 @@ class IconDrawable(private val ic: Ic, private var color: Int, private val strok
 object Glass {
     /** Frosted capsule: light-on-dark gradient fill with a hairline edge. */
     fun panel(c: Context, radiusDp: Number, strong: Boolean = false): GradientDrawable =
-        GradientDrawable(
-            GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(if (strong) 0x3AFFFFFF else 0x2CFFFFFF, if (strong) 0x1CFFFFFF else 0x12FFFFFF)
-        ).apply {
+        GradientDrawable().apply {
             cornerRadius = c.dpf(radiusDp)
+            setColor(if (strong) UiTheme.surfaceAlt else UiTheme.sheet)
             setStroke(c.dpi(1), UiTheme.stroke)
         }
 
     fun field(c: Context, radiusDp: Number, focused: Boolean): GradientDrawable =
         GradientDrawable().apply {
             cornerRadius = c.dpf(radiusDp)
-            setColor(if (focused) 0x1FFFFFFF else 0x12FFFFFF)
-            setStroke(c.dpi(if (focused) 1.5f else 1f), if (focused) UiTheme.accent else UiTheme.strokeSoft)
+            setColor(UiTheme.sheet)
+            setStroke(c.dpi(if (focused) 2 else 1), if (focused) UiTheme.accent else UiTheme.strokeSoft)
         }
 
     fun accent(c: Context, radiusDp: Number, orientation: GradientDrawable.Orientation = GradientDrawable.Orientation.LEFT_RIGHT): GradientDrawable =
-        GradientDrawable(orientation, intArrayOf(UiTheme.accentA, UiTheme.accentB)).apply {
+        GradientDrawable().apply {
             cornerRadius = c.dpf(radiusDp)
+            setColor(UiTheme.accent)
         }
 
     fun solid(c: Context, color: Int, radiusDp: Number, strokeColor: Int = 0, strokeDp: Number = 1): GradientDrawable =
