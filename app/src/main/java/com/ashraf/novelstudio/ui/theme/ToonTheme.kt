@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Build
 import android.provider.Settings
+import com.ashraf.novelstudio.Prefs
 import com.ashraf.novelstudio.R
 
 /**
@@ -43,6 +44,13 @@ object ToonTheme {
     )
 
     fun colors(context: Context): Colors {
+        val base = baseColors(context)
+        val selected = Prefs.get(context, "uiAccentPreset", "").trim()
+        val preset = AccentPreset.values().firstOrNull { it.name == selected }
+        return if (preset == null) base else withAccent(base, preset)
+    }
+
+    private fun baseColors(context: Context): Colors {
         return Colors(
             background = context.getColor(R.color.toon_bg),
             surface = context.getColor(R.color.toon_surface),
