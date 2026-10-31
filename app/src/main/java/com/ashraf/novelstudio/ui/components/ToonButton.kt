@@ -2,9 +2,7 @@ package com.ashraf.novelstudio.ui.components
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
-import android.view.View
 import android.widget.TextView
 import com.ashraf.novelstudio.ui.theme.ToonTheme
 
