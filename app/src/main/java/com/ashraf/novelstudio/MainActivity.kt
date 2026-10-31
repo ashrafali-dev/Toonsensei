@@ -11549,8 +11549,8 @@ ${rows.take(220).joinToString("\n")}
             val row = Toon.listRow(this, c, name, valueText = "$count chapters", chevron = true, onClick = {
                 sheet.close(); novelActions(name)
             })
-            row.addView(cover, LinearLayout.LayoutParams(dp(40), dp(56)).also { it.marginEnd = dp(12) })
-            row.onLongClickListener = null
+            // Cover goes before the title, so it is inserted at index 0.
+            row.addView(cover, 0, LinearLayout.LayoutParams(dp(40), dp(56)).also { it.marginEnd = dp(12) })
             group.addView(row)
             if (i != names.lastIndex) group.addView(Toon.divider(this, c))
         }
@@ -11587,11 +11587,33 @@ ${rows.take(220).joinToString("\n")}
     private fun chapterList(name: String) {
         val l = Store.chapters(this, name)
         if (l.isEmpty()) return
-        listDialog(name + " (long-press to delete)", l.map { it.label() },
-            { i -> startActivity(Intent(this, ReaderActivity::class.java).putExtra("novel", name).putExtra("id", l[i].id)) },
-            { i ->
-                confirmDelete("Delete \"${l[i].label()}\"?") { Store.delete(this, l[i].id) }
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, name)
+        sheet.shell.addContent(TextView(this).apply {
+            text = l.size.toString() + " translated chapters · long-press to delete"
+            textSize = ToonTheme.Type.caption
+            setTextColor(c.muted)
+            setPadding(dp(20), 0, dp(20), dp(8))
+        })
+        val group = Toon.group(this, c)
+        l.forEachIndexed { i, ch ->
+            val row = Toon.listRow(this, c, ch.label(), chevron = false, onClick = {
+                sheet.close()
+                startActivity(Intent(this, ReaderActivity::class.java).putExtra("novel", name).putExtra("id", ch.id))
             })
+            row.setOnLongClickListener {
+                confirmDelete("Delete \"${ch.label()}\"?") { Store.delete(this, ch.id); sheet.close() }
+                true
+            }
+            group.addView(row)
+            if (i != l.lastIndex) group.addView(Toon.divider(this, c))
+        }
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        sheet.shell.footer.addView(Toon.buttonPrimary(this, c, "Start reading") {
+            sheet.close()
+            startActivity(Intent(this, ReaderActivity::class.java).putExtra("novel", name).putExtra("id", l.first().id))
+        }, LinearLayout.LayoutParams(MP, dp(48)))
+        sheet.show()
     }
 
     private fun renameNovel(old: String) {
