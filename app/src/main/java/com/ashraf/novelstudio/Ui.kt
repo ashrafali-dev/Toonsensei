@@ -72,6 +72,25 @@ object UiTheme {
     var strokeSoft = 0xFF3E5A3F.toInt()
         private set
 
+    /** Pick the most legible ink for any palette tile or selected chip fill. */
+    fun foregroundFor(fill: Int): Int =
+        if (contrast(text, fill) >= contrast(Color.WHITE, fill)) text else Color.WHITE
+
+    private fun contrast(a: Int, b: Int): Double {
+        fun luminance(color: Int): Double {
+            fun channel(value: Int): Double {
+                val v = value / 255.0
+                return if (v <= 0.04045) v / 12.92 else Math.pow((v + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * channel(Color.red(color)) +
+                0.7152 * channel(Color.green(color)) +
+                0.0722 * channel(Color.blue(color))
+        }
+        val l1 = luminance(a)
+        val l2 = luminance(b)
+        return (maxOf(l1, l2) + 0.05) / (minOf(l1, l2) + 0.05)
+    }
+
     /** Bridge the app's legacy View UI to the shared G1 semantic palette. */
     fun apply(context: Context) {
         val c = ToonTheme.colors(context)
