@@ -1,7 +1,6 @@
 package com.ashraf.novelstudio.ui.components
 
 import android.content.Context
-import android.graphics.Color
 import android.widget.TextView
 import android.view.Gravity
 import com.ashraf.novelstudio.ui.theme.ToonTheme
