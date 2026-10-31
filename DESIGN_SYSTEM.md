@@ -94,6 +94,7 @@ All screen code reads semantic resources through `ToonTheme.Colors`. The light a
 | `toon_line_strong` | `#45E8E4DA` | Control edge |
 | `toon_accent` | `#C9AE7C` | Active mode, focus, main CTA |
 | `toon_accent_tint` | `#3A3328` | Selected/soft accent surface |
+| `accentForeground` | Derived from selected accent | Selected label, badge text and focus ring; at least 4.5:1 on the selected tint |
 | `toon_on_accent` | `#1C1B19` | Text on accent |
 | `toon_success` | `#7FB08A` | Success marker |
 | `toon_success_tint` | `#26352B` | Success surface |
@@ -110,7 +111,7 @@ All screen code reads semantic resources through `ToonTheme.Colors`. The light a
 
 ### 3.3 Accent presets
 
-Default follows the base palette (Seal Red in Paper, warm bronze in Charcoal). Appearance settings may select one of these presets; the token factory derives an appropriate foreground, tint, focus ring, and ripple from the selected accent. The token reader checks the saved `uiAccentPreset` preference; an empty value retains the theme default.
+Default follows the base palette (Seal Red in Paper, warm bronze in Charcoal). Appearance settings may select one of these presets; the token factory derives an appropriate foreground, tint, focus ring, and ripple from the selected accent. The token reader checks the saved `uiAccentPreset` preference; an empty value retains the theme default. In dark mode, the raw preset color remains the primary button fill, while `accentForeground` is automatically lifted toward the ink color until it reaches at least 4.5:1 against the selected accent tint. The focus ring uses this contrast-safe foreground token.
 
 | Preset | Hex |
 |---|---|
@@ -128,11 +129,11 @@ Mode identity uses these accents unless the exact mode board specifies otherwise
 Measured against the supplied base palette:
 - Paper ink on background: 14.91:1.
 - Paper muted on background: 5.05:1.
-- Paper accent on white: 6.73:1.
+- Paper accent on surface: 6.44:1; on accent tint: 5.29:1.
 - Paper warning ink on warning tint: 8.15:1.
 - Charcoal ink on background: 13.56:1.
 - Charcoal muted on surface: 5.14:1.
-- Charcoal accent on its on-color: 8.06:1.
+- Charcoal accent on its on-color: 8.06:1; on accent tint: 5.84:1.
 - Charcoal danger on background: 6.35:1.
 
 The dark `toon_faint` color is about 3.2:1 against the dark background. It is reserved for non-essential metadata/decorative use and must not carry an instruction, error, label, or status by itself. The translucent line tokens are for non-interactive separators; use the accent focus token for active/focused controls.
@@ -156,7 +157,7 @@ The app owns only its own chrome and saved-content UI. Do not inject these typef
 | `display` | 26 sp | 600 | Wordmark / primary editorial heading |
 
 Font rules:
-- App chrome uses the Android system sans family until the approved Inter font asset is bundled.
+- App chrome currently uses the Android system sans family. Inter, Noto Serif Bengali and Shippori Mincho font assets are not in the verified source tree; do not claim they are bundled. Bundle licensed font assets in a later explicit font task before switching these roles.
 - Bengali app-owned text uses the bundled Hind face as an offline-compatible fallback.
 - Saved translation reading may use the bundled Tiro serif face where appropriate.
 - The existing Galada face is reserved for decorative brand use, not dense interface labels.
@@ -287,5 +288,6 @@ A component/screen is not done until:
 - `ui/components/ToonStateView.kt`
 - `res/values/colors.xml` and `res/values-night/colors.xml` — Paper / Charcoal palettes.
 - `res/values/styles.xml` and `res/values-night/styles.xml` — Material Components theme overlays.
+- `res/values/dimens.xml` — shared XML shape/stroke dimensions.
 
 G1 does not migrate existing `AlertDialog.Builder` call sites, restyle screens, or alter MainActivity. Those tasks belong to later groups.
