@@ -28,11 +28,11 @@ class ReaderActivity : Activity() {
     private lateinit var readBar: ProgressBar
 
     // themes: 0 dark, 1 sepia, 2 white
-    private val bg = intArrayOf(0xFF07080D.toInt(), 0xFFF4ECD8.toInt(), 0xFFFFFFFF.toInt())
-    private val fg = intArrayOf(0xFFDDDDDD.toInt(), 0xFF3B2F1E.toInt(), 0xFF111111.toInt())
-    private val dim = intArrayOf(0xFF8B93A7.toInt(), 0xFF8A7B5C.toInt(), 0xFF777777.toInt())
-    private val card = intArrayOf(0xFF14181F.toInt(), 0x33FFFFFF, 0x11000000)
-    private val pill = intArrayOf(0xF21E232E.toInt(), 0xE63B2F1E.toInt(), 0xE6111111.toInt())
+    private val bg = intArrayOf(0xFF121211.toInt(), 0xFFF4ECD8.toInt(), 0xFFFFFFFF.toInt())
+    private val fg = intArrayOf(0xFFE8E3D9.toInt(), 0xFF3B2F1E.toInt(), 0xFF111111.toInt())
+    private val dim = intArrayOf(0xFF9B9488.toInt(), 0xFF8A7B5C.toInt(), 0xFF777777.toInt())
+    private val card = intArrayOf(0xFF1B1B1A.toInt(), 0x33FFFFFF, 0x11000000)
+    private val pill = intArrayOf(0xFF1B1B1A.toInt(), 0xE63B2F1E.toInt(), 0xE6111111.toInt())
     private val accent = UiTheme.accent
     private var novel = ""
 

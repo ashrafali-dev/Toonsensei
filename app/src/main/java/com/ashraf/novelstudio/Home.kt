@@ -3,7 +3,6 @@ package com.ashraf.novelstudio
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -127,8 +126,8 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
     private var riseIndex = 0
 
     private val palette = intArrayOf(
-        0xFF7F77DD.toInt(), 0xFF1D9E75.toInt(), 0xFFD4537E.toInt(), 0xFFBA7517.toInt(),
-        0xFF378ADD.toInt(), 0xFF639922.toInt(), 0xFFD85A30.toInt(), 0xFF534AB7.toInt()
+        0xFF9C3D2E.toInt(), 0xFF2E6B47.toInt(), 0xFF1A4FB4.toInt(), 0xFF8C2C1D.toInt(),
+        0xFF2C6650.toInt(), 0xFF5E3F0B.toInt(), 0xFF6E2A1E.toInt(), 0xFF3C6E52.toInt()
     )
 
     init {
@@ -199,10 +198,11 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             })
         }
         val go = ImageView(ctx).apply {
-            setImageDrawable(IconDrawable(Ic.FORWARD, Color.WHITE))
+            setImageDrawable(IconDrawable(Ic.FORWARD, UiTheme.palette.onInk))
             setPadding(ctx.dpi(11), ctx.dpi(11), ctx.dpi(11), ctx.dpi(11))
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(UiTheme.accentA, UiTheme.accentB)).apply {
+            background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
+                setColor(UiTheme.palette.ink)
             }
             isClickable = true
             contentDescription = "Go"
@@ -283,11 +283,11 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
         val base = colorFor(site.name)
         frame.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
-            intArrayOf(base, ModeUi.lerp(base, Color.BLACK, 0.3f))
+            intArrayOf(base, ModeUi.lerp(base, 0xFF1F1D1A.toInt(), 0.45f))
         ).apply { cornerRadius = ctx.dpf(radiusDp) }
         val letter = TextView(ctx).apply {
             text = site.name.take(1).uppercase()
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.palette.onInk)
             textSize = textSp
             typeface = bold
             gravity = Gravity.CENTER
@@ -306,7 +306,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             Favicons.load(ctx, host) { bmp ->
                 if (bmp != null && mine == token) {
                     frame.background = GradientDrawable().apply {
-                        setColor(0xFFF4F6FB.toInt())
+                        setColor(UiTheme.palette.surface)
                         cornerRadius = ctx.dpf(radiusDp)
                     }
                     img.setImageBitmap(bmp)
@@ -435,11 +435,11 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             text = title.trim().take(1).uppercase()
             textSize = textSp
             typeface = bold
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.palette.onInk)
             gravity = Gravity.CENTER
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(base, ModeUi.lerp(base, Color.BLACK, 0.3f))
+                intArrayOf(base, ModeUi.lerp(base, 0xFF1F1D1A.toInt(), 0.45f))
             ).apply { cornerRadius = ctx.dpf(radiusDp) }
             layoutParams = LinearLayout.LayoutParams(ctx.dpi(wDp), ctx.dpi(hDp))
         }
@@ -477,7 +477,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             text = "Continue  \u203A"
             textSize = 13f
             typeface = bold
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.palette.onInk)
             setPadding(ctx.dpi(14), ctx.dpi(7), ctx.dpi(14), ctx.dpi(7))
             background = GradientDrawable().apply {
                 setColor(base)
@@ -545,9 +545,9 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             textSize = 15f
             typeface = bold
             gravity = Gravity.CENTER
-            setTextColor(if (primary) Color.WHITE else UiTheme.text)
+            setTextColor(if (primary) UiTheme.palette.onInk else UiTheme.text)
             background = if (primary)
-                GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(UiTheme.accentA, UiTheme.accentB)).apply { cornerRadius = ctx.dpf(22) }
+                GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(UiTheme.palette.ink, UiTheme.palette.ink)).apply { cornerRadius = ctx.dpf(22) }
             else Glass.solid(ctx, UiTheme.sheet, 22, UiTheme.stroke)
         }
         pressable(t) { onHub(part) }

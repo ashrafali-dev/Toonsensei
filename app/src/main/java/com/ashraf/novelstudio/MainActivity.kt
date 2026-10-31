@@ -3438,7 +3438,7 @@ return t.length>=40?'TXT:'+t:'';
 
     // ================================================================== theme ("Aurora Glass", see Ui.kt)
     private val cBg = UiTheme.bg
-    private val cSurface = 0xFF0C0E15.toInt()
+    private val cSurface = UiTheme.sheet
     private val cPill = 0xFF171A24.toInt()
     private val cChip = 0xFF1D2130.toInt()
     private val cField = 0xFF141722.toInt()

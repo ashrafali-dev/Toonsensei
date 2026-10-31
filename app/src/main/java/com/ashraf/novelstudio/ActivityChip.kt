@@ -32,8 +32,8 @@ class ActivityChip(context: Context) : LinearLayout(context) {
         background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = 20 * d
-            setColor(0xE6121420.toInt())
-            setStroke((1 * d).toInt().coerceAtLeast(1), 0x33FFFFFF)
+            setColor(UiTheme.palette.surface)
+            setStroke((1 * d).toInt().coerceAtLeast(1), UiTheme.palette.lineStrong)
         }
         elevation = 12 * d
         isClickable = false
@@ -85,7 +85,7 @@ class ActivityChip(context: Context) : LinearLayout(context) {
     }
 
     private class DotsView(context: Context) : View(context) {
-        var color: Int = 0xFFB388FF.toInt()
+        var color: Int = UiTheme.palette.accent
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         private var t = 0f
         private var anim: ValueAnimator? = null

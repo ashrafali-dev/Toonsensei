@@ -3,7 +3,6 @@ package com.ashraf.novelstudio
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
@@ -32,7 +31,7 @@ class TourOverlay(private val ctx: Context) : FrameLayout(ctx) {
     private var index = 0
     private var onDone: () -> Unit = {}
 
-    private val dim = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xCC050711.toInt() }
+    private val dim = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xB3000000.toInt() }
     private val clear = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
     private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -89,10 +88,11 @@ class TourOverlay(private val ctx: Context) : FrameLayout(ctx) {
         nextBtn.apply {
             textSize = 14f
             typeface = bold
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.palette.onInk)
             setPadding(ctx.dpi(20), ctx.dpi(9), ctx.dpi(20), ctx.dpi(9))
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(UiTheme.accentA, UiTheme.accentB)).apply {
+            background = GradientDrawable().apply {
                 cornerRadius = ctx.dpf(20)
+                setColor(UiTheme.palette.ink)
             }
             isClickable = true
             setOnClickListener { next() }
@@ -221,7 +221,7 @@ class TourOverlay(private val ctx: Context) : FrameLayout(ctx) {
             val r = min(hole.width(), hole.height()) / 2f
             val grow = 2f * dens * pulse
             tmp.set(hole.left - grow, hole.top - grow, hole.right + grow, hole.bottom + grow)
-            ring.color = ModeUi.withAlpha(Color.WHITE, (110 + 130 * (1f - pulse)).toInt())
+            ring.color = ModeUi.withAlpha(UiTheme.palette.bg, (110 + 130 * (1f - pulse)).toInt())
             c.drawRoundRect(tmp, r + grow, r + grow, ring)
         }
     }

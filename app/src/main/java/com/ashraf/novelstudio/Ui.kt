@@ -33,26 +33,11 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Novel Studio design system ("Aurora Glass").
- * Everything visual that is shared between screens lives here: colours, vector icons drawn with
- * Canvas (no emoji in the chrome), glass surfaces, the glow progress bar, the extract button
- * with its progress ring, and the bottom-sheet / full-screen dialog helpers.
+ * Shared visual helpers (icons, surfaces, the extract button, sheet scaffolding).
+ *
+ * Palette names such as [UiTheme.text] live in ToonSkin.kt and read the current Paper & Seal
+ * palette, so screens that have not been redesigned yet inherit the new colours.
  */
-object UiTheme {
-    val bg = 0xFF07080D.toInt()
-    val sheet = 0xFF10121B.toInt()
-    val text = 0xFFF4F6FB.toInt()
-    val dim = 0xFF9AA3B8.toInt()
-    val faint = 0xFF6B7488.toInt()
-    val iconIdle = 0xFFC9D0E4.toInt()
-    val accentA = 0xFF7B8CFF.toInt()
-    val accentB = 0xFFB27CFF.toInt()
-    val accent = 0xFF8C9CFF.toInt()
-    val ok = 0xFF4ADE80.toInt()
-    val danger = 0xFFFF6B7A.toInt()
-    const val stroke = 0x2EFFFFFF
-    const val strokeSoft = 0x1AFFFFFF
-}
 
 internal fun Context.dpi(v: Number): Int = (v.toFloat() * resources.displayMetrics.density + 0.5f).toInt()
 internal fun Context.dpf(v: Number): Float = v.toFloat() * resources.displayMetrics.density
@@ -247,33 +232,48 @@ class IconDrawable(private val ic: Ic, private var color: Int, private val strok
 // ============================================================================ glass surfaces
 
 object Glass {
-    /** Frosted capsule: light-on-dark gradient fill with a hairline edge. */
+    /**
+     * Paper & Seal surfaces. Legacy callers pass light-on-dark fills such as `0x14FFFFFF`; those are
+     * translated to the matching tint of the palette's ink so every migrated screen stays legible on
+     * paper without rewriting its call sites.
+     */
+    private fun adapt(c: Context, color: Int): Int {
+        val p = UiTheme.palette
+        val a = (color ushr 24) and 0xFF
+        if (a == 0xFF) return color
+        // White-on-dark tints become ink-on-paper tints at the same strength.
+        val isWhiteish = (color and 0x00FFFFFF) >= 0x00E0E0E0
+        val base = if (isWhiteish) p.title else color
+        return ToonTheme.withAlpha(base, a)
+    }
+
+    /** Capsule fill with a hairline edge (frosted in the old theme, paper tint now). */
     fun panel(c: Context, radiusDp: Number, strong: Boolean = false): GradientDrawable =
-        GradientDrawable(
-            GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(if (strong) 0x3AFFFFFF else 0x2CFFFFFF, if (strong) 0x1CFFFFFF else 0x12FFFFFF)
-        ).apply {
+        GradientDrawable().apply {
             cornerRadius = c.dpf(radiusDp)
+            setColor(ToonTheme.withAlpha(UiTheme.palette.title, if (strong) 0x1F else 0x12))
             setStroke(c.dpi(1), UiTheme.stroke)
         }
 
     fun field(c: Context, radiusDp: Number, focused: Boolean): GradientDrawable =
         GradientDrawable().apply {
             cornerRadius = c.dpf(radiusDp)
-            setColor(if (focused) 0x1FFFFFFF else 0x12FFFFFF)
-            setStroke(c.dpi(if (focused) 1.5f else 1f), if (focused) UiTheme.accent else UiTheme.strokeSoft)
+            setColor(if (focused) UiTheme.palette.surface else UiTheme.palette.surfaceAlt)
+            setStroke(c.dpi(if (focused) 2f else 1f), if (focused) UiTheme.palette.accent else UiTheme.palette.lineStrong)
         }
 
+    /** Filled accent surface (seal colour, flat — no gradient in Paper & Seal). */
     fun accent(c: Context, radiusDp: Number, orientation: GradientDrawable.Orientation = GradientDrawable.Orientation.LEFT_RIGHT): GradientDrawable =
-        GradientDrawable(orientation, intArrayOf(UiTheme.accentA, UiTheme.accentB)).apply {
+        GradientDrawable().apply {
             cornerRadius = c.dpf(radiusDp)
+            setColor(UiTheme.palette.accent)
         }
 
     fun solid(c: Context, color: Int, radiusDp: Number, strokeColor: Int = 0, strokeDp: Number = 1): GradientDrawable =
         GradientDrawable().apply {
             cornerRadius = c.dpf(radiusDp)
-            setColor(color)
-            if (strokeColor != 0) setStroke(c.dpi(strokeDp), strokeColor)
+            setColor(adapt(c, color))
+            if (strokeColor != 0) setStroke(c.dpi(strokeDp), adapt(c, strokeColor))
         }
 
     fun oval(color: Int, strokeColor: Int = 0, strokePx: Int = 0): GradientDrawable =
@@ -289,7 +289,7 @@ object Glass {
             setColor(Color.WHITE)
             if (radiusDp == null) shape = GradientDrawable.OVAL else cornerRadius = c.dpf(radiusDp)
         }
-        return RippleDrawable(ColorStateList.valueOf(0x40FFFFFF), content, mask)
+        return RippleDrawable(ColorStateList.valueOf(ToonTheme.withAlpha(UiTheme.palette.title, 0x1A)), content, mask)
     }
 }
 
@@ -310,7 +310,7 @@ internal fun Context.iconButton(ic: Ic, desc: String, sizeDp: Int = 22, boxDp: I
 // ============================================================================ glow progress bar
 
 class GlowBar(ctx: Context) : View(ctx) {
-    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x24FFFFFF }
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ToonTheme.withAlpha(UiTheme.palette.title, 0x1A) }
     private val fillP = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shine = Paint(Paint.ANTI_ALIAS_FLAG)
     private var shown = 0f
@@ -363,11 +363,12 @@ class GlowBar(ctx: Context) : View(ctx) {
         c.drawRoundRect(0f, 0f, w, h, r, r, track)
         val fw = maxOf(w * shown / 100f, if (shown > 0f) h else 0f)
         if (fw <= 0f) return
-        fillP.shader = LinearGradient(0f, 0f, maxOf(fw, 1f), 0f, UiTheme.accentA, UiTheme.accentB, Shader.TileMode.CLAMP)
+        fillP.color = UiTheme.palette.accent
         c.drawRoundRect(0f, 0f, fw, h, r, r, fillP)
         val bw = w * 0.30f
         val x = -bw + (fw + bw) * phase
-        shine.shader = LinearGradient(x, 0f, x + bw, 0f, intArrayOf(0x00FFFFFF, 0x70FFFFFF, 0x00FFFFFF), null, Shader.TileMode.CLAMP)
+        // Paper & Seal: a quiet light sweep, no glow.
+        shine.color = ToonTheme.withAlpha(UiTheme.palette.bg, 0x66)
         val save = c.save()
         c.clipRect(0f, 0f, fw, h)
         c.drawRoundRect(x, 0f, x + bw, h, r, r, shine)
@@ -492,7 +493,9 @@ class ExtractButton(ctx: Context) : View(ctx) {
         val mStart = ModeUi.start(modeIndex)
         val mEnd = ModeUi.end(modeIndex)
 
-        glow.shader = RadialGradient(cx, cy, r, intArrayOf(ModeUi.withAlpha(mStart, 0x44), ModeUi.withAlpha(mStart, 0)), floatArrayOf(0.55f, 1f), Shader.TileMode.CLAMP)
+        // Paper & Seal: hairline ring + static ticks, no glow.
+        glow.shader = null
+        glow.color = 0
         c.drawCircle(cx, cy, r, glow)
 
         // the bubble the button sits in
@@ -500,6 +503,7 @@ class ExtractButton(ctx: Context) : View(ctx) {
         bubble.color = UiTheme.sheet
         c.drawCircle(cx, cy, bubR, bubble)
         bubbleStroke.strokeWidth = 1f * dens
+        bubbleStroke.color = UiTheme.stroke
         c.drawCircle(cx, cy, bubR, bubbleStroke)
 
         // 24 ticks: idle = dim, comet = busy, filled up to N% = determinate progress
@@ -526,9 +530,9 @@ class ExtractButton(ctx: Context) : View(ctx) {
             c.drawLine(cx + ca * tInner, cy + sa * tInner, cx + ca * tOuter, cy + sa * tOuter, tick)
         }
 
-        // gradient disc + bolt
+        // seal disc + mode glyph (flat colour)
         val br = tInner - 4f * dens
-        disc.shader = LinearGradient(cx - br, cy - br, cx + br, cy + br, mStart, mEnd, Shader.TileMode.CLAMP)
+        disc.color = mStart
         c.drawCircle(cx, cy, br, disc)
         val s = (br * 1.05f).toInt()
         bolt.setBounds((cx - s / 2f).toInt(), (cy - s / 2f).toInt(), (cx + s / 2f).toInt(), (cy + s / 2f).toInt())
@@ -587,14 +591,12 @@ object Sheets {
     }
 
     /** Rounded top-corner glass background for sheets. */
-    fun sheetBackground(c: Context, topRadiusDp: Number = 30): GradientDrawable {
+    fun sheetBackground(c: Context, topRadiusDp: Number = ToonTheme.Radius.sheet): GradientDrawable {
         val r = c.dpf(topRadiusDp)
-        return GradientDrawable(
-            GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(0xF5202332.toInt(), 0xF710121B.toInt())
-        ).apply {
+        return GradientDrawable().apply {
+            setColor(UiTheme.palette.surface)
             cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
-            setStroke(c.dpi(1), 0x24FFFFFF)
+            setStroke(c.dpi(1), UiTheme.palette.line)
         }
     }
 }

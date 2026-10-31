@@ -28,13 +28,13 @@ import kotlin.math.sin
  * Index 0 = Novel, 1 = Scan (WebToon scanning), 2 = Live (WebToon real-time).
  */
 object ModeUi {
-    val names = arrayOf("Novel", "Scan", "Live")
-    private val starts = intArrayOf(UiTheme.accentA, 0xFF4ADEB0.toInt(), 0xFFFF8FB5.toInt())
-    private val ends = intArrayOf(UiTheme.accentB, 0xFF1D9E75.toInt(), 0xFFD4537E.toInt())
+    /** Paper & Seal mode names; index order shared with [ToonTheme.modeColor]. */
+    val names = ToonTheme.modeNames.copyOf(3)
 
-    fun start(i: Int): Int = starts[i.coerceIn(0, 2)]
-    fun end(i: Int): Int = ends[i.coerceIn(0, 2)]
-    fun mid(i: Int): Int = lerp(start(i), end(i), 0.5f)
+    /** Seal colours come from the palette, so light and dark stay in sync. */
+    fun start(i: Int): Int = ToonTheme.modeColor(UiTheme.palette, i)
+    fun end(i: Int): Int = start(i)
+    fun mid(i: Int): Int = start(i)
 
     /** [c] with its alpha replaced by [a] (0..255). */
     fun withAlpha(c: Int, a: Int): Int = (c and 0x00FFFFFF) or (a.coerceIn(0, 255) shl 24)
@@ -113,7 +113,7 @@ class ModeCapsule(ctx: Context) : View(ctx) {
 
     private val dens = ctx.resources.displayMetrics.density
     private val glyph = ModeGlyphPainter()
-    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0x14FFFFFF }
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = ToonTheme.withAlpha(UiTheme.palette.title, 0x0F) }
     private val trackStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1f * dens
@@ -189,17 +189,29 @@ class ModeCapsule(ctx: Context) : View(ctx) {
         val left = pad + pos * segW
         rect.set(left, pad, left + segW, pad + th)
 
+        // Paper & Seal: thumb is a surface pill; the selected mode shows as a seal underline.
+        val p = UiTheme.palette
         val a = pos.toInt().coerceIn(0, 1)
         val t = pos - a
         val c0 = ModeUi.lerp(ModeUi.start(a), ModeUi.start(a + 1), t)
         val c1 = ModeUi.lerp(ModeUi.end(a), ModeUi.end(a + 1), t)
-        thumb.shader = LinearGradient(rect.left, rect.top, rect.right, rect.bottom, c0, c1, Shader.TileMode.CLAMP)
+        thumb.shader = null
+        thumb.color = p.surface
         c.drawRoundRect(rect, th / 2f, th / 2f, thumb)
+        thumb.strokeWidth = 1f * dens
+        thumb.style = Paint.Style.STROKE
+        thumb.color = p.lineStrong
+        c.drawRoundRect(rect, th / 2f, th / 2f, thumb)
+        thumb.style = Paint.Style.FILL
+        thumb.color = c0
+        val uw = segW * 0.42f
+        rect.set(left + (segW - uw) / 2f, pad + th - 2.5f * dens, left + (segW + uw) / 2f, pad + th)
+        c.drawRoundRect(rect, 1.25f * dens, 1.25f * dens, thumb)
 
         for (i in 0..2) {
             val cx = pad + segW * (i + 0.5f)
             val d = min(1f, abs(pos - i))
-            glyph.draw(c, i, cx, h / 2f, 17f * dens, ModeUi.lerp(Color.WHITE, UiTheme.iconIdle, d))
+            glyph.draw(c, i, cx, h / 2f, 17f * dens, ModeUi.lerp(UiTheme.palette.title, UiTheme.palette.muted, d))
         }
     }
 
@@ -248,8 +260,7 @@ class ModeSwitchOverlay(ctx: Context) : View(ctx) {
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         textAlign = Paint.Align.CENTER
         textSize = 17f * dens
-        letterSpacing = 0.08f
-        color = Color.WHITE
+        color = ToonTheme.withAlpha(UiTheme.palette.title, 0xEE)
     }
     private val rect = RectF()
     private val path = Path()
@@ -350,10 +361,10 @@ class ModeSwitchOverlay(ctx: Context) : View(ctx) {
         // glass card
         rect.set(cx - cardW / 2f, cy - cardW / 2f, cx + cardW / 2f, cy + cardW / 2f)
         p.color = UiTheme.sheet
-        p.alpha = 0xEE
+        p.alpha = 0xFF
         c.drawRoundRect(rect, 30f * dens, 30f * dens, p)
         p.alpha = 255
-        st.color = 0x33FFFFFF
+        st.color = UiTheme.stroke
         st.strokeWidth = 1f * dens
         c.drawRoundRect(rect, 30f * dens, 30f * dens, st)
 
