@@ -166,7 +166,7 @@ class MainActivity : Activity() {
             enqueue(c)
             sent++
         }
-        if (sent > 0) toast("🔁 Translation failed earlier — sending to the chatbot again")
+        if (sent > 0) toast("Translation failed earlier — sending to the chatbot again")
     }
 
     // Single-bubble/area jobs temporarily pass partial source text through the existing chatbot pipeline.
@@ -527,16 +527,16 @@ class MainActivity : Activity() {
             return
         }
         if (!webModeOn()) {
-            toast("🔎 Area re-scan needs Scanning or Real-time mode")
+            toast("Area re-scan needs Scanning or Real-time mode")
             return
         }
         if (!fromReOcr && (webModeHandle != null || running != null || queue.isNotEmpty())) {
-            toast("⏳ Current OCR/translation is busy. Try again when it finishes")
+            toast("Current OCR/translation is busy. Try again when it finishes")
             return
         }
         val url = novelWv.url.orEmpty()
         if (!url.startsWith("http", ignoreCase = true) || src.isBlank()) {
-            toast("⚠️ Could not identify the selected image")
+            toast("Could not identify the selected image")
             return
         }
         // Load persisted geometry first, so a correction keeps unrelated bubbles from this page.
@@ -600,17 +600,17 @@ class MainActivity : Activity() {
                         val ny = (rawY - rawH * ex).coerceIn(0f, 0.994f)
                         val nw = (rawW * (1f + 2f * ex)).coerceIn(0.006f, 1f - nx)
                         val nh = (rawH * (1f + 2f * ex)).coerceIn(0.006f, 1f - ny)
-                        toast("🔎 Nothing found yet — reading a wider area…")
+                        toast("Nothing found yet — reading a wider area…")
                         requestForceOcrArea(src, nx, ny, nw, nh, fromReOcr = true, expanded = true, onFinished = onFinished)
                         return@onDone
                     }
                     when (out) {
-                        is WebModeOutcome.Failure -> toast("⚠️ Force OCR failed: ${out.message}")
+                        is WebModeOutcome.Failure -> toast("Force OCR failed: ${out.message}")
                         is WebModeOutcome.Success -> {
                             val scan = WebModeLayoutStore.getScan(out.chapter.url)
                             val selected = scan?.bubbles.orEmpty().filter { it.sourceText.isNotBlank() }
                             if (selected.isEmpty()) {
-                                toast("⚠️ Selected area: no text found; previous bubbles were kept")
+                                toast("Selected area: no text found; previous bubbles were kept")
                             } else {
                                 // Force OCR always translates the fresh scan, even if its hash already
                                 // existed in the real-time dedup set. The stale geometry was replaced above.
@@ -628,7 +628,7 @@ class MainActivity : Activity() {
                                 registerRealtimeBatch(chapter, hashes, selectedLayout)
                                 deepSeekLastOcrAtMs = System.currentTimeMillis()
                                 deepSeekVisibleSignature = ""
-                                toast("🔎 OCR refreshed · sending ${selected.size} bubble(s) to translate…")
+                                toast("OCR refreshed · sending ${selected.size} bubble(s) to translate…")
                                 rememberChapterAfterBubbleJob(lastChapter?.takeIf { cleanUrl(it.url) == cleanUrl(chapter.url) }, chapter)
                                 // Scanning mode: translate just this area and merge it into the bubbles already placed.
                                 scanRegionChapter = if (DeepSeekRealtimeTranslation.isEnabled(this)) null else chapter
@@ -671,7 +671,7 @@ class MainActivity : Activity() {
             val src = decode(raw)
             if (src.isBlank()) {
                 OcrDiag.log("MANUAL", "extract: no visible image on this screen")
-                toast("🔎 No visible page image — scroll to the panel and try again")
+                toast("No visible page image — scroll to the panel and try again")
                 return@evaluateJavascript
             }
             OcrDiag.setMode("manual")
@@ -711,7 +711,7 @@ class MainActivity : Activity() {
                 interruptRealtimeAheadForVisiblePanel()
             }
             if (webModeHandle == null && running == null && queue.isEmpty()) { block(); return }
-            if (attempt >= 300) { finish("⚠️ The chatbot was busy, please try again"); return }
+            if (attempt >= 300) { finish("The chatbot was busy, please try again"); return }
             handler.postDelayed({ whenIdle(attempt + 1, block) }, 400L)
         }
         // Safety net: background work must never stay paused for good.
@@ -735,7 +735,7 @@ class MainActivity : Activity() {
             if (srcs.isEmpty()) {
                 whenIdle(0) {
                     navToken++
-                    toast("🔎 No image URL found; trying fresh OCR on the visible reader")
+                    toast("No image URL found; trying fresh OCR on the visible reader")
                     // Keep Auto Real-time paused until screenshot OCR has been handed to translation;
                     // resuming here used to start a competing OCR job and cancel the manual read.
                     startWebModeExtract(navToken, realtimeViewport = true, forceFresh = true, onHandled = {
@@ -746,7 +746,7 @@ class MainActivity : Activity() {
             }
             fun step(i: Int) {
                 whenIdle(0) {
-                    if (i >= srcs.size) { finish("✅ OCR finished — other work is running again"); return@whenIdle }
+                    if (i >= srcs.size) { finish("OCR finished — other work is running again"); return@whenIdle }
                     requestForceOcrArea(srcs[i], 0f, 0f, 1f, 1f, fromReOcr = true) {
                         // OCR is done; its translation (if any text was found) is now with the chatbot.
                         handler.postDelayed({ step(i + 1) }, 700L)
@@ -761,7 +761,7 @@ class MainActivity : Activity() {
 
     private fun showRescanSelector() {
         if (!webModeOn()) {
-            toast("🔎 Open a comic in Scanning or Real-time mode first")
+            toast("Open a comic in Scanning or Real-time mode first")
             return
         }
         if (rescanOverlay != null) return
@@ -840,7 +840,7 @@ class MainActivity : Activity() {
                 interruptRealtimeAheadForVisiblePanel()
             }
             if (webModeHandle == null && running == null && queue.isEmpty()) { block(); return }
-            if (attempt >= 300) { finish("⚠️ The chatbot was busy, please try again"); return }
+            if (attempt >= 300) { finish("The chatbot was busy, please try again"); return }
             handler.postDelayed({ whenIdle(attempt + 1, block) }, 400L)
         }
         handler.postDelayed({ if (run == reOcrRun && reOcrBusy) finish("⟳ Paused work resumed") }, 240_000L)
@@ -860,7 +860,7 @@ class MainActivity : Activity() {
                 // Manual mode still honours the intent: read exactly what was framed, from the live screen.
                 if (manual) {
                     val hit = captureManualRegionFromView(fx0, fy0, fx1, fy1)
-                    if (hit == null) { finish("⚠️ Nothing under the frame — try again"); return@evaluateJavascript }
+                    if (hit == null) { finish("Nothing under the frame — try again"); return@evaluateJavascript }
                     // Anchor for the overlay. The frame may cover no <img> at all (background artwork, CSS
                     // layers), so fall back to a canvas-style identity describing the whole WebView, which the
                     // writer already knows how to position against.
@@ -873,7 +873,7 @@ class MainActivity : Activity() {
                     finish(null)
                     return@evaluateJavascript
                 }
-                finish("⚠️ No page image under the frame"); return@evaluateJavascript
+                finish("No page image under the frame"); return@evaluateJavascript
             }
             if (manual) {
                 // Straight into the manual pipeline: no realtime queue to wait for, no pause/resume dance.
@@ -888,7 +888,7 @@ class MainActivity : Activity() {
                 requestForceOcrArea(
                     o.optString("s"), o.optDouble("x").toFloat(), o.optDouble("y").toFloat(),
                     o.optDouble("w").toFloat(), o.optDouble("h").toFloat(), fromReOcr = true
-                ) { handler.postDelayed({ finish("✅ Area read — other work is running again") }, 700L) }
+                ) { handler.postDelayed({ finish("Area read — other work is running again") }, 700L) }
             }
         }
     }
@@ -898,7 +898,7 @@ class MainActivity : Activity() {
     private fun chapterGlossaryDialog() {
         val key = pageKey(novelWv.url.orEmpty())
         val items = ChapterGlossary.list(this, key)
-        val labels = items.map { it.type + ": " + it.source + "  →  " + it.value }
+        val labels = items.map { it.type + ": " + it.source + "" + it.value }
         val b = AlertDialog.Builder(this)
             .setTitle("Glossary — this chapter")
             .setPositiveButton("Add") { _, _ -> chapterGlossaryAdd(key) }
@@ -934,7 +934,7 @@ class MainActivity : Activity() {
                         val a = src.text.toString().trim()
                         val v = dst.text.toString().trim()
                         if (a.isEmpty() || v.isEmpty()) toast("Fill in both fields")
-                        else { ChapterGlossary.add(this, key, ChapterGlossary.Entry(type, a, v)); toast("✅ Added to this chapter's glossary") }
+                        else { ChapterGlossary.add(this, key, ChapterGlossary.Entry(type, a, v)); toast("Added to this chapter's glossary") }
                         chapterGlossaryDialog()
                     }
                     .setNegativeButton("Cancel", null)
@@ -947,7 +947,7 @@ class MainActivity : Activity() {
 
     private fun openCommunityLink(url: String) {
         try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-        catch (_: Exception) { toast("⚠️ Could not open the link") }
+        catch (_: Exception) { toast("Could not open the link") }
     }
 
     private fun showCommunityChooser() {
@@ -999,7 +999,7 @@ class MainActivity : Activity() {
 
     private fun requestBubbleRetranslate(src: String, cx: Float, cy: Float, w: Float, h: Float) {
         if (!DeepSeekRealtimeTranslation.isEnabled(this) || !webModeOn()) {
-            toast("🔁 Re-translate works in Real-time mode")
+            toast("Re-translate works in Real-time mode")
             return
         }
         val url = novelWv.url.orEmpty()
@@ -1015,7 +1015,7 @@ class MainActivity : Activity() {
         if (layout != null && stored != null &&
             Math.abs(stored.cx - cx) + Math.abs(stored.cy - cy) < 0.04f &&
             base != null && cleanUrl(base.url) == cleanUrl(url)) {
-            toast("🔁 Sending this bubble to the chatbot…")
+            toast("Sending this bubble to the chatbot…")
             sendStoredBubble(url, layout, stored, 0)
             return
         }
@@ -1027,7 +1027,7 @@ class MainActivity : Activity() {
             retranslateTargets.add(RetrTarget(srcN, cx, cy, w, h, now))
         }
         deepSeekLastOcrAtMs = 0L
-        toast("⏳ Re-translating this bubble… (rescanning)")
+        toast("Re-translating this bubble… (rescanning)")
     }
 
     private fun sendStoredBubble(url: String, layout: WebModeLayout, bubble: WmBubble, attempt: Int) {
@@ -1036,17 +1036,17 @@ class MainActivity : Activity() {
         if (!idle) {
             // A batch is still with the chatbot (or a scan is running): wait for it, up to ~1 minute.
             if (attempt < 150) handler.postDelayed({ sendStoredBubble(url, layout, bubble, attempt + 1) }, 400L)
-            else toast("⚠️ Chatbot is busy. Long-press the bubble and try again")
+            else toast("Chatbot is busy. Long-press the bubble and try again")
             return
         }
         val base = lastChapter
-        if (base == null) { toast("⚠️ Nothing to send yet. Scroll a little and try again"); return }
+        if (base == null) { toast("Nothing to send yet. Scroll a little and try again"); return }
         val hash = WebModeLayout.fingerprint(bubble)
         val accepted = synchronized(deepSeekInFlightTextHashes) {
             if (hash in deepSeekInFlightTextHashes) false
             else { deepSeekInFlightTextHashes.add(hash); true }
         }
-        if (!accepted) { toast("⏳ This bubble is already being translated"); return }
+        if (!accepted) { toast("This bubble is already being translated"); return }
         val liveChapter = base.copy(text = bubble.sourceText.trim(), contentSel = "")
         val singleBubbleLayout = WebModeLayout(layout.titleOffset, listOf(bubble))
         WebModeLayoutStore.setScan(liveChapter.url, singleBubbleLayout)
@@ -2434,7 +2434,7 @@ Each marker must remain faithful to its own ${Langs.source(this)} text in meanin
                     deepSeekPendingSig = stalledSignature
                     deepSeekPendingSince = System.currentTimeMillis()
                     deepSeekLastOcrAtMs = System.currentTimeMillis()
-                    toast("⚠️ OCR is stuck on the same panel, so retries stopped. Scroll or reload to try again.")
+                    toast("OCR is stuck on the same panel, so retries stopped. Scroll or reload to try again.")
                 }
             }
             if (pageKeyNow != cleanUrl(deepSeekPollUrl)) {
@@ -3096,7 +3096,7 @@ return t.length>=40?'TXT:'+t:'';
     private fun chatRolloverDue() = autoFreshChatEnabled && chatRequestCount >= chatNewWindowEvery
 
     private fun menuAutoFreshChatLabel(): String =
-        "🔄 Auto new chat: " + if (autoFreshChatEnabled) "ON (every $chatNewWindowEvery requests)" else "OFF"
+        "Auto new chat: " + if (autoFreshChatEnabled) "ON (every $chatNewWindowEvery requests)" else "OFF"
 
     private fun scanStepMsPref(): Long =
         (Prefs.get(this, "scanStepMs", "0").toLongOrNull() ?: 0L).coerceIn(0L, 5_000L)
@@ -3120,7 +3120,7 @@ return t.length>=40?'TXT:'+t:'';
         val set = nativeTapHosts()
         if (set.add(h)) {
             Prefs.put(this, "nativeTapHosts", set.joinToString(","))
-            toast("🧠 Learned: $h needs a real tap to send — next sends skip the script click")
+            toast("Learned: $h needs a real tap to send — next sends skip the script click")
         }
     }
 
@@ -3135,13 +3135,13 @@ return t.length>=40?'TXT:'+t:'';
         (Prefs.get(this, "sendHoldMs", "0").toLongOrNull() ?: 0L).coerceIn(0L, 15_000L)
 
     private fun menuScanFastLabel(): String =
-        "⚡ Scan OCR: " + if (Prefs.get(this, "scanFastFirst", "1") == "1") "fast first (quick)" else "full passes (slow, thorough)"
+        "Scan OCR: " + if (Prefs.get(this, "scanFastFirst", "1") == "1") "fast first (quick)" else "full passes (slow, thorough)"
 
     private fun menuBatchLabel(): String =
-        "📦 Realtime batching: " + listOf("Small (fast text)", "Balanced", "Big", "Max (fewest requests)")[rtBatchLevel()]
+        "Realtime batching: " + listOf("Small (fast text)", "Balanced", "Big", "Max (fewest requests)")[rtBatchLevel()]
 
     private fun menuSendHoldLabel(): String =
-        "⏱ Pause before Send click: " + sendHoldPref().let { if (it == 0L) "Instant" else "$it ms" }
+        "Pause before Send click: " + sendHoldPref().let { if (it == 0L) "Instant" else "$it ms" }
 
     /** Realtime: how long to wait after the text lands in the chat box before pressing Send (0 = instant). */
     private fun editSendHold(onChanged: () -> Unit) {
@@ -3160,13 +3160,13 @@ return t.length>=40?'TXT:'+t:'';
                 Prefs.put(this, "sendHoldMs", v.toString())
                 Js.sendHoldMs = v
                 onChanged()
-                toast(if (v == 0L) "⏱ Send: instant" else "⏱ Send after $v ms")
+                toast(if (v == 0L) "Send: instant" else "Send after $v ms")
             }
             .setNeutralButton("Instant") { _, _ ->
                 Prefs.put(this, "sendHoldMs", "0")
                 Js.sendHoldMs = 0L
                 onChanged()
-                toast("⏱ Send: instant")
+                toast("Send: instant")
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -3186,13 +3186,13 @@ return t.length>=40?'TXT:'+t:'';
     }
 
     private fun menuForceLoadLabel(): String =
-        "⚡ Force-load images (experimental): " + if (forceLoadOn()) "ON" else "OFF"
+        "Force-load images (experimental): " + if (forceLoadOn()) "ON" else "OFF"
 
     private fun menuScanIntervalLabel(): String =
-        "📸 Scan capture interval: " + scanStepMsPref().let { if (it == 0L) "Auto (fast, learns per site)" else "max $it ms" }
+        "Scan capture interval: " + scanStepMsPref().let { if (it == 0L) "Auto (fast, learns per site)" else "max $it ms" }
 
     private fun menuExtraChatDelayLabel(): String =
-        "⏱ Extra request delay: " + when (chatExtraDelayMs) {
+        "Extra request delay: " + when (chatExtraDelayMs) {
             0L -> "OFF"
             300L -> "+0.3 s"
             600L -> "+0.6 s"
@@ -3395,7 +3395,7 @@ return t.length>=40?'TXT:'+t:'';
             chatRequestCount = 0
             val base = selectedBotBaseUrl()
             if (base.startsWith("http", true)) {
-                toast("🔄 Opening a new chat window ($chatNewWindowEvery requests used)")
+                toast("Opening a new chat window ($chatNewWindowEvery requests used)")
                 var resumed = false
                 val resume = {
                     if (!resumed) {
@@ -3426,7 +3426,7 @@ return t.length>=40?'TXT:'+t:'';
                                     handler.postDelayed({ probeComposer(attempt + 1) }, 250L)
                                 } else {
                                     copy(text)
-                                    toast("⚠️ The new chat was not ready; the text was copied and not sent again")
+                                    toast("The new chat was not ready; the text was copied and not sent again")
                                     onResult("nobox")
                                 }
                             }
@@ -3916,7 +3916,7 @@ return t.length>=40?'TXT:'+t:'';
         }
 
         val reloadBtn = iconButton(Ic.RELOAD, "Reload", 19, 36, UiTheme.iconIdle) { reloadPage() }.apply {
-            setOnLongClickListener { novelWv.reload(); chatWv.reload(); toast("🔄 Reloading both pages"); true }
+            setOnLongClickListener { novelWv.reload(); chatWv.reload(); toast("Reloading both pages"); true }
         }
 
         addressBox = LinearLayout(this).apply {
@@ -4393,10 +4393,10 @@ return t.length>=40?'TXT:'+t:'';
         TourOverlay.Step("View", "Switch between the page, the page and chatbot side by side, or the chatbot alone. Handy for checking what was sent.") {
             tourOverlay.rectOf(modeBtn)
         },
-        TourOverlay.Step("Prompts", "Menu → Edit Prompt For Novel / Live / Scanning Translation. The defaults already name your language; edit them only if you want different rules.") {
+        TourOverlay.Step("Prompts", "Menu Edit Prompt For Novel / Live / Scanning Translation. The defaults already name your language; edit them only if you want different rules.") {
             menuBtnView?.let { tourOverlay.rectOf(it) }
         },
-        TourOverlay.Step("Next button", "On a new novel site, tap the site's own Next button once yourself. The app learns which control it is, so from then on ▶ skips the ads that some sites put on their Next link.") {
+        TourOverlay.Step("Next button", "On a new novel site, tap the site's own Next button once yourself. The app learns which control it is, so from then on skips the ads that some sites put on their Next link.") {
             tourOverlay.rectOf(extractBtn)
         },
         TourOverlay.Step("Menu", "Library, bookmarks, translation language and settings. Technical options are tucked away under Advanced.") {
@@ -4526,11 +4526,11 @@ return t.length>=40?'TXT:'+t:'';
     /** Fetches the font of the target language (once) so translated text looks right. */
     private fun downloadLanguageFont(lang: String) {
         if (lang == Langs.DEFAULT_TARGET || LangFonts.familyFor(lang) == null || LangFonts.installed(this, lang)) return
-        toast("⬇️ Downloading a font for $lang…")
+        toast("Downloading a font for $lang…")
         LangFonts.ensure(this, lang) { ok, family ->
             if (isFinishing) return@ensure
             fontB64.keys.removeAll { it.startsWith("dl_") }
-            toast(if (ok) "✅ Font ready: $family" else "⚠️ Font download failed — the page's own font will be used. Tap Translation Font in the menu to retry.")
+            toast(if (ok) "Font ready: $family" else "Font download failed — the page's own font will be used. Tap Translation Font in the menu to retry.")
             val ch = lastChapter
             if (ok && ch != null && hasTr) shownTrRaw?.let { applyTranslation(ch, it, false) }
         }
@@ -4540,7 +4540,7 @@ return t.length>=40?'TXT:'+t:'';
     private fun showFirstPromptChoice() {
         AlertDialog.Builder(this)
             .setTitle("Novel translation prompt")
-            .setMessage("The default prompt already asks for ${Langs.target(this)}. Use it, or write your own now. You can change it any time: Menu → Edit Prompt For Novel Translation.")
+            .setMessage("The default prompt already asks for ${Langs.target(this)}. Use it, or write your own now. You can change it any time: Menu Edit Prompt For Novel Translation.")
             .setPositiveButton("Use default prompt", null)
             .setNegativeButton("Write my own") { _, _ -> editPrompt() }
             .setCancelable(false)
@@ -4632,7 +4632,7 @@ return t.length>=40?'TXT:'+t:'';
     private fun reloadPage() {
         val wv = if (mode == Mode.CHAT) chatWv else activeWv
         wv.reload()
-        toast(if (wv === chatWv) "🔄 Reloading chatbot…" else "🔄 Reloading novel page…")
+        toast(if (wv === chatWv) "Reloading chatbot…" else "Reloading novel page…")
     }
 
     private fun loginChatbot() {
@@ -4640,7 +4640,7 @@ return t.length>=40?'TXT:'+t:'';
         val url = Prefs.get(this, "botUrl", bots().optJSONObject(0)?.optString("u", "https://chatgpt.com/") ?: "https://chatgpt.com/")
         openBot(url)
         CookieManager.getInstance().flush()
-        toast("🔐 Log in here; your session stays in the app")
+        toast("Log in here; your session stays in the app")
     }
 
     // ================================================================== browser tabs / shortcuts / history
@@ -4694,7 +4694,7 @@ return t.length>=40?'TXT:'+t:'';
         Prefs.put(this, "rendererGoneAt", now.toString())
         if (now - last > 20_000L && !isFinishing) {
             handler.post {
-                toast("⚠️ The page process stopped (probably out of memory) — reloading the app")
+                toast("The page process stopped (probably out of memory) — reloading the app")
                 try { recreate() } catch (_: Exception) { }
             }
         }
@@ -4937,9 +4937,23 @@ return t.length>=40?'TXT:'+t:'';
 
     private fun showLinkMenu(url: String) {
         val shown = if (url.length > 70) url.take(67) + "…" else url
-        AlertDialog.Builder(this)
-            .setTitle(shown)
-            .setItems(arrayOf("Open in new tab", "Open in background tab", "Copy link address")) { _, which ->
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Link")
+        sheet.shell.addContent(TextView(this).apply {
+            text = shown
+            textSize = ToonTheme.Type.caption
+            setTextColor(c.muted)
+            setPadding(dp(16), 0, dp(16), dp(8))
+        })
+        val group = Toon.group(this, c)
+        listOf(
+            Triple("Open in new tab", ToonIc.EXTERNAL, 0),
+            Triple("Open in background tab", ToonIc.TABS, 1),
+            Triple("Copy link address", ToonIc.SAVE, 2)
+        ).forEachIndexed { i, (label, ic, which) ->
+            if (i > 0) group.addView(Toon.divider(this, c))
+            group.addView(Toon.listRow(this, c, label, icon = ic, onClick = {
+                sheet.close()
                 when (which) {
                     0 -> newBrowserTab(url)
                     1 -> {
@@ -4949,10 +4963,14 @@ return t.length>=40?'TXT:'+t:'';
                         persistBrowserTabs()
                         toast("Opened in background tab (${browserTabs.size})")
                     }
-                    2 -> { copy(url); toast("Link copied") }
+                    else -> { copy(url); toast("Link copied") }
                 }
-            }
-            .show()
+            }))
+        }
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also {
+            it.setMargins(dp(16), 0, dp(16), dp(8))
+        })
+        sheet.show()
     }
 
     private fun newBrowserTab(url: String) {
@@ -5268,12 +5286,12 @@ return t.length>=40?'TXT:'+t:'';
 
     private fun browserHistoryDialog() {
         val h = Store.history(this)
-        if (h.isEmpty()) return toast("🕘 History is empty")
+        if (h.isEmpty()) return toast("History is empty")
         val labels = h.map {
             val host = Uri.parse(it.url).host ?: it.url
             "${it.title.ifBlank { host }}\n$host"
         }
-        listDialog("🕘 Browser History", labels, { i ->
+        listDialog("Browser History", labels, { i ->
             if (i in h.indices) {
                 if (mode == Mode.CHAT) setMode(Mode.SPLIT)
                 newBrowserTab(h[i].url)
@@ -5666,7 +5684,7 @@ return t.length>=40?'TXT:'+t:'';
             deepSeekLastOcrAtMs = 0L
             scheduleDeepSeekAutoTranslation(novelWv.url.orEmpty())
             scheduleRealtimeAheadPump(0L)
-            toast("⚡ Auto Real-time OCR ON — new visible panels will be read automatically")
+            toast("Auto Real-time OCR ON — new visible panels will be read automatically")
         } else {
             handler.removeCallbacks(deepSeekVisiblePoll)
             deepSeekPollBusy = false
@@ -5687,7 +5705,7 @@ return t.length>=40?'TXT:'+t:'';
             rtAheadHoldFlushRunnable?.let { handler.removeCallbacks(it) }
             rtAheadHoldFlushRunnable = null
             rtAheadHoldSince = 0L
-            toast("⚡ Auto Real-time OCR OFF — manual mode: tap any bubble to read and translate it")
+            toast("Auto Real-time OCR OFF — manual mode: tap any bubble to read and translate it")
         }
         updateProgressUi()
     }
@@ -5949,15 +5967,15 @@ return t.length>=40?'TXT:'+t:'';
     private val ocrLangCodes = listOf("auto", "en", "ko", "ja", "zh")
 
     private fun menuOcrLangLabel(): String =
-        "🔤 OCR language: " + when (Prefs.get(this, "ocrLang", "auto")) {
+        "OCR language: " + when (Prefs.get(this, "ocrLang", "auto")) {
             "en" -> "English only"; "ko" -> "Korean only"; "ja" -> "Japanese only"; "zh" -> "Chinese only"
             else -> "Auto (guess from page)"
         }
 
     private fun menuScanDirLabel(): String {
         val d = ScanMode.direction(this)
-        val short = when (d) { ScanDirection.SCROLL -> "Top → Bottom"; ScanDirection.RTL -> "Right → Left"; ScanDirection.LTR -> "Left → Right" }
-        return "🧭 Scan direction: $short" + if (ScanMode.askBefore(this)) " (asks on ⚡)" else " (no question)"
+        val short = when (d) { ScanDirection.SCROLL -> "Top Bottom"; ScanDirection.RTL -> "Right Left"; ScanDirection.LTR -> "Left Right" }
+        return "Scan direction: $short" + if (ScanMode.askBefore(this)) "(asks on )" else " (no question)"
     }
 
     /** Menu: pick the scan direction for good and decide whether ⚡ asks before every scan. */
@@ -5978,17 +5996,17 @@ return t.length>=40?'TXT:'+t:'';
     }
 
     private fun menuRealtimeAutoOcrLabel(): String =
-        if (Prefs.bool(this, "rtAutoOcrEnabled", true)) "✅ ⚡ Auto Real-time OCR"
-        else "⬜ ⚡ Auto Real-time OCR — off (manual tap mode)"
+        if (Prefs.bool(this, "rtAutoOcrEnabled", true)) "Auto Real-time OCR"
+        else "Auto Real-time OCR — off (manual tap mode)"
 
     private fun menuOcrRescanLabel(): String =
-        (if (Prefs.bool(this, "ocrRescan", true)) "✅" else "⬜") + " 🩹 OCR rescan (find missed lines)"
+        (if (Prefs.bool(this, "ocrRescan", true)) "" else "") + "OCR rescan (find missed lines)"
 
     private fun lastActuallyUsedOcrEngine(): String =
         OcrEngineStatus.label.takeIf { it.isNotBlank() } ?: "No OCR run yet"
 
     private fun menuOcrModelsLabel(): String =
-        "🧠 OCR Engine: " + currentOcrEngineLabel() + "\nLast actually used: " + lastActuallyUsedOcrEngine()
+        "OCR Engine: " + currentOcrEngineLabel() + "\nLast actually used: " + lastActuallyUsedOcrEngine()
 
     private fun shortOcrEngineName(): String = when (Prefs.get(this, "ocrEngine", "mlkit")) {
         "lens" -> "Lens"
@@ -6021,30 +6039,30 @@ return t.length>=40?'TXT:'+t:'';
 
     private fun ocrModelsDialog() {
         val labels = ArrayList<String>()
-        labels.add("⚙️ Selected engine: " + currentOcrEngineLabel() +
-            "\n✅ Last foreground OCR: " + lastActuallyUsedOcrEngine() +
+        labels.add("Selected engine: " + currentOcrEngineLabel() +
+            "\nLast foreground OCR: " + lastActuallyUsedOcrEngine() +
             "\nGoogle Lens and ML Kit run independently; read-ahead results do not replace the visible scan status.")
         val detectorIndex = labels.size
         labels.add(detectorRowLabel())
         val inpaintIndex = labels.size
         labels.add(inpaintRowLabel())
         val lensDiagnosticIndex = labels.size
-        labels.add("🧪 Google Lens diagnostic — tap to copy\n" +
+        labels.add("Google Lens diagnostic — tap to copy\n" +
             OcrEngineStatus.lastLensDiagnostic.take(220))
         val runtimeErrorIndex = labels.size
-        labels.add("⚠️ Last OCR runtime issue — tap to copy\n" +
+        labels.add("Last OCR runtime issue — tap to copy\n" +
             OcrEngineStatus.lastError.take(220).ifBlank { "No OCR runtime issue captured yet" })
 
-        listDialog("🧠 OCR engine & models", labels, { i ->
+        listDialog("OCR engine & models", labels, { i ->
             when (i) {
                 lensDiagnosticIndex -> {
                     copy(OcrEngineStatus.lastLensDiagnostic)
-                    toast("✅ Lens diagnostic copied. Paste it here.")
+                    toast("Lens diagnostic copied. Paste it here.")
                 }
                 runtimeErrorIndex -> {
                     if (OcrEngineStatus.lastError.isNotBlank()) {
                         copy(OcrEngineStatus.lastError)
-                        toast("✅ OCR runtime issue copied. Paste it into the bug report.")
+                        toast("OCR runtime issue copied. Paste it into the bug report.")
                     } else toast("No OCR runtime issue captured yet")
                 }
                 detectorIndex -> detectorDialog { }
@@ -6055,10 +6073,10 @@ return t.length>=40?'TXT:'+t:'';
     }
 
     private fun menuOcrDebugLabel(): String =
-        (if (Prefs.bool(this, "ocrDebug", false)) "✅" else "⬜") + " 🔬 OCR debug (marked images, private folder)"
+        (if (Prefs.bool(this, "ocrDebug", false)) "" else "") + "OCR debug (marked images, private folder)"
 
     private fun menuBarsLabel(): String =
-        "📐 Bars in Web Mode: " + listOf("Float over page", "Fixed (no overlap)", "Auto-hide on scroll")[barsMode()]
+        "Bars in Web Mode: " + listOf("Float over page", "Fixed (no overlap)", "Auto-hide on scroll")[barsMode()]
 
     private fun syncToonBars() {
         barsLockedForToon = webModeOn() && barsMode() != 2
@@ -6305,7 +6323,7 @@ return t.length>=40?'TXT:'+t:'';
             setBackgroundColor(0xFF141726.toInt())
             setPadding(dp(16), dp(8), dp(8), dp(8))
             addView(TextView(this@MainActivity).apply {
-                text = "🔐 Login"
+                text = "Login"
                 textSize = 16f
                 typeface = boldMedium
                 setTextColor(Color.WHITE)
@@ -6535,8 +6553,8 @@ return t.length>=40?'TXT:'+t:'';
                             autoCopy = false
                             polling = false
                             toast(
-                                if (target == "edge") "ℹ️ No more chapters"
-                                else "❌ WebNovel chapter link not found"
+                                if (target == "edge") "ℹNo more chapters"
+                                else "WebNovel chapter link not found"
                             )
                         }
                     }
@@ -6983,7 +7001,7 @@ return t.length>=40?'TXT:'+t:'';
                     var x=document.createElement('div');
                     x.id='__ns_nav_loading';
                     x.style.cssText='position:fixed;inset:0;z-index:2147483647;background:linear-gradient(160deg,#0B0D14,#131826);color:#8B93A7;display:flex;align-items:center;justify-content:center;font:15px sans-serif;letter-spacing:.4px;';
-                    x.textContent='⏳ Loading chapter…';
+                    x.textContent='Loading chapter…';
                     (document.body||document.documentElement).appendChild(x);
                 } catch(e) {}
                 return 'loading';
@@ -7040,7 +7058,7 @@ return t.length>=40?'TXT:'+t:'';
                         document.documentElement.innerHTML =
                             '<head><title>Loading…</title></head>' +
                             '<body style="background:linear-gradient(160deg,#0B0D14,#131826);color:#8B93A7;font-family:sans-serif">' +
-                            '<div style="padding:32px;text-align:center;letter-spacing:.4px">⏳ Loading chapter…</div>' +
+                            '<div style="padding:32px;text-align:center;letter-spacing:.4px">Loading chapter…</div>' +
                             '</body>';
                     } catch(e) {}
                     return "cleared";
@@ -7062,10 +7080,10 @@ return t.length>=40?'TXT:'+t:'';
     private fun webModeOn(): Boolean = Prefs.bool(this, "webMode")
 
     private fun menuForceLabel(): String =
-        (if (Prefs.bool(this, "wmForce")) "✅" else "⬜") + " 🛟 Force Extract (screen OCR, no downloads)"
+        (if (Prefs.bool(this, "wmForce")) "" else "") + "Force Extract (screen OCR, no downloads)"
 
     private fun menuWebModeLabel(): String =
-        (if (webModeOn()) "✅" else "⬜") + " 🖼 Web Mode (OCR for image chapters)"
+        (if (webModeOn()) "" else "") + "Web Mode (OCR for image chapters)"
 
     private fun clearWebModeProgress() {
         webModePct = -1
@@ -7272,7 +7290,7 @@ return t.length>=40?'TXT:'+t:'';
                                 }
                             } else {
                                 if (out.failedPanels > 0)
-                                    toast("⚠ ${out.failedPanels} panel(s) could not be read; the rest were kept")
+                                    toast("${out.failedPanels} panel(s) could not be read; the rest were kept")
                                 handleChapter(out.chapter, useSavedTranslation = useSaved)
                             }
                             // Only realtime viewport scans may resume the ahead-translation queue.
@@ -7297,7 +7315,7 @@ return t.length>=40?'TXT:'+t:'';
                                             return@extractNow
                                         }
                                         if (ch == null || ch.text.isBlank()) {
-                                            toast("🤖 No image panels or readable chapter text found" + WebModeExtractor.lastDiscoveryDebug.takeIf { it.isNotBlank() }.let { if (it == null) "" else " (" + it + ")" })
+                                            toast("No image panels or readable chapter text found" + WebModeExtractor.lastDiscoveryDebug.takeIf { it.isNotBlank() }.let { if (it == null) "" else " (" + it + ")" })
                                             deepSeekLastOcrAtMs = System.currentTimeMillis()
                                             return@extractNow
                                         }
@@ -7322,7 +7340,7 @@ return t.length>=40?'TXT:'+t:'';
                                 val failNow = System.currentTimeMillis()
                                 if (failNow - deepSeekLastFailToastAtMs > 15000L) {
                                     deepSeekLastFailToastAtMs = failNow
-                                    toast("⚠ OCR: " + out.message)
+                                    toast("OCR: " + out.message)
                                 }
                                 deepSeekAutoStartedUrl = novelWv.url.orEmpty()
                                 // Retry the same panel, but back off (2s, 4s, 8s ... max 20s) instead of
@@ -7336,7 +7354,7 @@ return t.length>=40?'TXT:'+t:'';
                                     }
                                 }, backoffMs)
                             } else if (out.error != WebModeError.NAVIGATION_INVALIDATED) {
-                                toast("❌ " + out.message)
+                                toast("" + out.message)
                             }
                         }
                     }
@@ -7432,7 +7450,7 @@ return t.length>=40?'TXT:'+t:'';
             failedChapters.remove(fk); failedRetryTries.remove(fk); scanFallbackTries.remove(fk)
             handler.removeCallbacks(failedRetryRunnable)
             chatWv.evaluateJavascript(Js.clearSendState(), null)
-            toast("🔁 Sending the same text to the chatbot again…")
+            toast("Sending the same text to the chatbot again…")
             enqueue(failed)
             return
         }
@@ -7458,14 +7476,14 @@ return t.length>=40?'TXT:'+t:'';
                     if (n < 4) {
                         handler.postDelayed({ if (token == navToken) attempt(n + 1) }, 250L)
                     } else {
-                        toast("❌ Chapter text was not found on this page\n(fast: " +
+                        toast("Chapter text was not found on this page\n(fast: " +
                             lastFastWhy.ifBlank { "short/empty" } + " · WebView " + webViewVer() + ")")
                     }
                     return@extractNow
                 }
                 val pendingHash = pendingNavHash
                 if (pendingHash != null && bodyHash(ch) == pendingHash) {
-                    toast("⏳ The next chapter has not loaded yet. Tap ● again.")
+                    toast("The next chapter has not loaded yet. Tap again.")
                     return@extractNow
                 }
                 pendingNavHash = null
@@ -7610,7 +7628,7 @@ return t.length>=40?'TXT:'+t:'';
                 if (result.contains("none") || result.contains("failed")) {
                     autoCopy = false
                     hideNavLoading()
-                    toast("❌ Next chapter link not found")
+                    toast("Next chapter link not found")
                 } else if (autoExtract) {
                     handler.postDelayed({
                         if (token == navToken) pollExtract(0, token)
@@ -7649,7 +7667,7 @@ return t.length>=40?'TXT:'+t:'';
                         loadAndWait(picked, token, base)
                     } else {
                         hideNavLoading()
-                        toast(if (picked == "edge") "ℹ️ No more chapters" else "❌ Novel543 chapter link not found")
+                        toast(if (picked == "edge") "ℹNo more chapters" else "Novel543 chapter link not found")
                     }
                 }
                 return
@@ -7662,7 +7680,7 @@ return t.length>=40?'TXT:'+t:'';
                         loadAndWait(picked, token, base)
                     } else {
                         hideNavLoading()
-                        toast(if (picked == "edge") "ℹ️ No more chapters" else "❌ Qidian catalog chapter link not found")
+                        toast(if (picked == "edge") "ℹNo more chapters" else "Qidian catalog chapter link not found")
                     }
                 }
                 return
@@ -7698,7 +7716,7 @@ return t.length>=40?'TXT:'+t:'';
             val base = cur ?: lastChapter
             if (base == null) {
                 hideNavLoading()
-                toast("❌ Open a novel chapter page first")
+                toast("Open a novel chapter page first")
                 return@extractNow
             }
             lastChapter = base
@@ -7779,7 +7797,7 @@ return t.length>=40?'TXT:'+t:'';
                         waitUrl(n + 1)
                     } else {
                         hideNavLoading()
-                        toast("⚠️ The next chapter did not load")
+                        toast("The next chapter did not load")
                     }
                 }, 250L)
             }
@@ -7818,7 +7836,7 @@ return t.length>=40?'TXT:'+t:'';
             val had = Prefs.get(this, "navSig:$host:$dir", "")
             Prefs.put(this, "navSig:$host:$dir", sig)
             novelWv.evaluateJavascript("try{localStorage.removeItem('__ns_lastclick')}catch(e){}", null)
-            if (had != sig) toast("🧠 Learned the $dir button of $host")
+            if (had != sig) toast("Learned the $dir button of $host")
         }
     }
 
@@ -7840,7 +7858,7 @@ return t.length>=40?'TXT:'+t:'';
                 autoCopy = false
                 polling = false
                 hideNavLoading()
-                toast("❌ The next chapter did not load")
+                toast("The next chapter did not load")
             }
         }, 8000)
     }
@@ -7855,7 +7873,7 @@ return t.length>=40?'TXT:'+t:'';
             val catalogUrl = webNovelSystem.catalogUrl(base.url)
             if (catalogUrl.isNullOrBlank()) {
                 hideNavLoading()
-                toast("❌ Could not identify the WebNovel book URL")
+                toast("Could not identify the WebNovel book URL")
                 return
             }
             webNovelCatalogPending = true
@@ -7876,11 +7894,11 @@ return t.length>=40?'TXT:'+t:'';
                 val g = if (h543 == "novel543.com" || h543.endsWith(".novel543.com")) null
                         else Extractor.bump(base.url, if (dir == "next") 1 else -1)
                 if (g != null) {
-                    toast("⚠️ Navigation button not found; guessing from the URL")
+                    toast("Navigation button not found; guessing from the URL")
                     loadAndWait(g, token, base)
                 } else {
                     hideNavLoading()
-                    toast("❌ Next chapter link not found")
+                    toast("Next chapter link not found")
                 }
             } else {
                 val autoExtract = Prefs.bool(this@MainActivity, "autoExtractNext", true)
@@ -7915,7 +7933,7 @@ return t.length>=40?'TXT:'+t:'';
                     waitChange(oldHash, n + 1, token, oldUrl)
                 } else {
                     hideNavLoading()
-                    toast("❌ Next chapter text has not appeared. Tap ● to retry.")
+                    toast("Next chapter text has not appeared. Tap to retry.")
                 }
             }
         }, if (n < 4) 150L else 220L)
@@ -7981,7 +7999,7 @@ return t.length>=40?'TXT:'+t:'';
                     autoCopy = false
                     polling = false
                     hideNavLoading()
-                    toast("❌ Next chapter text was not found. Tap ● to retry.")
+                    toast("Next chapter text was not found. Tap to retry.")
                 }
             }
         }
@@ -8215,7 +8233,7 @@ return t.length>=40?'TXT:'+t:'';
             val saved = Store.find(this, ch)
             val translated = saved?.let { Store.readRaw(this, it.id) }.orEmpty()
             if (translated.length < 30) {
-                toast("ℹ️ No saved translation found for this chapter")
+                toast("ℹNo saved translation found for this chapter")
                 return
             }
             saved?.let { markPrefetchedTranslationActive(ch, it) }
@@ -8229,7 +8247,7 @@ return t.length>=40?'TXT:'+t:'';
         } else {
             extractNow { ch ->
                 if (token != navToken) return@extractNow
-                if (ch == null) toast("❌ Chapter text was not found on this page") else useChapter(ch)
+                if (ch == null) toast("Chapter text was not found on this page") else useChapter(ch)
             }
         }
     }
@@ -8381,14 +8399,14 @@ return t.length>=40?'TXT:'+t:'';
         }, if (webModeOn()) 10 * 60_000L else 30000L)
     }
 
-    private fun menuPrefetchDepthLabel(): String = "⚡ Prefetch how many chapters ahead: ${prefetchAhead()}"
+    private fun menuPrefetchDepthLabel(): String = "Prefetch how many chapters ahead: ${prefetchAhead()}"
 
     private fun menuRtPromptLabel(): String =
-        (if (Prefs.bool(this, "rtSendPrompt", true)) "✅" else "⬜") + " 📝 Send Prompt With Text (scan & real-time)"
+        (if (Prefs.bool(this, "rtSendPrompt", true)) "" else "") + "Send Prompt With Text (scan & real-time)"
 
     private fun menuPrefetchLabel(): String =
-        (if (Prefs.bool(this, "prefetchNextChapter")) "✅" else "⬜") +
-            " ⚡ Prefetch next chapter in background"
+        (if (Prefs.bool(this, "prefetchNextChapter")) "" else "") +
+            "Prefetch next chapter in background"
 
     /**
      * Dedicated prefetch extractor. Intentionally reads ONLY prefetchWv.
@@ -8592,14 +8610,14 @@ return t.length>=40?'TXT:'+t:'';
         // full of private-use characters and cannot be translated.
         val pua = chapterText.count { it in '\uE000'..'\uF8FF' }
         if (pua > 20 && pua * 20 > chapterText.length) {
-            toast("⚠ This chapter uses an encoded font; translation may be inaccurate")
+            toast("This chapter uses an encoded font; translation may be inaccurate")
         }
         val g0 = if (Prefs.glossaryOn(this)) Glossary.block(this, chapterText) else ""
         // Webtoon chapters (Scanning / Real-time) also get the small glossary of the chapter on screen.
         val cg = if (webModeOn()) ChapterGlossary.block(this, pageKey(novelWv.url.orEmpty())) else ""
         val g = listOf(g0, cg).filter { it.isNotEmpty() }.joinToString("\n\n")
         if (Prefs.glossaryOn(this) && Glossary.count > 0)
-            toast("📖 Glossary: ${Glossary.lastMatchCount} terms added to the prompt")
+            toast("Glossary: ${Glossary.lastMatchCount} terms added to the prompt")
         return prompt + "\n\n" + (if (g.isNotEmpty()) g + "\n\n" else "") + "---\n\n"
     }
 
@@ -8610,20 +8628,20 @@ return t.length>=40?'TXT:'+t:'';
             lastCopied = full
             val send = Prefs.bool(this, "autoSend")
             val token = navToken
-            toast("✍️ $label (${full.length} characters) → chatbot box")
+            toast("$label (${full.length} characters) chatbot box")
             handler.postDelayed({
                 if (token != navToken) return@postDelayed
                 sendChatRequest(full, send, { token == navToken }) { r ->
                     if (decode(r).startsWith("nobox")) {
                         copy(full)
-                        toast("⚠️ Chat input not found. Text is copied; paste it manually.")
+                        toast("Chat input not found. Text is copied; paste it manually.")
                     }
                 }
             }, 400)
             return
         }
         copy(full)
-        toast("📋 Copied: $label (${full.length} characters)")
+        toast("Copied: $label (${full.length} characters)")
     }
 
     // ================================================================== auto mode (⚡ on)
@@ -8680,7 +8698,7 @@ return t.length>=40?'TXT:'+t:'';
                 val recentSubmit = sendState == "pending" ||
                     (sendState.startsWith("sent:") && sendAgeMs in 0L..8_000L)
                 if (streaming || recentSubmit) {
-                    if (n == 20) toast("⏳ Waiting for the previous chatbot answer to finish…")
+                    if (n == 20) toast("Waiting for the previous chatbot answer to finish…")
                     if (n >= 720) {
                         failJob(
                             tok, ch,
@@ -8962,7 +8980,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                 when {
                     completed -> finishJob(tok, ch)
                     livePanelBatch && got && !meaningfulReply && !(filledReply && allMarkers) && !streaming && st >= 8 && elapsed >= 12_000L ->
-                        failJob(tok, ch, "The chatbot returned only paragraph markers, not a translation. Tap ⚡ to retry.")
+                        failJob(tok, ch, "The chatbot returned only paragraph markers, not a translation. Tap to retry.")
                     sendFailed && !got -> failJob(tok, ch, "Message could not be sent — all methods failed (check chatbot login/CAPTCHA)")
                     elapsed > 6 * 60_000 -> failJob(tok, ch, "Timed out (6 minutes)")
                     !got && elapsed > 60_000 -> failJob(tok, ch, "The chatbot did not start responding — was the message sent?")
@@ -9105,7 +9123,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                 releaseDeepSeekHashBatch(ch)
             }
             if (!livePanelBatch) {
-                toast("✅ Translation saved" + (if (ch.number.isNotEmpty()) " (Ch ${ch.number})" else ""))
+                toast("Translation saved" + (if (ch.number.isNotEmpty()) " (Ch ${ch.number})" else ""))
             }
             chatWv.evaluateJavascript(Js.clearSendState(), null)
             running = null
@@ -9171,7 +9189,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             chatWv.evaluateJavascript(Js.clearSendState(), null)
             chatWv.evaluateJavascript(Js.clearBox(), null)
             deepSeekVisibleSignature = ""
-            toast("⏳ $msg")
+            toast("$msg")
             updateProgressUi()
             restoreChapterAfterBubbleJob()
             handler.postDelayed({ pumpRealtimeAheadTranslation() }, 600L)
@@ -9179,11 +9197,11 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
         }
         val manualText = promptWithGlossary(Prefs.activeTranslationPrompt(this), ch.text) + ch.text
         val willRetry = retryList.isNotEmpty() && (failedRetryTries[keyOf(ch)] ?: 0) < 2
-        val retryNote = if (willRetry) "\n⏳ Retrying automatically in 15 s…" else ""
+        val retryNote = if (willRetry) "\nRetrying automatically in 15 s…" else ""
         // The chapter goes straight into the chatbot box (just press Send); the clipboard is the fallback only.
         insertIntoChatBox(manualText) { ok ->
             if (!ok) copy(manualText)
-            toast("❌ $msg\n" + (if (ok) "✍️ Chapter text is in the chatbot box — press Send, then Copy → 💾." else "📋 Chapter copied. Paste it into the chatbot and tap Copy → 💾.") + retryNote)
+            toast("$msg\n" + (if (ok) "Chapter text is in the chatbot box — press Send, then Copy ." else "Chapter copied. Paste it into the chatbot and tap Copy .") + retryNote)
         }
         if (retryList.isNotEmpty()) scheduleFailedRetry(retryList)
         updateProgressUi()
@@ -9205,7 +9223,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
         updateProgressUi()
         restoreChapterAfterBubbleJob()
         if (tries > 4) {
-            toast("❌ Translation kept failing on every try. Tap ⚡ to send it again.")
+            toast("Translation kept failing on every try. Tap to send it again.")
             return
         }
         for (c in retryList) failedRetryTries.remove(keyOf(c))   // fallback retries have their own limit
@@ -9215,8 +9233,8 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             showProviderFailedDialog()
         } else {
             val name = switchToNextBot()
-            toast(if (name != null) "⚠️ A background chapter failed — switched the chatbot to $name"
-                  else "⚠️ A background chapter failed — retrying")
+            toast(if (name != null) "A background chapter failed — switched the chatbot to $name"
+                  else "A background chapter failed — retrying")
             scheduleFailedRetry(retryList, 8_000L)
         }
         handler.postDelayed({ pumpRealtimeAheadTranslation() }, 600L)
@@ -9279,7 +9297,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
         running = null
         chatWv.evaluateJavascript(Js.stop(), null)
         updateProgressUi()
-        toast("⏹ Background translation stopped")
+        toast("Background translation stopped")
     }
 
     // ---- put the translation into the novel page itself
@@ -9549,7 +9567,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             if (livePanelBatch) {
                 if (wmLayout == null || wmPlaced == null) {
                     releaseDeepSeekHashBatch(ch)
-                    toast("⚠️ This batch did not match the bubbles; nothing was placed in the wrong spot")
+                    toast("This batch did not match the bubbles; nothing was placed in the wrong spot")
                     restoreChapterAfterBubbleJob(ch.url)
                     return
                 }
@@ -9588,7 +9606,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                     if (!livePanelBatch && wmLayout != null && wmPlaced != null) retryMissingScanBubbles(ch, wmLayout, wmPlaced)
                 } else {
                     if (livePanelBatch) releaseDeepSeekHashBatch(ch)
-                    toast("⚠️ Could not show the translation on this page; it is saved in the library")
+                    toast("Could not show the translation on this page; it is saved in the library")
                 }
                 if (livePanelBatch) restoreChapterAfterBubbleJob(ch.url)
             }
@@ -9743,7 +9761,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                     shownTranslated = true
                     updatePill()
                 } else {
-                    toast("⚠️ WTR: translation blocks did not match the chapter")
+                    toast("WTR: translation blocks did not match the chapter")
                 }
             }
             return
@@ -9792,7 +9810,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
         if (lastChapter !== ch) return
         val paras = splitInternalMarkedTranslation(text, preserveParagraphs = true)
         if (paras.isEmpty()) {
-            toast("⚠️ Could not insert the translation; it is saved in the library")
+            toast("Could not insert the translation; it is saved in the library")
             return
         }
         val placementId = beginTranslationPlacement()
@@ -9805,9 +9823,9 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                 hasTr = true
                 shownTranslated = true
                 updatePill()
-                toast("ℹ️ Could not write into the page itself — showing the translation in a reader view")
+                toast("ℹCould not write into the page itself — showing the translation in a reader view")
             } else {
-                toast("⚠️ Could not insert the translation; it is saved in the library")
+                toast("Could not insert the translation; it is saved in the library")
             }
         }
     }
@@ -9927,7 +9945,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
         val on = !Prefs.auto(this)
         Prefs.putBool(this, "noAuto", !on)
         refreshAutoBtn()
-        toast(if (on) "⚡ Background translation enabled — tap ▶ to translate and insert into the site" else "⚡ Copy mode — tap ▶ to copy the chapter")
+        toast(if (on) "Background translation enabled — tap to translate and insert into the site" else "Copy mode — tap to copy the chapter")
     }
 
     private fun refreshAutoBtn() {
@@ -9945,15 +9963,15 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             }
             val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val t = cm.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString()?.trim() ?: ""
-            if (t.length < 30) return@evaluateJavascript toast("⚠️ No answer found in the chatbot page or the clipboard.")
-            if (t == lastCopied.trim()) return@evaluateJavascript toast("⚠️ This is source text. Copy the chatbot answer instead.")
+            if (t.length < 30) return@evaluateJavascript toast("No answer found in the chatbot page or the clipboard.")
+            if (t == lastCopied.trim()) return@evaluateJavascript toast("This is source text. Copy the chatbot answer instead.")
             commitSavedAnswer(t)
         }
     }
 
     private fun commitSavedAnswer(t: String) {
         val tr = Store.save(this, lastChapter, t)
-        toast("💾 Saved to library: ${tr.novel} — ${tr.label()}")
+        toast("Saved to library: ${tr.novel} — ${tr.label()}")
         if (!Prefs.bool(this, "noSaveNext")) step("next")
     }
 
@@ -10018,21 +10036,13 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
         background = Glass.solid(this@MainActivity, 0x0FFFFFFF, 20, UiTheme.strokeSoft)
     }
 
-    /** "✅ 🌙 Dark Mode: Auto" -> title "Dark Mode", badge "Auto"; toggles become ON/OFF badges. */
-    private fun splitLabel(raw: String): Triple<String, String?, Boolean?> {
-        var s = raw.trim()
-        var toggle: Boolean? = null
-        if (s.startsWith("✅")) { toggle = true; s = s.removePrefix("✅") }
-        else if (s.startsWith("⬜")) { toggle = false; s = s.removePrefix("⬜") }
-        s = s.replace(Regex("^[^A-Za-z0-9]+"), "").trim()
-        if (toggle != null) return Triple(s, if (toggle) "ON" else "OFF", toggle)
-        val k = s.lastIndexOf(": ")
-        return if (k > 0) Triple(s.substring(0, k), s.substring(k + 2), null) else Triple(s, null, null)
-    }
-
     private inner class SheetRow(val view: LinearLayout, val title: TextView, val state: TextView) {
         fun set(raw: String) {
-            val (t, s, on) = splitLabel(raw)
+            // Labels are plain now: text before ": " is the value chip; anything else is the title.
+            val split = raw.split(": ", limit = 2)
+            val t = if (split.size == 2) split[0] else raw
+            val s = if (split.size == 2) split[1] else null
+            val on: Any? = null
             title.text = t
             if (s == null) { state.visibility = View.GONE; return }
             state.visibility = View.VISIBLE
@@ -10121,31 +10131,31 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
     // ---------------------------------------------------------------- main menu (bottom sheet)
     private fun menu() {
         val labels = arrayListOf(
-            "📚 Library", "🕘 Browser History", "⬇️ Export All Translations (.txt)",
-            "🔖 Bookmark This Page", "🔖 Bookmarks", "📝 Edit Prompt For Novel Translation",
-            menuAutoLabel(), "🔁 Re-translate Current Chapter", "⏹ Stop Background Translation",
+            "Library", "Browser History", "Export All Translations (.txt)",
+            "Bookmark This Page", "Bookmarks", "Edit Prompt For Novel Translation",
+            menuAutoLabel(), "Re-translate Current Chapter", "Stop Background Translation",
             menuDarkLabel(), menuAutoPasteLabel(), menuAutoSendLabel(), menuPromptLabel(),
             menuSaveNextLabel(), menuNextExtractLabel(), menuAdBlockLabel(),
-            "🔄 Update Ad Block Lists", "🔄 Reload Novel Page", "🔄 Reload Chatbot",
-            menuGlossaryLabel(), menuFontLabel(), "🌐 Site Settings",
-            "🔍 Inspect Page (Copy Report)", menuSizeLabel(), "🔐 Chatbot Login",
-            "🔍 Inspect Chatbot (Copy Report)", menuPrefetchLabel(),
-            "🧪 AdBlock Debug: " + AdBlock.debugModeName(), "📋 Copy AdBlock Debug Report",
-            "✏️ AdBlock Rules (paste)", menuPrefetchDepthLabel(), menuWebModeLabel(), DeepSeekRealtimeTranslation.menuLabel(this),
-            "📝 Edit Prompt For Live Translation", menuForceLabel(),
-            "🤖 AI Scan Page Links & Update AdBlock", menuRtPromptLabel(),
+            "Update Ad Block Lists", "Reload Novel Page", "Reload Chatbot",
+            menuGlossaryLabel(), menuFontLabel(), "Site Settings",
+            "Inspect Page (Copy Report)", menuSizeLabel(), "Chatbot Login",
+            "Inspect Chatbot (Copy Report)", menuPrefetchLabel(),
+            "AdBlock Debug: " + AdBlock.debugModeName(), "Copy AdBlock Debug Report",
+            "AdBlock Rules (paste)", menuPrefetchDepthLabel(), menuWebModeLabel(), DeepSeekRealtimeTranslation.menuLabel(this),
+            "Edit Prompt For Live Translation", menuForceLabel(),
+            "AI Scan Page Links & Update AdBlock", menuRtPromptLabel(),
             "(removed)", menuTextRemovalLabel(),
             menuAutoFreshChatLabel(), menuExtraChatDelayLabel(), menuScanIntervalLabel(),
-            "🖼 Scan Report: images (Copy)", menuForceLoadLabel(), menuSendHoldLabel(),
-            "🐞 Copy crash / freeze log", menuBatchLabel(),
-            "✨ Apply recommended settings", menuScanFastLabel(), menuBarsLabel(),
+            "Scan Report: images (Copy)", menuForceLoadLabel(), menuSendHoldLabel(),
+            "Copy crash / freeze log", menuBatchLabel(),
+            "Apply recommended settings", menuScanFastLabel(), menuBarsLabel(),
             menuOcrLangLabel(), menuOcrRescanLabel(), menuOcrDebugLabel(), menuOcrModelsLabel(),
-            "📝 Edit Prompt For Scanning Translation",
-            "⬆️ App Updates (Community)",
-            "💬 Join the Community (Telegram · Reddit)",
-            "🧠 What the App Learned About This Site",
-            "🔬 OCR Log — copy everything",
-            "🧹 Clear OCR Log (then reproduce the problem)",
+            "Edit Prompt For Scanning Translation",
+            "App Updates (Community)",
+            "Join the Community (Telegram · Reddit)",
+            "What the App Learned About This Site",
+            "OCR Log — copy everything",
+            "Clear OCR Log (then reproduce the problem)",
             menuDetectorLabel(), menuRealtimeAutoOcrLabel(), menuScanDirLabel()
         )
         // Rows that are not offered here. Their underlying features and code remain unchanged.
@@ -10185,8 +10195,8 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                 5 -> { dlg.dismiss(); editPrompt() }
                 7 -> {
                     val ch = lastChapter
-                    if (ch == null) toast("❌ Open a chapter first")
-                    else { enqueue(ch); toast("⏳ Chapter added to the translation queue") }
+                    if (ch == null) toast("Open a chapter first")
+                    else { enqueue(ch); toast("Chapter added to the translation queue") }
                     dlg.dismiss()
                 }
                 9 -> {
@@ -10209,18 +10219,18 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                     refresh(i, menuAdBlockLabel())
                 }
                 16 -> {
-                    toast("⏳ Updating the block list…")
+                    toast("Updating the block list…")
                     AdBlock.update(this) { n ->
-                        toast(if (n > 0) "✅ Added $n hosts" else "❌ Update failed")
+                        toast(if (n > 0) "Added $n hosts" else "Update failed")
                     }
                 }
                 27 -> {
                     AdBlock.nextDebugMode(this)
                     AdBlock.clearLog()
-                    refresh(i, "🧪 AdBlock Debug: " + AdBlock.debugModeName())
-                    toast("🧪 ${AdBlock.debugModeName()} — reload the page, then copy the report")
+                    refresh(i, "AdBlock Debug: " + AdBlock.debugModeName())
+                    toast("${AdBlock.debugModeName()} — reload the page, then copy the report")
                 }
-                28 -> { copy(AdBlock.report()); toast("📋 AdBlock report copied — paste it into a chatbot") }
+                28 -> { copy(AdBlock.report()); toast("AdBlock report copied — paste it into a chatbot") }
                 29 -> { dlg.dismiss(); adblockRulesDialog() }
                 30 -> {
                     val steps = intArrayOf(1, 2, 3, 5, 7)
@@ -10235,7 +10245,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                     refresh(i, menuWebModeLabel())
                     refreshModeChip()
                     trackReadModeSelection()
-                    toast(if (on) "🖼 Web Mode on — tap ● to read image chapters with OCR" else "📖 Web Mode off — normal text extraction")
+                    toast(if (on) "Web Mode on — tap to read image chapters with OCR" else "Web Mode off — normal text extraction")
                 }
                 33 -> { dlg.dismiss(); editRealtimePrompt() }
                 54 -> { dlg.dismiss(); editScanPrompt() }
@@ -10266,7 +10276,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                     val on = !Prefs.bool(this, "wmForce")
                     Prefs.putBool(this, "wmForce", on)
                     refresh(i, menuForceLabel())
-                    toast(if (on) "🛟 Force Extract on — Web Mode will OCR the screen itself (no image downloads)" else "🛟 Force Extract off — normal Web Mode")
+                    toast(if (on) "Force Extract on — Web Mode will OCR the screen itself (no image downloads)" else "Force Extract off — normal Web Mode")
                 }
                 32 -> {
                     if (!DeepSeekRealtimeTranslation.isEnabled(this)) {
@@ -10275,13 +10285,13 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                         refresh(31, menuWebModeLabel())
                         refreshModeChip()
                         dlg.dismiss()
-                        toast("🤖 AI real-time mode ON — current chatbot will translate chapter panels")
+                        toast("AI real-time mode ON — current chatbot will translate chapter panels")
                     } else {
                         disableRealtimeMode()
                         refresh(i, DeepSeekRealtimeTranslation.menuLabel(this))
                         refresh(31, menuWebModeLabel())
                         refreshModeChip()
-                        toast("📖 AI Real-time Translation OFF — previous settings restored")
+                        toast("AI Real-time Translation OFF — previous settings restored")
                     }
                     trackReadModeSelection()
                 }
@@ -10289,18 +10299,18 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                     val on = !Prefs.bool(this, "rtSendPrompt", true)
                     Prefs.putBool(this, "rtSendPrompt", on)
                     refresh(i, menuRtPromptLabel())
-                    toast(if (on) "📝 Prompt is sent with every batch (scan & real-time)"
-                          else "📝 Only the text is sent (no prompt) — scan & real-time")
+                    toast(if (on) "Prompt is sent with every batch (scan & real-time)"
+                          else "Only the text is sent (no prompt) — scan & real-time")
                 }
                 38 -> {
                     val on = !Prefs.bool(this, "wmTextRemoval2", true)
                     Prefs.putBool(this, "wmTextRemoval2", on)
                     if (on) {
-                        toast("🧽 Text Remover ON — next Web Mode/Japanese Manga OCR scan will clean only safe text pixels.")
+                        toast("Text Remover ON — next Web Mode/Japanese Manga OCR scan will clean only safe text pixels.")
                     } else {
                         WebModeTextRemovalCache.clear(this)
                         novelWv.evaluateJavascript("(function(){var l=document.getElementById('__ns_wm_clean_layer');if(l&&l.parentNode)l.parentNode.removeChild(l);var w=document.getElementById('__ns_wm_overlay');if(w){var bs=w.querySelectorAll('.__ns_b[data-cl]');for(var i=0;i<bs.length;i++){var b=bs[i],bg=b.getAttribute('data-bg')||'#FFFFFF',sf=b.getAttribute('data-sf')==='1';b.style.background=bg;b.style.borderRadius=sf?'12px':'4px';b.style.boxShadow=sf?'0 0 7px 5px '+bg:'0 0 0 3px '+bg;b.removeAttribute('data-cl');}}})()", null)
-                        toast("🧽 Text Remover OFF — active cleaned overlay removed; original page remains intact.")
+                        toast("Text Remover OFF — active cleaned overlay removed; original page remains intact.")
                     }
                     refresh(i, menuTextRemovalLabel())
                 }
@@ -10310,23 +10320,23 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                     chatRequestCount = 0
                     aheadChatRequestCount = 0
                     refresh(i, menuAutoFreshChatLabel())
-                    toast(if (on) "🔄 Auto new chat ON — every $chatNewWindowEvery requests"
-                          else "🔄 Auto new chat OFF — stay in the current chat")
+                    toast(if (on) "Auto new chat ON — every $chatNewWindowEvery requests"
+                          else "Auto new chat OFF — stay in the current chat")
                 }
                 53 -> { dlg.dismiss(); ocrModelsDialog() }
                 51 -> {
                     val on = !Prefs.bool(this, "ocrRescan", true)
                     Prefs.putBool(this, "ocrRescan", on)
                     refresh(i, menuOcrRescanLabel())
-                    toast(if (on) "🩹 OCR rescan ON — lines the first pass missed are re-read"
-                          else "🩹 OCR rescan OFF — normal OCR only")
+                    toast(if (on) "OCR rescan ON — lines the first pass missed are re-read"
+                          else "OCR rescan OFF — normal OCR only")
                 }
                 52 -> {
                     val on = !Prefs.bool(this, "ocrDebug", false)
                     Prefs.putBool(this, "ocrDebug", on)
                     refresh(i, menuOcrDebugLabel())
-                    toast(if (on) "🔬 OCR debug ON — marked slices go to the app's private folder (Android/data › files › ocr_debug, newest 12), NOT the Gallery. Resets to OFF on restart"
-                          else "🔬 OCR debug OFF")
+                    toast(if (on) "OCR debug ON — marked slices go to the app's private folder (Android/data › files › ocr_debug, newest 12), NOT the Gallery. Resets to OFF on restart"
+                          else "OCR debug OFF")
                 }
                 50 -> {
                     val cur = ocrLangCodes.indexOf(Prefs.get(this, "ocrLang", "auto")).let { if (it < 0) 0 else it }
@@ -10354,7 +10364,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                     Prefs.put(this, "scanFastFirst", "1")
                     Prefs.put(this, "forceLoadImages", "0"); applyForceLoadImages()
                     dlg.dismiss()
-                    toast("✨ Recommended: batching Big · Send instant · scan interval Auto · fast-first OCR · force-load OFF")
+                    toast("Recommended: batching Big · Send instant · scan interval Auto · fast-first OCR · force-load OFF")
                 }
                 46 -> {
                     Prefs.put(this, "rtBatchLevel", ((rtBatchLevel() + 1) % 4).toString())
@@ -10366,27 +10376,27 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                     val full = OcrDiag.report(this, novelWv.url.orEmpty()) +
                         "\n--- CRASH / FREEZE LOG (tail) ---\n" + CrashLog.read().takeLast(6_000).ifBlank { "(none)" }
                     copy(full)
-                    toast("🔬 OCR log copied (" + (full.length / 1000) + " KB) — paste it to Claude")
+                    toast("OCR log copied (" + (full.length / 1000) + " KB) — paste it to Claude")
                 }
                 60 -> { detectorDialog { refresh(i, menuDetectorLabel()) } }
                 62 -> { scanDirectionDialog { refresh(i, menuScanDirLabel()) } }
                 61 -> { setRealtimeAutoOcrEnabled(!Prefs.bool(this, "rtAutoOcrEnabled", true)); refresh(i, menuRealtimeAutoOcrLabel()) }
                 59 -> {
                     OcrDiag.clear()
-                    toast("🧹 OCR log cleared — now open the page, scan, then copy the log")
+                    toast("OCR log cleared — now open the page, scan, then copy the log")
                 }
                 45 -> {
                     dlg.dismiss()
                     val log = CrashLog.read().takeLast(20_000)
-                    if (log.isBlank()) toast("🐞 No crash or freeze recorded yet")
-                    else { copy(log); toast("🐞 Log copied — paste it here") }
+                    if (log.isBlank()) toast("No crash or freeze recorded yet")
+                    else { copy(log); toast("Log copied — paste it here") }
                 }
                 44 -> editSendHold { refresh(i, menuSendHoldLabel()) }
                 43 -> {
                     Prefs.put(this, "forceLoadImages", if (forceLoadOn()) "0" else "1")
                     applyForceLoadImages()
                     refresh(i, menuForceLoadLabel())
-                    toast(if (forceLoadOn()) "⚡ ON — reload the page for it to take effect" else "Force-load OFF — reload the page")
+                    toast(if (forceLoadOn()) "ON — reload the page for it to take effect" else "Force-load OFF — reload the page")
                 }
                 22 -> { dlg.dismiss(); diagnosePage() }
                 42 -> { dlg.dismiss(); diagnoseScanImages() }
@@ -10405,7 +10415,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                     val next = steps[(current + 1) % steps.size]
                     Prefs.put(this, "chatExtraDelayMs", next.toString())
                     refresh(i, menuExtraChatDelayLabel())
-                    toast("⏱ Extra request delay: " + menuExtraChatDelayLabel().substringAfter(": "))
+                    toast("Extra request delay: " + menuExtraChatDelayLabel().substringAfter(": "))
                 }
                 19 -> { dlg.dismiss(); glossaryDialog() }
                 20 -> {
@@ -10526,7 +10536,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             val report = "chat url=" + (chatWv.url ?: "") + " | WebView " + webViewVer() + "\n" +
                 rep.ifBlank { "(Empty — did the chatbot page finish loading?)" }
             copy(report)
-            toast("🔍 Chatbot report copied — paste it here")
+            toast("Chatbot report copied — paste it here")
         }
     }
 
@@ -10577,7 +10587,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             val state = "app: WebView " + webViewVer() + " | scanStepMs(menu)=" + scanStepMsPref() +
                 " | learned for site=" + Prefs.get(this, "scanStepHost:" + host, "-") + " | webMode=" + webModeOn()
             copy(state + "\n" + page.ifBlank { "(Empty — did the page finish loading?)" })
-            toast("🖼 Scan report copied — paste it here")
+            toast("Scan report copied — paste it here")
         }
     }
 
@@ -10627,37 +10637,37 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                 "siteRule=" + (SiteRules.find(this, novelWv.url ?: "")?.let { it.host + " compat=" + it.compat } ?: "none")
             val report = state + "\n" + page
             copy(report)
-            toast("🔍 Report copied — paste it here")
+            toast("Report copied — paste it here")
         }
     }
 
     // ---------------------------------------------------------------- AI-assisted AdBlock link review
 
     private fun startAiAdBlockScan() {
-        if (aiAdBlockScanBusy) return toast("⏳ AI AdBlock scan already running")
+        if (aiAdBlockScanBusy) return toast("AI AdBlock scan already running")
         if (running != null || DeepSeekRealtimeTranslation.isEnabled(this)) {
-            return toast("⏸️ Stop the active translation/real-time mode before using the chatbot for AdBlock scan")
+            return toast("Stop the active translation/real-time mode before using the chatbot for AdBlock scan")
         }
-        val pageUrl = novelWv.url ?: return toast("❌ Open the website page first")
+        val pageUrl = novelWv.url ?: return toast("Open the website page first")
         val botUrl = chatWv.url
         if (botUrl.isNullOrBlank() || !(botUrl.startsWith("http://") || botUrl.startsWith("https://"))) {
-            return toast("❌ Open/login to a chatbot first")
+            return toast("Open/login to a chatbot first")
         }
         val token = ++aiAdBlockScanToken
         aiAdBlockScanBusy = true
-        toast("🔎 Scanning page links…")
+        toast("Scanning page links…")
         novelWv.evaluateJavascript(AdBlock.pageLinkScanJs()) { raw ->
             if (token != aiAdBlockScanToken) return@evaluateJavascript
             try {
                 val json = JSONObject(decode(raw))
                 if (json.has("error")) {
                     aiAdBlockScanBusy = false
-                    return@evaluateJavascript toast("❌ Could not scan this page's links")
+                    return@evaluateJavascript toast("Could not scan this page's links")
                 }
                 val arr = json.optJSONArray("links") ?: JSONArray()
                 if (arr.length() == 0) {
                     aiAdBlockScanBusy = false
-                    return@evaluateJavascript toast("ℹ️ No HTTP/HTTPS links found on this page")
+                    return@evaluateJavascript toast("ℹNo HTTP/HTTPS links found on this page")
                 }
                 val candidates = linkedSetOf<String>()
                 val rows = ArrayList<String>()
@@ -10675,7 +10685,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                 }
                 if (rows.isEmpty()) {
                     aiAdBlockScanBusy = false
-                    return@evaluateJavascript toast("ℹ️ No valid links found")
+                    return@evaluateJavascript toast("ℹNo valid links found")
                 }
                 val prompt = """
 You are reviewing URLs for an Android WebView ad blocker.
@@ -10693,13 +10703,13 @@ SCANNED LINKS AND RESOURCES (${rows.size} entries):
 ${rows.take(220).joinToString("\n")}
 """.trimIndent()
                 setMode(Mode.SPLIT)
-                toast("🤖 Sending ${rows.size} links to the selected chatbot…")
+                toast("Sending ${rows.size} links to the selected chatbot…")
                 sendChatRequest(prompt, true, { token == aiAdBlockScanToken && aiAdBlockScanBusy }) { sentRaw ->
                     if (token != aiAdBlockScanToken) return@sendChatRequest
                     val sent = decode(sentRaw)
                     if (!sent.startsWith("ok:")) {
                         aiAdBlockScanBusy = false
-                        toast("❌ Chatbot composer not found. Open the chatbot and retry.")
+                        toast("Chatbot composer not found. Open the chatbot and retry.")
                     } else {
                         handler.postDelayed({
                             pollAiAdBlockResult(token, 0, candidates, Uri.parse(pageUrl).host.orEmpty())
@@ -10708,7 +10718,7 @@ ${rows.take(220).joinToString("\n")}
                 }
             } catch (e: Exception) {
                 aiAdBlockScanBusy = false
-                toast("❌ Link scan failed: " + (e.message ?: "unknown error"))
+                toast("Link scan failed: " + (e.message ?: "unknown error"))
             }
         }
     }
@@ -10725,7 +10735,7 @@ ${rows.take(220).joinToString("\n")}
         if (attempt >= 100) {
             deferNextChatbotRequest()
             aiAdBlockScanBusy = false
-            toast("⏱️ Chatbot scan timed out. Check the bot and retry.")
+            toast("Chatbot scan timed out. Check the bot and retry.")
             return
         }
         chatWv.evaluateJavascript(Js.readLen()) { raw ->
@@ -10777,10 +10787,10 @@ ${rows.take(220).joinToString("\n")}
                     if (added > 0) {
                         val preview = newlySaved.take(4).joinToString(", ")
                         val more = if (newlySaved.size > 4) " +${newlySaved.size - 4} more" else ""
-                        toast("✅ Saved $added new ad domain(s): $preview$more. Reload this page to apply.")
+                        toast("Saved $added new ad domain(s): $preview$more. Reload this page to apply.")
                     } else {
                         toast(
-                            "ℹ️ Scan finished: ${domains.size} domain(s) suggested, none newly saved. " +
+                            "ℹScan finished: ${domains.size} domain(s) suggested, none newly saved. " +
                                 "They may already be blocked, absent from scanned resources, or rejected as unsafe."
                         )
                     }
@@ -10808,11 +10818,11 @@ ${rows.take(220).joinToString("\n")}
         }
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad / 2, pad, 0); addView(box) }
         AlertDialog.Builder(this)
-            .setTitle("✏️ AdBlock Rules")
+            .setTitle("AdBlock Rules")
             .setView(ScrollView(this).apply { addView(col) })
             .setPositiveButton("Save") { _, _ ->
                 val w = AdBlock.setRules(this, box.text.toString())
-                toast(if (w == 0) "✅ Rules saved — reload the page" else "⚠️ Saved, but $w line(s) were not understood — reload the page")
+                toast(if (w == 0) "Rules saved — reload the page" else "Saved, but $w line(s) were not understood — reload the page")
             }
             .setNeutralButton("Clear") { _, _ -> AdBlock.setRules(this, ""); toast("Rules cleared") }
             .setNegativeButton("Cancel", null)
@@ -10822,7 +10832,7 @@ ${rows.take(220).joinToString("\n")}
     private fun siteRulesDialog() {
         val rules = SiteRules.all(this)
         val labels = ArrayList<String>()
-        labels.add("➕ Add new site")
+        labels.add("Add new site")
         rules.forEach {
             labels.add(it.host + "\n" + listOfNotNull(
                 if (it.compat) "Read full page" else null,
@@ -10831,7 +10841,7 @@ ${rows.take(220).joinToString("\n")}
             ).joinToString(" • "))
         }
         AlertDialog.Builder(this)
-            .setTitle("🌐 Site Settings")
+            .setTitle("Site Settings")
             .setItems(labels.toTypedArray()) { _, i ->
                 if (i == 0) siteRuleEditor(null) else siteRuleEditor(rules[i - 1])
             }
@@ -10858,61 +10868,61 @@ ${rows.take(220).joinToString("\n")}
         val sv = ScrollView(this).apply { addView(col) }
 
         val b = AlertDialog.Builder(this)
-            .setTitle(if (old == null) "➕ Add Site" else "✏️ ${old.host}")
+            .setTitle(if (old == null) "Add Site" else "${old.host}")
             .setView(sv)
             .setPositiveButton("Save") { _, _ ->
                 val h = SiteRules.hostOf(host.text.toString())
-                if (h.isEmpty() || !h.contains('.')) { toast("❌ Enter a valid domain"); return@setPositiveButton }
+                if (h.isEmpty() || !h.contains('.')) { toast("Enter a valid domain"); return@setPositiveButton }
                 if (old != null && old.host != h) SiteRules.remove(this, old.host)
                 SiteRules.upsert(this, SiteRules.Rule(
                     h, compat.isChecked, noAds.isChecked,
                     content.text.toString().trim(), next.text.toString().trim(), prev.text.toString().trim()
                 ))
-                toast("✅ Saved — reload the page and tap ●")
+                toast("Saved — reload the page and tap ")
             }
             .setNegativeButton("Cancel", null)
-        if (old != null) b.setNeutralButton("🗑 Delete") { _, _ ->
+        if (old != null) b.setNeutralButton("Delete") { _, _ ->
             SiteRules.remove(this, old.host)
-            toast("🗑 Deleted")
+            toast("Deleted")
         }
         b.show()
     }
 
     private fun menuGlossaryLabel(): String =
-        (if (Prefs.glossaryOn(this)) "✅" else "⬜") + " 📖 Glossary (" + Glossary.count + ") — Edit / Add"
+        (if (Prefs.glossaryOn(this)) "" else "") + "Glossary (" + Glossary.count + ") — Edit / Add"
 
     private fun menuSizeLabel(): String =
-        "🔠 Translation Text Size: " + Prefs.sizePx(this) + "px"
+        "Translation Text Size: " + Prefs.sizePx(this) + "px"
 
     private fun menuFontLabel(): String {
         val t = Langs.target(this)
-        if (t == Langs.DEFAULT_TARGET) return "🔤 Translation Font: " + Prefs.FONT_NAMES[Prefs.fontIdx(this)]
-        val fam = LangFonts.familyFor(t) ?: return "🔤 Translation Font: System default ($t)"
-        return "🔤 Translation Font: " + if (LangFonts.installed(this, t)) fam else "$fam (tap to download)"
+        if (t == Langs.DEFAULT_TARGET) return "Translation Font: " + Prefs.FONT_NAMES[Prefs.fontIdx(this)]
+        val fam = LangFonts.familyFor(t) ?: return "Translation Font: System default ($t)"
+        return "Translation Font: " + if (LangFonts.installed(this, t)) fam else "$fam (tap to download)"
     }
 
     private fun glossaryDialog() {
         val opts = arrayOf(
-            "➕ Add a word (English = translation)",
-            "📥 Paste multiple words",
-            (if (Prefs.glossaryOn(this)) "✅" else "⬜") + " Include glossary in prompt",
-            "📋 Copy full glossary",
-            "🗑 Delete all"
+            "Add a word (English = translation)",
+            "Paste multiple words",
+            (if (Prefs.glossaryOn(this)) "" else "") + " Include glossary in prompt",
+            "Copy full glossary",
+            "Delete all"
         )
         AlertDialog.Builder(this)
-            .setTitle("📖 Glossary — ${Glossary.count} entries")
+            .setTitle("Glossary — ${Glossary.count} entries")
             .setItems(opts) { _, i ->
                 when (i) {
                     0 -> glossaryInput(false)
                     1 -> glossaryInput(true)
                     2 -> {
                         Prefs.putBool(this, "noGlossary", Prefs.glossaryOn(this))
-                        toast(if (Prefs.glossaryOn(this)) "✅ Glossary enabled" else "⬜ Glossary disabled")
+                        toast(if (Prefs.glossaryOn(this)) "Glossary enabled" else "Glossary disabled")
                     }
-                    3 -> { copy(Glossary.read(this)); toast("📋 Glossary copied") }
+                    3 -> { copy(Glossary.read(this)); toast("Glossary copied") }
                     4 -> AlertDialog.Builder(this)
                         .setMessage("The entire glossary will be deleted. Continue?")
-                        .setPositiveButton("Delete") { _, _ -> Glossary.write(this, ""); toast("🗑 Deleted") }
+                        .setPositiveButton("Delete") { _, _ -> Glossary.write(this, ""); toast("Deleted") }
                         .setNegativeButton("Cancel", null)
                         .show()
                 }
@@ -10927,43 +10937,43 @@ ${rows.take(220).joinToString("\n")}
             if (bulk) { minLines = 8; gravity = Gravity.TOP } else setSingleLine(false)
         }
         val b = AlertDialog.Builder(this)
-            .setTitle(if (bulk) "📥 Paste" else "➕ New word")
+            .setTitle(if (bulk) "Paste" else "New word")
             .setView(et)
             .setPositiveButton("Add") { _, _ ->
                 Glossary.append(this, et.text.toString())
-                toast("✅ Added")
+                toast("Added")
             }
             .setNegativeButton("Cancel", null)
         if (bulk) b.setNeutralButton("Replace all") { _, _ ->
             Glossary.write(this, et.text.toString())
-            toast("✅ Glossary updated")
+            toast("Glossary updated")
         }
         b.show()
     }
 
     private fun menuAutoLabel(): String =
-        (if (Prefs.auto(this)) "✅" else "⬜") + " ⚡ Background translation (insert into site)"
+        (if (Prefs.auto(this)) "" else "") + "Background translation (insert into site)"
 
     private fun menuDarkLabel(): String =
-        "🌙 Dark Mode: " + arrayOf("Off", "Auto", "Force")[darkMode()]
+        "Dark Mode: " + arrayOf("Off", "Auto", "Force")[darkMode()]
 
     private fun menuAutoPasteLabel(): String =
-        (if (Prefs.bool(this, "autoPaste")) "✅" else "⬜") + " Copy Mode: Auto Paste"
+        (if (Prefs.bool(this, "autoPaste")) "" else "") + " Copy Mode: Auto Paste"
 
     private fun menuAutoSendLabel(): String =
-        (if (Prefs.bool(this, "autoSend")) "✅" else "⬜") + " Copy Mode: Auto Send"
+        (if (Prefs.bool(this, "autoSend")) "" else "") + " Copy Mode: Auto Send"
 
     private fun menuPromptLabel(): String =
-        (if (Prefs.bool(this, "withPrompt")) "✅" else "⬜") + " Copy Mode: Include Prompt"
+        (if (Prefs.bool(this, "withPrompt")) "" else "") + " Copy Mode: Include Prompt"
 
     private fun menuNextExtractLabel(): String =
-        (if (Prefs.bool(this, "autoExtractNext", true)) "✅" else "⬜") + " ▶ Auto-Extract After Next / Previous"
+        (if (Prefs.bool(this, "autoExtractNext", true)) "" else "") + "Auto-Extract After Next / Previous"
 
     private fun menuSaveNextLabel(): String =
-        (if (!Prefs.bool(this, "noSaveNext")) "✅" else "⬜") + " Copy Mode: Next Chapter after 💾"
+        (if (!Prefs.bool(this, "noSaveNext")) "" else "") + "Copy Mode: Next Chapter after "
 
     private fun menuAdBlockLabel(): String =
-        (if (Prefs.adblock(this)) "✅" else "⬜") + " Ad Block"
+        (if (Prefs.adblock(this)) "" else "") + " Ad Block"
 
     private fun detectorRowLabel(): String {
         val state = when {
@@ -10972,7 +10982,7 @@ ${rows.take(220).joinToString("\n")}
             BubbleDetector.isInstalled(this) -> "installed (mode: " + BubbleDetector.mode(this) + ")"
             else -> "not installed · tap to download (≈ 11 MB)"
         }
-        return "🫧 Bubble & text detector\n" + state +
+        return "Bubble & text detector\n" + state +
             (if (BubbleDetector.lastError.isNotBlank()) " · " + BubbleDetector.lastError.take(60) else "")
     }
 
@@ -10983,31 +10993,31 @@ ${rows.take(220).joinToString("\n")}
             WebModeInpainter.isReady(this) -> "installed · used automatically for lettering on artwork"
             else -> "not installed · tap to download (≈ 16.3 MB)"
         }
-        return "🎨 AI text eraser (MI-GAN)\n" + state
+        return "AI text eraser (MI-GAN)\n" + state
     }
 
     private fun inpaintDialog() {
-        if (WebModeInpainter.isDownloading()) { toast("⬇️ Still downloading…"); return }
+        if (WebModeInpainter.isDownloading()) { toast("Still downloading…"); return }
         if (WebModeInpainter.isReady(this)) {
             AlertDialog.Builder(this)
                 .setMessage("Delete the AI text eraser model? Flat bubbles are still cleaned without it.")
-                .setPositiveButton("Delete") { _, _ -> WebModeInpainter.delete(this); toast("🗑 AI text eraser deleted") }
+                .setPositiveButton("Delete") { _, _ -> WebModeInpainter.delete(this); toast("AI text eraser deleted") }
                 .setNegativeButton("Cancel", null)
                 .show()
             return
         }
-        toast("⬇️ Downloading the AI text eraser…")
+        toast("Downloading the AI text eraser…")
         var lastPct = -25
         WebModeInpainter.download(this, { done, total ->
             val pct = if (total > 0) (done * 100 / total).toInt() else 0
-            if (pct >= lastPct + 25) { lastPct = pct; runOnUiThread { toast("⬇️ AI text eraser $pct%") } }
+            if (pct >= lastPct + 25) { lastPct = pct; runOnUiThread { toast("AI text eraser $pct%") } }
         }, { err ->
-            runOnUiThread { toast(if (err == null) "✅ AI text eraser installed and tested" else "❌ AI text eraser: $err") }
+            runOnUiThread { toast(if (err == null) "AI text eraser installed and tested" else "AI text eraser: $err") }
         })
     }
 
     private fun menuDetectorLabel(): String =
-        "🫧 Bubble & text detector: " + (if (BubbleDetector.enabled(this)) "ACTIVE" else if (BubbleDetector.isInstalled(this)) "installed" else "not installed")
+        "Bubble & text detector: " + (if (BubbleDetector.enabled(this)) "ACTIVE" else if (BubbleDetector.isInstalled(this)) "installed" else "not installed")
 
     /**
      * Optional detector of speech bubbles and free lettering (ONNX, 11 MB). It is downloaded from inside the app; the
@@ -11022,12 +11032,12 @@ ${rows.take(220).joinToString("\n")}
                 "from free lettering (sound effects) and keeps lines of different bubbles apart.")
         if (!installed && !BubbleDetector.isDownloading()) {
             b.setPositiveButton("Download (≈ 11 MB)") { _, _ ->
-                toast("⬇️ Downloading the detector…")
+                toast("Downloading the detector…")
                 BubbleDetector.download(this, { pct ->
-                    if (pct % 25 == 0) runOnUiThread { toast("⬇️ Detector $pct%") }
+                    if (pct % 25 == 0) runOnUiThread { toast("Detector $pct%") }
                 }, { err ->
                     runOnUiThread {
-                        toast(if (err == null) "✅ Detector installed and tested on this phone" else "❌ Detector: $err")
+                        toast(if (err == null) "Detector installed and tested on this phone" else "Detector: $err")
                         onChanged()
                     }
                 })
@@ -11058,12 +11068,12 @@ ${rows.take(220).joinToString("\n")}
                 "old lettering is hidden inside the balloon. It runs only while reading ahead, never when memory is low.")
         if (!installed && !BubbleSegDetector.isDownloading()) {
             b.setPositiveButton("Download (≈ 12 MB)") { _, _ ->
-                toast("⬇️ Downloading the mask model…")
+                toast("Downloading the mask model…")
                 BubbleSegDetector.download(this, { pct ->
-                    if (pct % 25 == 0) runOnUiThread { toast("⬇️ Mask model $pct%") }
+                    if (pct % 25 == 0) runOnUiThread { toast("Mask model $pct%") }
                 }, { err ->
                     runOnUiThread {
-                        toast(if (err == null) "✅ Mask model installed and tested on this phone" else "❌ Mask model: $err")
+                        toast(if (err == null) "Mask model installed and tested on this phone" else "Mask model: $err")
                         onChanged()
                     }
                 })
@@ -11082,7 +11092,7 @@ ${rows.take(220).joinToString("\n")}
     }
 
     private fun menuTextRemovalLabel(): String =
-        (if (Prefs.bool(this, "wmTextRemoval2", true)) "✅" else "⬜") + " 🧽 Text Remover (Webtoon + Manga)"
+        (if (Prefs.bool(this, "wmTextRemoval2", true)) "" else "") + "Text Remover (Webtoon + Manga)"
 
     /** Glass bottom sheet with one tappable row per label (long-press optional). */
     /** A sheet with a search box on top; used for the long language lists. */
@@ -11203,22 +11213,33 @@ ${rows.take(220).joinToString("\n")}
         val names = Store.novelNames(this)
         if (names.isEmpty()) return toast("Library is empty. Saved translations will appear here.")
         val labels = names.map { it + "   (" + Store.chapters(this, it).size + " chapters)" }
-        listDialog("📚 Library", labels, { i -> novelActions(names[i]) }, null)
+        listDialog("Library", labels, { i -> novelActions(names[i]) }, null)
     }
 
     private fun novelActions(name: String) {
-        AlertDialog.Builder(this).setTitle(name)
-            .setItems(arrayOf("📖 Chapter List", "⬇️ Export this novel as TXT", "✏️ Rename", "🗑 Delete Novel")) { _, k ->
-                when (k) {
-                    0 -> chapterList(name)
-                    1 -> exportAll(name)
-                    2 -> renameNovel(name)
-                    3 -> AlertDialog.Builder(this).setMessage("Delete all translations for \"$name\"?")
-                        .setPositiveButton("Delete") { _, _ -> Store.deleteNovel(this, name) }
-                        .setNegativeButton("No", null).show()
-                    else -> {}
-                }
-            }.show()
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, name)
+        val group = Toon.group(this, c)
+        group.addView(Toon.listRow(this, c, "Chapter list", icon = ToonIc.BOOK, onClick = { sheet.close(); chapterList(name) }))
+        group.addView(Toon.divider(this, c))
+        group.addView(Toon.listRow(this, c, "Export as TXT", icon = ToonIc.DOWNLOAD, onClick = { sheet.close(); exportAll(name) }))
+        group.addView(Toon.divider(this, c))
+        group.addView(Toon.listRow(this, c, "Rename", icon = ToonIc.EDIT, onClick = { sheet.close(); renameNovel(name) }))
+        group.addView(Toon.divider(this, c))
+        group.addView(Toon.listRow(this, c, "Delete novel", icon = ToonIc.TRASH, destructive = true, chevron = false, onClick = {
+            sheet.close(); confirmDelete("Delete all translations for \"$name\"?") { Store.deleteNovel(this, name) }
+        }))
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        sheet.show()
+    }
+
+    /** Paper & Seal confirm dialog (replaces AlertDialog for destructive actions). */
+    private fun confirmDelete(message: String, title: String = "Delete?", onDelete: () -> Unit) {
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, title, message)
+        d.addAction("Delete", style = 2) { onDelete(); d.dismiss() }
+        d.addAction("Cancel", style = 1) { d.dismiss() }
+        d.show()
     }
 
     private fun chapterList(name: String) {
@@ -11227,9 +11248,7 @@ ${rows.take(220).joinToString("\n")}
         listDialog(name + " (long-press to delete)", l.map { it.label() },
             { i -> startActivity(Intent(this, ReaderActivity::class.java).putExtra("novel", name).putExtra("id", l[i].id)) },
             { i ->
-                AlertDialog.Builder(this).setMessage("Delete \"${l[i].label()}\"?")
-                    .setPositiveButton("Delete") { _, _ -> Store.delete(this, l[i].id) }
-                    .setNegativeButton("No", null).show()
+                confirmDelete("Delete \"${l[i].label()}\"?") { Store.delete(this, l[i].id) }
             })
     }
 
@@ -11259,9 +11278,9 @@ ${rows.take(220).joinToString("\n")}
             val u = data?.data ?: return
             try {
                 contentResolver.openOutputStream(u)?.use { it.write(Store.export(this, exportNovel).toByteArray()) }
-                toast("✅ Export completed")
+                toast("Export completed")
             } catch (e: Exception) {
-                toast("❌ " + (e.message ?: "Failed"))
+                toast("" + (e.message ?: "Failed"))
             }
         }
     }
@@ -11271,14 +11290,14 @@ ${rows.take(220).joinToString("\n")}
         val u = novelWv.url ?: return
         val name = (novelWv.title ?: "").ifBlank { Uri.parse(u).host ?: u }
         Store.addBookmark(this, Bookmark(name, u, u, ""))
-        toast("🔖 Saved: $name")
+        toast("Saved: $name")
     }
 
     private fun bookmarkList() {
         val l = Store.bookmarks(this)
         if (l.isEmpty()) return toast("Bookmarks are empty")
-        val labels = l.map { it.name + (if (it.lastTitle.isNotEmpty()) "\n↳ " + it.lastTitle else "") }
-        listDialog("🔖 Bookmarks (long-press to delete)", labels,
+        val labels = l.map { it.name + (if (it.lastTitle.isNotEmpty()) "\n" + it.lastTitle else "") }
+        listDialog("Bookmarks (long-press to delete)", labels,
             { i ->
                 hideHome()
                 if (mode == Mode.CHAT) setMode(Mode.SPLIT)
@@ -11317,11 +11336,11 @@ ${rows.take(220).joinToString("\n")}
             .setPositiveButton("Save") { _, _ ->
                 val t = et.text.toString()
                 Prefs.put(this, "scanPrompt", if (t.trim() == Langs.scanPrompt(this).trim()) "" else t)
-                toast("✅ Scanning prompt saved")
+                toast("Scanning prompt saved")
             }
             .setNeutralButton("Reset") { _, _ ->
                 Prefs.put(this, "scanPrompt", "")
-                toast("↩ Scanning prompt reset to default")
+                toast("Scanning prompt reset to default")
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -11340,11 +11359,11 @@ ${rows.take(220).joinToString("\n")}
             .setPositiveButton("Save") { _, _ ->
                 val t = et.text.toString()
                 Prefs.put(this, "realtimePrompt", if (t.trim() == Langs.realtimePrompt(this).trim()) "" else t)
-                toast("✅ Real-time prompt saved")
+                toast("Real-time prompt saved")
             }
             .setNeutralButton("Reset") { _, _ ->
                 Prefs.put(this, "realtimePrompt", "")
-                toast("↩ Real-time prompt reset to default")
+                toast("Real-time prompt reset to default")
             }
             .setNegativeButton("Cancel", null)
             .show()
