@@ -16,8 +16,8 @@ object ToonChip {
     ): TextView {
         val colors = ToonTheme.colors(context)
         val fill = if (selected) colors.accentTint else colors.surfaceAlt
-        val ink = if (selected) colors.accent else colors.body
-        val stroke = if (selected) colors.accent else colors.line
+        val ink = if (selected) colors.accentForeground else colors.body
+        val stroke = if (selected) colors.accentForeground else colors.line
         return TextView(context).apply {
             text = label
             textSize = ToonTheme.Type.caption
@@ -25,8 +25,8 @@ object ToonChip {
             setTextColor(ink)
             gravity = Gravity.CENTER
             includeFontPadding = false
-            minHeight = ToonTheme.dp(context, 48)
-            minWidth = ToonTheme.dp(context, 48)
+            minHeight = ToonTheme.dp(context, ToonTheme.Metrics.minimumTouchDp)
+            minWidth = ToonTheme.dp(context, ToonTheme.Metrics.minimumTouchDp)
             setPadding(
                 ToonTheme.dp(context, ToonTheme.Space.md),
                 ToonTheme.dp(context, ToonTheme.Space.xs),
@@ -39,10 +39,12 @@ object ToonChip {
                 ToonTheme.Radius.pill
             )
             isEnabled = enabled
+            isSelected = selected
             isClickable = onClick != null
             isFocusable = true
             alpha = if (enabled) 1f else 0.48f
             onClick?.let { action -> setOnClickListener { if (isEnabled) action() } }
+            if (onClick != null) ToonComponents.exposeAsButton(this)
             stateListAnimator = null
         }
     }
