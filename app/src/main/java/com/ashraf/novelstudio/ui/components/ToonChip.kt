@@ -16,7 +16,7 @@ object ToonChip {
         val colors = ToonTheme.colors(context)
         val fill = if (selected) colors.accentTint else colors.surfaceAlt
         val ink = if (selected) colors.accentForeground else colors.body
-        val stroke = if (selected) colors.accentForeground else colors.line
+        val stroke = if (selected) colors.accentForeground else colors.lineStrong
         val shape = ToonComponents.rounded(context, fill, ToonTheme.Radius.pill, stroke)
         return TextView(context).apply {
             text = label
