@@ -36,8 +36,8 @@ class ActivityChip(context: Context) : LinearLayout(context) {
             setStroke((1 * d).toInt().coerceAtLeast(1), UiTheme.palette.lineStrong)
         }
         elevation = 12 * d
-        isClickable = false
-        isFocusable = false
+        isClickable = true   // set by the activity: tap opens the task tray
+        isFocusable = true
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         addView(dots, LayoutParams((26 * d).toInt(), (14 * d).toInt()).also { it.rightMargin = (8 * d).toInt() })
         label.apply {
