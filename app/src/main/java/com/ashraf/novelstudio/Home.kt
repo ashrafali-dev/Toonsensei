@@ -288,7 +288,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
         }
         val letter = TextView(ctx).apply {
             text = site.name.take(1).uppercase()
-            setTextColor(UiTheme.onAccent)
+            setTextColor(UiTheme.foregroundFor(base))
             textSize = textSp
             typeface = bold
             gravity = Gravity.CENTER
@@ -436,7 +436,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             text = title.trim().take(1).uppercase()
             textSize = textSp
             typeface = bold
-            setTextColor(UiTheme.onAccent)
+            setTextColor(UiTheme.foregroundFor(base))
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 setColor(base)
