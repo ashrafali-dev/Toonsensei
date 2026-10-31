@@ -49,26 +49,26 @@ class RescanSelector(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
-            background = GradientDrawable().apply { setColor(0xEE232739.toInt()); cornerRadius = 26 * d }
+            background = GradientDrawable().apply { setColor(com.ashraf.novelstudio.UiTheme.palette.surface); cornerRadius = 26 * d; setStroke((1 * d).toInt().coerceAtLeast(1), com.ashraf.novelstudio.UiTheme.palette.line) }
             elevation = 12 * d
         }
         fun btn(label: String, filled: Boolean, click: () -> Unit) = TextView(ctx).apply {
             text = label
             textSize = 14f
             typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-            setTextColor(Color.WHITE)
+            setTextColor(com.ashraf.novelstudio.UiTheme.palette.text)
             gravity = Gravity.CENTER
             setPadding((18 * d).toInt(), 0, (18 * d).toInt(), 0)
             background = GradientDrawable().apply {
                 cornerRadius = 20 * d
-                setColor(if (filled) accent else 0x33FFFFFF)
+                setColor(if (filled) accent else com.ashraf.novelstudio.UiTheme.palette.surfaceAlt)
             }
             setOnClickListener { click() }
         }
-        bar.addView(btn("Cancel", false) { onCancel() }, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, (40 * d).toInt()))
+        bar.addView(btn("Cancel", false) { onCancel() }, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, (44 * d).toInt()))
         bar.addView(btn("Read this area", true) {
             if (width > 0 && height > 0) onScan(l / width, t / height, r / width, b / height)
-        }, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, (40 * d).toInt()).also { it.leftMargin = (10 * d).toInt() })
+        }, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, (44 * d).toInt()).also { it.leftMargin = (10 * d).toInt() })
         addView(bar, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).also {
             it.bottomMargin = (28 * d).toInt()
         })
