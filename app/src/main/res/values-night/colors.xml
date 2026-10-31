@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Charcoal palette: same semantic roles, tuned for night reading. -->
+    <color name="toon_bg">#1C1B19</color>
+    <color name="toon_surface">#262522</color>
+    <color name="toon_surface_alt">#302F2B</color>
+    <color name="toon_ink">#E8E4DA</color>
+    <color name="toon_body">#E8E4DA</color>
+    <color name="toon_muted">#9A958A</color>
+    <color name="toon_faint">#6F6A60</color>
+    <color name="toon_line">#2EE8E4DA</color>
+    <color name="toon_line_strong">#45E8E4DA</color>
+    <color name="toon_accent">#C9AE7C</color>
+    <color name="toon_accent_tint">#3A3328</color>
+    <color name="toon_on_accent">#1C1B19</color>
+    <color name="toon_success">#7FB08A</color>
+    <color name="toon_success_tint">#26352B</color>
+    <color name="toon_success_ink">#A4C9AA</color>
+    <color name="toon_warning">#C9AE7C</color>
+    <color name="toon_warning_tint">#3A3328</color>
+    <color name="toon_warning_line">#6B5F46</color>
+    <color name="toon_danger">#E5826F</color>
+    <color name="toon_danger_tint">#432923</color>
+    <color name="toon_scrim">#991C1B19</color>
+    <color name="toon_focus">#C9AE7C</color>
+    <color name="toon_ripple">#33E8E4DA</color>
+</resources>
