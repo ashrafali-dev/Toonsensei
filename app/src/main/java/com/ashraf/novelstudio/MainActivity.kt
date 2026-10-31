@@ -2873,7 +2873,7 @@ return t.length>=40?'TXT:'+t:'';
             // Announce only when the stage changes (not per second), so TalkBack is not flooded.
             if (lastAnnouncedStage != chipStageText) {
                 lastAnnouncedStage = chipStageText
-                announceForAccessibility((activityChip as? View)?.contentDescription?.toString() ?: "")
+                (activityChip as? View)?.announceForAccessibility(chipStageText)
             }
         } else if (++chipIdleTicks >= 2) {
             chipStageText = ""
