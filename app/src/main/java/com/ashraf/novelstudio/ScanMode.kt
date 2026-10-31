@@ -289,8 +289,9 @@ try{
 return done;
 """
 
-    fun jsPageTurn(rtl: Boolean): String = """
-var rtl=${if (rtl) "true" else "false"},moved=false,mode='none';
+    /** [how]: "both" (arrow key AND edge tap, the default), "key" (arrow key only) or "tap" (edge tap only). */
+    fun jsPageTurn(rtl: Boolean, how: String = "both"): String = """
+var rtl=${if (rtl) "true" else "false"},how='$how',moved=false,mode='none';
 try{
   var de0=document.documentElement,all=document.querySelectorAll('*'),best=null,bestA=0;
   for(var i=0;i<all.length;i++){
@@ -307,12 +308,12 @@ try{
   }
   if(!moved){
     var key=rtl?'ArrowLeft':'ArrowRight',code=rtl?37:39;
-    ['keydown','keyup'].forEach(function(t){
+    if(how!=='tap')['keydown','keyup'].forEach(function(t){
       var ev=new KeyboardEvent(t,{key:key,code:key,keyCode:code,which:code,bubbles:true,cancelable:true});
       document.dispatchEvent(ev);if(document.body)document.body.dispatchEvent(ev);
     });
     var w=window.innerWidth||360,h=window.innerHeight||640;
-    var el=document.elementFromPoint(Math.round(rtl?w*0.1:w*0.9),Math.round(h*0.5));
+    var el=how==='key'?null:document.elementFromPoint(Math.round(rtl?w*0.1:w*0.9),Math.round(h*0.5));
     if(el){
       ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
         try{el.dispatchEvent(new MouseEvent(t,{bubbles:true,cancelable:true,view:window,clientX:Math.round(rtl?w*0.1:w*0.9),clientY:Math.round(h*0.5)}));}catch(x){}

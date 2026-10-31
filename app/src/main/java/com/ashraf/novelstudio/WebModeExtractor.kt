@@ -1793,22 +1793,35 @@ internal class WebModeExtractor(
                 if (startKey != 0L) {
                     var matched = false
                     var turnsBack = 0
-                    var prevCur = 0L
-                    while (alive()) {
-                        try { Thread.sleep(550L) } catch (_: InterruptedException) { break }
+                    fun look(): Long {
+                        try { Thread.sleep(550L) } catch (_: InterruptedException) { return 0L }
                         val cur = try { captureView() } catch (_: Throwable) { null }
-                        val curKey = if (cur != null) ScanMode.quickKey(cur) else 0L
+                        val k = if (cur != null) ScanMode.quickKey(cur) else 0L
                         try { cur?.recycle() } catch (_: Throwable) {}
-                        if (curKey == startKey) { matched = true; break }
-                        // Same screen as the previous look = the reader cannot go back any further (first page). Stop: more turns
-                        // would only move the reader forward again.
-                        if (curKey != 0L && curKey == prevCur) break
-                        prevCur = curKey
-                        if (turnsBack >= distinctPages + 2) break
-                        evalWait(wrap(LIB + ScanMode.jsPageTurn(scanDir != ScanDirection.RTL))) { null }
-                        turnsBack++
+                        return k
                     }
-                    OcrDiag.log("SCAN_PAGE", "start page identity ${if (matched) "MATCHED" else "NOT matched"} after $turnsBack extra turns back")
+                    var curKey = look()
+                    if (curKey == startKey) matched = true
+                    // Which input turns this reader BACK is unknown (some readers read the arrow key and the edge tap as opposite
+                    // things). Try each input alone; a method that makes the screen alternate between two pages (A,B,A) or not
+                    // change at all is abandoned for the next one. Stops the moment the start page is on screen.
+                    for (how in arrayOf("both", "key", "tap")) {
+                        if (matched || !alive()) break
+                        var older = 0L
+                        var prev = curKey
+                        var tries = 0
+                        while (!matched && alive() && tries < distinctPages + 2) {
+                            evalWait(wrap(LIB + ScanMode.jsPageTurn(scanDir != ScanDirection.RTL, how))) { null }
+                            turnsBack++; tries++
+                            val k = look()
+                            if (k == startKey) { matched = true; curKey = k; break }
+                            if (k != 0L && k == prev) { curKey = k; break }          // nothing moved: this input does nothing
+                            if (k != 0L && k == older) { curKey = k; break }         // A,B,A: this input goes back and forth
+                            older = prev; prev = k; curKey = k
+                        }
+                        OcrDiag.log("SCAN_PAGE", "return method=$how tries=$tries matched=$matched")
+                    }
+                    OcrDiag.log("SCAN_PAGE", "start page identity ${if (matched) "MATCHED" else "NOT matched"} after $turnsBack turns back")
                 }
             }
             evalWait(wrap(LIB + JS_RESTORE)) { null }
