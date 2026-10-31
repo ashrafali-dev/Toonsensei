@@ -14,15 +14,15 @@ object ToonDialog {
         context: Context,
         title: CharSequence,
         message: CharSequence,
-        confirmLabel: CharSequence = "Confirm",
-        cancelLabel: CharSequence = "Cancel",
+        confirmLabel: CharSequence? = null,
+        cancelLabel: CharSequence? = null,
         destructive: Boolean = false,
         onConfirm: () -> Unit
     ): AlertDialog = builder(context)
         .setTitle(title)
         .setMessage(message)
-        .setNegativeButton(cancelLabel, null)
-        .setPositiveButton(confirmLabel) { _, _ -> onConfirm() }
+        .setNegativeButton(cancelLabel ?: context.getString(R.string.toon_action_cancel), null)
+        .setPositiveButton(confirmLabel ?: context.getString(R.string.toon_action_confirm)) { _, _ -> onConfirm() }
         .create()
         .also { dialog ->
             dialog.setOnShowListener {
@@ -37,11 +37,11 @@ object ToonDialog {
         context: Context,
         title: CharSequence,
         message: CharSequence,
-        actionLabel: CharSequence = "Got it"
+        actionLabel: CharSequence? = null
     ): AlertDialog = builder(context)
         .setTitle(title)
         .setMessage(message)
-        .setPositiveButton(actionLabel, null)
+        .setPositiveButton(actionLabel ?: context.getString(R.string.toon_action_got_it), null)
         .create()
 
     fun choices(
