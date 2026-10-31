@@ -435,7 +435,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(ctx.dpi(6), ctx.dpi(6), ctx.dpi(12), ctx.dpi(6))
-            background = Glass.solid(ctx, 0x14FFFFFF, 20, UiTheme.strokeSoft)
+            background = Glass.solid(ctx, ToonTheme.withAlpha(UiTheme.palette.title, 0x14), 20, UiTheme.palette.line)
             contentDescription = site.name
             addView(siteIcon(site, 24, 8, 12f), LinearLayout.LayoutParams(ctx.dpi(24), ctx.dpi(24)).also { it.marginEnd = ctx.dpi(8) })
             addView(name)
@@ -523,7 +523,7 @@ class HomeView(private val ctx: Context) : FrameLayout(ctx) {
         val card = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(ctx.dpi(14), ctx.dpi(14), ctx.dpi(14), ctx.dpi(14))
-            background = Glass.solid(ctx, 0x14FFFFFF, 18, UiTheme.strokeSoft)
+            background = Glass.solid(ctx, ToonTheme.withAlpha(UiTheme.palette.title, 0x14), 18, UiTheme.palette.line)
             addView(cover(r.title, 68, 90, 12, 30f), LinearLayout.LayoutParams(ctx.dpi(68), ctx.dpi(90)).also { it.marginEnd = ctx.dpi(14) })
             addView(info, LinearLayout.LayoutParams(0, ctx.dpi(90), 1f))
         }
