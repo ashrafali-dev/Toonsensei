@@ -91,6 +91,23 @@ object UiTheme {
         danger = c.danger
         stroke = c.lineStrong
         strokeSoft = c.line
+
+        // Match Android system-bar icon contrast to the selected app palette,
+        // even when the device's global appearance differs from the saved palette.
+        if (context is Activity) {
+            val window = context.window
+            window.statusBarColor = c.background
+            window.navigationBarColor = c.background
+            val decor = window.decorView
+            var flags = decor.systemUiVisibility
+            flags = if (c.dark) flags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+                else flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                flags = if (c.dark) flags and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
+                    else flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            }
+            decor.systemUiVisibility = flags
+        }
     }
 }
 
