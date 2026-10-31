@@ -4498,10 +4498,11 @@ return t.length>=40?'TXT:'+t:'';
             text = "Save"
             textSize = 16f
             typeface = boldMedium
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.palette.onInk)
             gravity = Gravity.CENTER
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(UiTheme.accentA, UiTheme.accentB)).apply {
+            background = GradientDrawable().apply {
                 cornerRadius = dp(26).toFloat()
+                setColor(UiTheme.palette.ink)
             }
             isClickable = true
             setOnClickListener {
@@ -4523,6 +4524,7 @@ return t.length>=40?'TXT:'+t:'';
         dlg.show()
     }
 
+
     /** Fetches the font of the target language (once) so translated text looks right. */
     private fun downloadLanguageFont(lang: String) {
         if (lang == Langs.DEFAULT_TARGET || LangFonts.familyFor(lang) == null || LangFonts.installed(this, lang)) return
@@ -4538,13 +4540,13 @@ return t.length>=40?'TXT:'+t:'';
 
     /** First run, right after the language: use the default novel prompt, or write one. */
     private fun showFirstPromptChoice() {
-        AlertDialog.Builder(this)
-            .setTitle("Novel translation prompt")
-            .setMessage("The default prompt already asks for ${Langs.target(this)}. Use it, or write your own now. You can change it any time: Menu Edit Prompt For Novel Translation.")
-            .setPositiveButton("Use default prompt", null)
-            .setNegativeButton("Write my own") { _, _ -> editPrompt() }
-            .setCancelable(false)
-            .show()
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Novel translation prompt",
+            "The default prompt already asks for ${Langs.target(this)}. Use it, or write your own now. " +
+                "You can change it any time from Menu › Prompt.")
+        d.addAction("Use default prompt") { d.dismiss() }
+        d.addAction("Write my own", style = 1) { d.dismiss(); editPrompt() }
+        d.show()
     }
 
     private fun refreshHome() {
@@ -5974,8 +5976,8 @@ return t.length>=40?'TXT:'+t:'';
 
     private fun menuScanDirLabel(): String {
         val d = ScanMode.direction(this)
-        val short = when (d) { ScanDirection.SCROLL -> "Top Bottom"; ScanDirection.RTL -> "Right Left"; ScanDirection.LTR -> "Left Right" }
-        return "Scan direction: $short" + if (ScanMode.askBefore(this)) "(asks on )" else " (no question)"
+        val short = when (d) { ScanDirection.SCROLL -> "Top to bottom"; ScanDirection.RTL -> "Right to left"; ScanDirection.LTR -> "Left to right" }
+        return "Scan direction: $short" + if (ScanMode.askBefore(this)) " (asks each time)" else ""
     }
 
     /** Menu: pick the scan direction for good and decide whether ⚡ asks before every scan. */
@@ -6000,13 +6002,13 @@ return t.length>=40?'TXT:'+t:'';
         else "Auto Real-time OCR — off (manual tap mode)"
 
     private fun menuOcrRescanLabel(): String =
-        (if (Prefs.bool(this, "ocrRescan", true)) "" else "") + "OCR rescan (find missed lines)"
+        "OCR rescan (find missed lines): " + onOff(Prefs.bool(this, "ocrRescan", true))
 
     private fun lastActuallyUsedOcrEngine(): String =
         OcrEngineStatus.label.takeIf { it.isNotBlank() } ?: "No OCR run yet"
 
     private fun menuOcrModelsLabel(): String =
-        "OCR Engine: " + currentOcrEngineLabel() + "\nLast actually used: " + lastActuallyUsedOcrEngine()
+        "OCR engine: " + currentOcrEngineLabel() + "\nLast used: " + lastActuallyUsedOcrEngine()
 
     private fun shortOcrEngineName(): String = when (Prefs.get(this, "ocrEngine", "mlkit")) {
         "lens" -> "Lens"
@@ -6073,7 +6075,7 @@ return t.length>=40?'TXT:'+t:'';
     }
 
     private fun menuOcrDebugLabel(): String =
-        (if (Prefs.bool(this, "ocrDebug", false)) "" else "") + "OCR debug (marked images, private folder)"
+        "OCR debug (marked images, private folder): " + onOff(Prefs.bool(this, "ocrDebug", false))
 
     private fun menuBarsLabel(): String =
         "Bars in Web Mode: " + listOf("Float over page", "Fixed (no overlap)", "Auto-hide on scroll")[barsMode()]
@@ -7080,10 +7082,10 @@ return t.length>=40?'TXT:'+t:'';
     private fun webModeOn(): Boolean = Prefs.bool(this, "webMode")
 
     private fun menuForceLabel(): String =
-        (if (Prefs.bool(this, "wmForce")) "" else "") + "Force Extract (screen OCR, no downloads)"
+        "Force Extract (screen OCR, no downloads): " + onOff(Prefs.bool(this, "wmForce"))
 
     private fun menuWebModeLabel(): String =
-        (if (webModeOn()) "" else "") + "Web Mode (OCR for image chapters)"
+        "Web Mode (OCR for image chapters): " + onOff(webModeOn())
 
     private fun clearWebModeProgress() {
         webModePct = -1
@@ -8402,11 +8404,10 @@ return t.length>=40?'TXT:'+t:'';
     private fun menuPrefetchDepthLabel(): String = "Prefetch how many chapters ahead: ${prefetchAhead()}"
 
     private fun menuRtPromptLabel(): String =
-        (if (Prefs.bool(this, "rtSendPrompt", true)) "" else "") + "Send Prompt With Text (scan & real-time)"
+        "Send Prompt With Text (scan & real-time): " + onOff(Prefs.bool(this, "rtSendPrompt", true))
 
     private fun menuPrefetchLabel(): String =
-        (if (Prefs.bool(this, "prefetchNextChapter")) "" else "") +
-            "Prefetch next chapter in background"
+        "Prefetch next chapter in background: " + onOff(Prefs.bool(this, "prefetchNextChapter"))
 
     /**
      * Dedicated prefetch extractor. Intentionally reads ONLY prefetchWv.
@@ -10889,23 +10890,23 @@ ${rows.take(220).joinToString("\n")}
     }
 
     private fun menuGlossaryLabel(): String =
-        (if (Prefs.glossaryOn(this)) "" else "") + "Glossary (" + Glossary.count + ") — Edit / Add"
+        "Glossary (" + Glossary.count + ") — Edit / Add"
 
     private fun menuSizeLabel(): String =
-        "Translation Text Size: " + Prefs.sizePx(this) + "px"
+        "Text size: " + Prefs.sizePx(this) + "px"
 
     private fun menuFontLabel(): String {
         val t = Langs.target(this)
-        if (t == Langs.DEFAULT_TARGET) return "Translation Font: " + Prefs.FONT_NAMES[Prefs.fontIdx(this)]
+        if (t == Langs.DEFAULT_TARGET) return "Font: " + Prefs.FONT_NAMES[Prefs.fontIdx(this)]
         val fam = LangFonts.familyFor(t) ?: return "Translation Font: System default ($t)"
-        return "Translation Font: " + if (LangFonts.installed(this, t)) fam else "$fam (tap to download)"
+        return "Font: " + if (LangFonts.installed(this, t)) fam else "$fam (tap to download)"
     }
 
     private fun glossaryDialog() {
         val opts = arrayOf(
             "Add a word (English = translation)",
             "Paste multiple words",
-            (if (Prefs.glossaryOn(this)) "" else "") + " Include glossary in prompt",
+            "Include glossary in prompt: " + onOff(Prefs.glossaryOn(this)),
             "Copy full glossary",
             "Delete all"
         )
@@ -10951,29 +10952,31 @@ ${rows.take(220).joinToString("\n")}
         b.show()
     }
 
+    private fun onOff(b: Boolean): String = if (b) "On" else "Off"
+
     private fun menuAutoLabel(): String =
-        (if (Prefs.auto(this)) "" else "") + "Background translation (insert into site)"
+        "Background translation (insert into site): " + onOff(Prefs.auto(this))
 
     private fun menuDarkLabel(): String =
         "Dark Mode: " + arrayOf("Off", "Auto", "Force")[darkMode()]
 
     private fun menuAutoPasteLabel(): String =
-        (if (Prefs.bool(this, "autoPaste")) "" else "") + " Copy Mode: Auto Paste"
+        "Auto-paste extracted text: " + onOff(Prefs.bool(this, "autoPaste"))
 
     private fun menuAutoSendLabel(): String =
-        (if (Prefs.bool(this, "autoSend")) "" else "") + " Copy Mode: Auto Send"
+        "Auto-send to chatbot: " + onOff(Prefs.bool(this, "autoSend"))
 
     private fun menuPromptLabel(): String =
-        (if (Prefs.bool(this, "withPrompt")) "" else "") + " Copy Mode: Include Prompt"
+        "Include prompt when copying: " + onOff(Prefs.bool(this, "withPrompt"))
 
     private fun menuNextExtractLabel(): String =
-        (if (Prefs.bool(this, "autoExtractNext", true)) "" else "") + "Auto-Extract After Next / Previous"
+        "Auto-extract after next / previous: " + onOff(Prefs.bool(this, "autoExtractNext", true))
 
     private fun menuSaveNextLabel(): String =
-        (if (!Prefs.bool(this, "noSaveNext")) "" else "") + "Copy Mode: Next Chapter after "
+        "Auto-open next chapter: " + onOff(!Prefs.bool(this, "noSaveNext"))
 
     private fun menuAdBlockLabel(): String =
-        (if (Prefs.adblock(this)) "" else "") + " Ad Block"
+        "Ad block: " + onOff(Prefs.adblock(this))
 
     private fun detectorRowLabel(): String {
         val state = when {
@@ -11092,120 +11095,68 @@ ${rows.take(220).joinToString("\n")}
     }
 
     private fun menuTextRemovalLabel(): String =
-        (if (Prefs.bool(this, "wmTextRemoval2", true)) "" else "") + "Text Remover (Webtoon + Manga)"
+        "Text Remover (Webtoon + Manga): " + onOff(Prefs.bool(this, "wmTextRemoval2", true))
 
     /** Glass bottom sheet with one tappable row per label (long-press optional). */
-    /** A sheet with a search box on top; used for the long language lists. */
+    /** Paper & Seal sheet with a search box on top; used for the long language and option lists. */
     private fun searchListDialog(title: String, options: List<String>, onPick: (String) -> Unit) {
-        lateinit var dlg: Dialog
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, title)
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = Sheets.sheetBackground(this@MainActivity)
-            setPadding(dp(14), dp(10), dp(14), dp(16))
+            setPadding(dp(16), 0, dp(16), dp(16))
         }
-        col.addView(sheetHandle())
-        col.addView(TextView(this).apply {
-            text = title
-            textSize = 20f
-            typeface = boldMedium
-            setTextColor(UiTheme.text)
-            setPadding(dp(6), dp(2), dp(6), dp(8))
-        })
-        val et = EditText(this).apply {
-            hint = "Search language"
+        val et = Toon.field(this, c, "Search").apply {
             setSingleLine()
-            textSize = 15f
-            setTextColor(UiTheme.text)
-            setHintTextColor(UiTheme.faint)
-            setPadding(dp(14), dp(10), dp(14), dp(10))
-            background = Glass.solid(this@MainActivity, 0x14FFFFFF, 14, UiTheme.strokeSoft)
-        }
-        col.addView(et, LinearLayout.LayoutParams(MP, WC).also { it.bottomMargin = dp(8) })
-        var shown: List<String> = options
-        val list = ListView(this).apply { divider = null }
-        val adapter = object : android.widget.BaseAdapter() {
-            override fun getCount() = shown.size
-            override fun getItem(position: Int) = shown[position]
-            override fun getItemId(position: Int) = position.toLong()
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View =
-                ((convertView as? TextView) ?: TextView(this@MainActivity)).apply {
-                    text = shown[position]
-                    textSize = 16f
-                    setTextColor(UiTheme.text)
-                    setPadding(dp(14), dp(13), dp(14), dp(13))
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(t: CharSequence?, a: Int, b: Int, c2: Int) {}
+                override fun onTextChanged(t: CharSequence?, a: Int, b: Int, c2: Int) {}
+                override fun afterTextChanged(e: Editable?) {
+                    val q = e?.toString().orEmpty().trim().lowercase()
+                    val shown = if (q.isEmpty()) options else options.filter { it.lowercase().contains(q) }
+                    val host = (et.parent as? LinearLayout)
+                    host?.let { h -> h.removeAllViews(); shown.forEach { o -> h.addView(optionRow(o) { sheet.close(); onPick(o) }, LinearLayout.LayoutParams(MP, WC)) } }
                 }
+            })
         }
-        list.adapter = adapter
-        list.setOnItemClickListener { _, _, i, _ -> dlg.dismiss(); onPick(shown[i]) }
-        et.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(t: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun onTextChanged(t: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(e: Editable?) {
-                val q = e?.toString().orEmpty().trim().lowercase()
-                shown = if (q.isEmpty()) options else options.filter { it.lowercase().contains(q) }
-                adapter.notifyDataSetChanged()
-            }
-        })
-        col.addView(list, LinearLayout.LayoutParams(MP, dp(360)))
-        dlg = Sheets.create(this, col)
-        dlg.show()
+        col.addView(et, LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(4); it.bottomMargin = dp(8) })
+        val listHost = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        options.forEach { listHost.addView(optionRow(it) { sheet.close(); onPick(it) }, LinearLayout.LayoutParams(MP, WC)) }
+        col.addView(listHost, LinearLayout.LayoutParams(MP, WC))
+        sheet.shell.addContent(col, LinearLayout.LayoutParams(MP, WC))
+        sheet.show()
+    }
+
+    private fun optionRow(label: String, onClick: () -> Unit): TextView = TextView(this).apply {
+        text = label
+        textSize = ToonTheme.Type.body
+        setTextColor(UiTheme.palette.text)
+        gravity = Gravity.CENTER_VERTICAL
+        minHeight = dp(48)
+        setPadding(dp(8), dp(10), dp(8), dp(10))
+        isClickable = true; isFocusable = true
+        background = Glass.ripple(this@MainActivity, null, 8)
+        setOnClickListener { onClick() }
     }
 
     private fun listDialog(title: String, labels: List<String>, onClick: (Int) -> Unit, onLong: ((Int) -> Unit)?) {
-        lateinit var dlg: Dialog
-        val col = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(10), dp(14), dp(20))
-            addView(sheetHandle())
-            addView(TextView(this@MainActivity).apply {
-                text = title.replace(Regex("^[^A-Za-z0-9]+"), "").trim().ifBlank { title }
-                textSize = 20f
-                typeface = boldMedium
-                setTextColor(UiTheme.text)
-                setPadding(dp(6), dp(2), dp(6), dp(10))
-            })
-        }
-        val group = sheetGroup()
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, title.replace(Regex("^[^A-Za-z0-9]+"), "").trim().ifBlank { title })
+        val group = Toon.group(this, c)
         labels.forEachIndexed { i, label ->
             val nl = label.indexOf('\n')
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(16), dp(12), dp(16), dp(12))
-                minimumHeight = dp(52)
-                gravity = Gravity.CENTER_VERTICAL
-                background = Glass.ripple(this@MainActivity, null, 0)
-                isClickable = true
-                setOnClickListener { dlg.dismiss(); onClick(i) }
-                if (onLong != null) setOnLongClickListener { dlg.dismiss(); onLong(i); true }
-                addView(TextView(this@MainActivity).apply {
-                    text = if (nl >= 0) label.substring(0, nl) else label
-                    textSize = 14.5f
-                    typeface = medium
-                    setTextColor(UiTheme.text)
-                    maxLines = 2
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                })
-                if (nl >= 0) addView(TextView(this@MainActivity).apply {
-                    text = label.substring(nl + 1)
-                    textSize = 11.5f
-                    setTextColor(UiTheme.dim)
-                    maxLines = 1
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                })
-            }
-            group.addView(row, LinearLayout.LayoutParams(MP, WC))
-            if (i != labels.lastIndex) group.addView(View(this).apply { setBackgroundColor(0x10FFFFFF) },
-                LinearLayout.LayoutParams(MP, dp(1)).also { it.marginStart = dp(16) })
+            val row = Toon.listRow(
+                this, c,
+                if (nl >= 0) label.substring(0, nl) else label,
+                detail = if (nl >= 0) label.substring(nl + 1) else null,
+                onClick = { sheet.close(); onClick(i) }
+            )
+            if (onLong != null) row.setOnLongClickListener { sheet.close(); onLong(i); true }
+            group.addView(row)
+            if (i != labels.lastIndex) group.addView(Toon.divider(this, c))
         }
-        col.addView(group, LinearLayout.LayoutParams(MP, WC))
-        val scroll = MaxHeightScroll(this, (resources.displayMetrics.heightPixels * 0.82f).toInt()).apply {
-            isVerticalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-            background = Sheets.sheetBackground(this@MainActivity)
-            addView(col, ViewGroup.LayoutParams(MP, WC))
-        }
-        dlg = Sheets.create(this, scroll)
-        dlg.show()
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        sheet.show()
     }
 
     // ---------- offline library ----------
@@ -11253,11 +11204,17 @@ ${rows.take(220).joinToString("\n")}
     }
 
     private fun renameNovel(old: String) {
-        val et = EditText(this).apply { setText(old) }
-        AlertDialog.Builder(this).setTitle("Novel name")
-            .setView(et)
-            .setPositiveButton("Save") { _, _ -> Store.rename(this, old, et.text.toString().trim()) }
-            .setNegativeButton("Cancel", null).show()
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Rename novel", null)
+        val et = Toon.field(this, c, "Novel name")
+        et.setText(old)
+        d.addContent(et)
+        d.addAction("Save") {
+            val name = et.text.toString().trim()
+            if (name.isEmpty()) toast("Enter a name") else { Store.rename(this, old, name); d.dismiss() }
+        }
+        d.addAction("Cancel", style = 1) { d.dismiss() }
+        d.show()
     }
 
     private fun exportAll(novel: String?) {
@@ -11306,67 +11263,71 @@ ${rows.take(220).joinToString("\n")}
     }
 
     private fun editPrompt() {
-        val et = EditText(this).apply {
-            setText(Prefs.prompt(this@MainActivity))
-            minLines = 6
-            gravity = Gravity.TOP
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Novel Translation Prompt")
-            .setView(et)
-            .setPositiveButton("Save") { _, _ ->
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Novel Translation Prompt", null)
+        val et = Toon.field(this, c, "Prompt", multiLine = true)
+        et.setText(Prefs.prompt(this@MainActivity))
+        d.addContent(et)
+        
+        d.actions.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END
+            addView(Toon.buttonGhost(this@MainActivity, c, "Cancel") { d.dismiss() })
+            addView(Toon.buttonGhost(this@MainActivity, c, "Save", c.accent) {
                 val t = et.text.toString()
                 // Unchanged generated text is stored as "no custom prompt" so it keeps following the language choice.
-                Prefs.put(this, "prompt", if (t.trim() == Langs.novelPrompt(this).trim()) "" else t)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+                Prefs.put(this@MainActivity, "prompt", if (t.trim() == Langs.novelPrompt(this).trim()) "" else t)
+                
+                d.dismiss()
+            })
+        }, LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(4) })
+        d.show()
     }
 
     private fun editScanPrompt() {
-        val et = EditText(this).apply {
-            setText(Prefs.scanPrompt(this@MainActivity))
-            minLines = 10
-            gravity = Gravity.TOP
-            hint = "Scanning translation prompt"
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Scanning Translation Prompt")
-            .setView(et)
-            .setPositiveButton("Save") { _, _ ->
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "Scanning Translation Prompt", null)
+        val et = Toon.field(this, c, "Scanning translation prompt", multiLine = true)
+        et.setText(Prefs.scanPrompt(this@MainActivity))
+        d.addContent(et)
+        val reset = Toon.buttonSecondary(this, c, "Reset to default") { Prefs.put(this, "scanPrompt", ""); d.dismiss(); toast("Prompt reset to default") }
+        d.actions.addView(reset, LinearLayout.LayoutParams(MP, ToonDp.px(this, 44)).also { it.topMargin = dp(12) })
+        d.actions.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END
+            addView(Toon.buttonGhost(this@MainActivity, c, "Cancel") { d.dismiss() })
+            addView(Toon.buttonGhost(this@MainActivity, c, "Save", c.accent) {
                 val t = et.text.toString()
-                Prefs.put(this, "scanPrompt", if (t.trim() == Langs.scanPrompt(this).trim()) "" else t)
+                // Unchanged generated text is stored as "no custom prompt" so it keeps following the language choice.
+                Prefs.put(this@MainActivity, "scanPrompt", if (t.trim() == Langs.scanPrompt(this).trim()) "" else t)
                 toast("Scanning prompt saved")
-            }
-            .setNeutralButton("Reset") { _, _ ->
-                Prefs.put(this, "scanPrompt", "")
-                toast("Scanning prompt reset to default")
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+                d.dismiss()
+            })
+        }, LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(4) })
+        d.show()
     }
 
     private fun editRealtimePrompt() {
-        val et = EditText(this).apply {
-            setText(Prefs.realtimePrompt(this@MainActivity))
-            minLines = 10
-            gravity = Gravity.TOP
-            hint = "AI Real-time Translation prompt"
-        }
-        AlertDialog.Builder(this)
-            .setTitle("AI Real-time Translation Prompt")
-            .setView(et)
-            .setPositiveButton("Save") { _, _ ->
+        val c = UiTheme.palette
+        val d = Toon.Dialog(this, c, "AI Real-time Translation Prompt", null)
+        val et = Toon.field(this, c, "AI Real-time Translation prompt", multiLine = true)
+        et.setText(Prefs.realtimePrompt(this@MainActivity))
+        d.addContent(et)
+        val reset = Toon.buttonSecondary(this, c, "Reset to default") { Prefs.put(this, "realtimePrompt", ""); d.dismiss(); toast("Prompt reset to default") }
+        d.actions.addView(reset, LinearLayout.LayoutParams(MP, ToonDp.px(this, 44)).also { it.topMargin = dp(12) })
+        d.actions.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END
+            addView(Toon.buttonGhost(this@MainActivity, c, "Cancel") { d.dismiss() })
+            addView(Toon.buttonGhost(this@MainActivity, c, "Save", c.accent) {
                 val t = et.text.toString()
-                Prefs.put(this, "realtimePrompt", if (t.trim() == Langs.realtimePrompt(this).trim()) "" else t)
+                // Unchanged generated text is stored as "no custom prompt" so it keeps following the language choice.
+                Prefs.put(this@MainActivity, "realtimePrompt", if (t.trim() == Langs.realtimePrompt(this).trim()) "" else t)
                 toast("Real-time prompt saved")
-            }
-            .setNeutralButton("Reset") { _, _ ->
-                Prefs.put(this, "realtimePrompt", "")
-                toast("Real-time prompt reset to default")
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+                d.dismiss()
+            })
+        }, LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(4) })
+        d.show()
     }
 
     // ================================================================== lifecycle
