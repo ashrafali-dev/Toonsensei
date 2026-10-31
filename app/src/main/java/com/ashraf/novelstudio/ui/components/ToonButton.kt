@@ -18,10 +18,10 @@ object ToonButton {
         variant: ToonButtonVariant = ToonButtonVariant.PRIMARY,
         size: ToonButtonSize = ToonButtonSize.REGULAR,
         enabled: Boolean = true,
-        contentDescription: String? = null,
+        accessibilityLabel: String? = null,
         onClick: (() -> Unit)? = null
     ): TextView {
-        require(label.isNotBlank() || !contentDescription.isNullOrBlank()) {
+        require(label.isNotBlank() || !accessibilityLabel.isNullOrBlank()) {
             "Icon-only buttons require a contentDescription."
         }
         val colors = ToonTheme.colors(context)
@@ -83,7 +83,7 @@ object ToonButton {
             isEnabled = enabled
             isClickable = onClick != null
             isFocusable = true
-            contentDescription = contentDescription?.takeIf { it.isNotBlank() }
+            this.contentDescription = accessibilityLabel?.takeIf { it.isNotBlank() }
             alpha = if (enabled) 1f else 0.48f
             onClick?.let { action -> setOnClickListener { if (isEnabled) action() } }
             stateListAnimator = null
