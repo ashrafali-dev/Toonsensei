@@ -288,7 +288,7 @@ class IconDrawable(private val ic: Ic, private var color: Int, private val strok
 // ============================================================================ glass surfaces
 
 object Glass {
-    /** Frosted capsule: light-on-dark gradient fill with a hairline edge. */
+    /** Flat semantic surface with a hairline edge. */
     fun panel(c: Context, radiusDp: Number, strong: Boolean = false): GradientDrawable =
         GradientDrawable().apply {
             cornerRadius = c.dpf(radiusDp)
@@ -532,15 +532,13 @@ object Sheets {
         }
     }
 
-    /** Rounded top-corner glass background for sheets. */
+    /** Flat Forest Luxe / Paper surface with rounded top corners. */
     fun sheetBackground(c: Context, topRadiusDp: Number = 30): GradientDrawable {
         val r = c.dpf(topRadiusDp)
-        return GradientDrawable(
-            GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(0xF5202332.toInt(), 0xF710121B.toInt())
-        ).apply {
+        return GradientDrawable().apply {
+            setColor(UiTheme.sheet)
             cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
-            setStroke(c.dpi(1), 0x24FFFFFF)
+            setStroke(c.dpi(1), UiTheme.stroke)
         }
     }
 }
