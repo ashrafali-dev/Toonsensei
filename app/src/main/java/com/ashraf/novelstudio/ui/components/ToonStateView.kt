@@ -18,7 +18,8 @@ object ToonStateView {
         title: CharSequence,
         message: CharSequence? = null,
         actionLabel: CharSequence? = null,
-        onAction: (() -> Unit)? = null
+        onAction: (() -> Unit)? = null,
+        progressPercent: Int? = null
     ): FrameLayout {
         val colors = ToonTheme.colors(context)
         val root = FrameLayout(context).apply {
@@ -36,24 +37,30 @@ object ToonStateView {
             )
         }
         if (state == State.LOADING) {
-            val progress = ProgressBar(
-                context,
-                null,
-                android.R.attr.progressBarStyleHorizontal
-            ).apply {
-                isIndeterminate = true
-                max = 100
-                minimumHeight = ToonTheme.dp(context, 3)
-                indeterminateTintList =
-                    android.content.res.ColorStateList.valueOf(colors.accent)
-            }
-            content.addView(
-                progress,
-                LinearLayout.LayoutParams(
-                    ToonTheme.dp(context, 144),
-                    ToonTheme.dp(context, 3)
+            // Only render a bar when the caller supplies real determinate task progress.
+            if (progressPercent != null) {
+                val progress = ProgressBar(
+                    context,
+                    null,
+                    android.R.attr.progressBarStyleHorizontal
+                ).apply {
+                    isIndeterminate = false
+                    max = 100
+                    progressTintList =
+                        android.content.res.ColorStateList.valueOf(colors.accent)
+                    progressBackgroundTintList =
+                        android.content.res.ColorStateList.valueOf(colors.line)
+                    progress = progressPercent.coerceIn(0, 100)
+                    contentDescription = "${progress} percent complete"
+                }
+                content.addView(
+                    progress,
+                    LinearLayout.LayoutParams(
+                        ToonTheme.dp(context, 144),
+                        ToonTheme.dp(context, 3)
+                    )
                 )
-            )
+            }
         } else {
             val eyebrow = when (state) {
                 State.EMPTY -> "NOTHING HERE YET"
