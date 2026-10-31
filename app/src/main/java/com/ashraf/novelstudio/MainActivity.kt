@@ -4096,7 +4096,7 @@ return t.length>=40?'TXT:'+t:'';
                     shape = GradientDrawable.OVAL
                     setColor(UiTheme.ok)
                 }
-                elevation = dp(7).toFloat()
+                elevation = 0f
                 visibility = View.GONE
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }
@@ -4107,12 +4107,12 @@ return t.length>=40?'TXT:'+t:'';
                 setImageDrawable(IconDrawable(Ic.SEARCH, UiTheme.iconIdle))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(0xEE232739.toInt())
+                    setColor(UiTheme.sheet)
                     setStroke(dp(1), UiTheme.stroke)
                 }
                 val pad = dp(10)
                 setPadding(pad, pad, pad, pad)
-                elevation = dp(10).toFloat()
+                elevation = 0f
                 contentDescription = "Re-scan a bubble area"
                 visibility = View.GONE
                 setOnClickListener { showRescanSelector() }
@@ -4223,7 +4223,7 @@ return t.length>=40?'TXT:'+t:'';
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(8), 0, dp(8), 0)
             background = floatingBarBg(34)
-            elevation = dp(12).toFloat()
+            elevation = 0f
             clipChildren = false   // the raised centre button may poke out above the dock
             clipToPadding = false  // dock has side padding, so clipToPadding (default true) would still cut the button at the dock's top edge
             addView(modeChip, LinearLayout.LayoutParams(0, dp(42), 1.9f).also { it.setMargins(0, 0, dp(2), 0) })
@@ -5073,11 +5073,11 @@ return t.length>=40?'TXT:'+t:'';
             text = "New tab"
             textSize = 15f
             typeface = boldMedium
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.onAccent)
             gravity = Gravity.CENTER
             setPadding(dp(20), 0, dp(26), 0)
             compoundDrawablePadding = dp(8)
-            val pi = IconDrawable(Ic.PLUS, Color.WHITE, 2.2f)
+            val pi = IconDrawable(Ic.PLUS, UiTheme.onAccent, 2.2f)
             pi.setBounds(0, 0, dp(20), dp(20))
             setCompoundDrawablesRelative(pi, null, null, null)
             background = Glass.accent(this@MainActivity, 27)
@@ -5861,8 +5861,8 @@ return t.length>=40?'TXT:'+t:'';
             botLp.topMargin = -botH
             chromeTopView.layoutParams = topLp
             dockWrapView.layoutParams = botLp
-            chromeTopView.elevation = dp(16).toFloat()
-            dockWrapView.elevation = dp(16).toFloat()
+            chromeTopView.elevation = dp(1).toFloat()
+            dockWrapView.elevation = dp(1).toFloat()
             contentHolderView.translationY = topH.toFloat()
             chromeTopView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             dockWrapView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
@@ -6077,7 +6077,7 @@ return t.length>=40?'TXT:'+t:'';
             botLp.topMargin = -botH
             chromeTopView.layoutParams = topLp
             dockWrapView.layoutParams = botLp
-            val z = if (want) dp(16).toFloat() else 0f
+            val z = if (want) dp(1).toFloat() else 0f
             chromeTopView.elevation = z
             dockWrapView.elevation = z
             (togglePill.layoutParams as? FrameLayout.LayoutParams)?.let { it.bottomMargin = dp(12) + botH; togglePill.layoutParams = it }
