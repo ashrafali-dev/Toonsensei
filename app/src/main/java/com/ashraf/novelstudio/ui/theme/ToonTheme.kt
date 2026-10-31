@@ -91,7 +91,8 @@ object ToonTheme {
                 dangerTint = c("#3D2926"),
                 scrim = c("#990B0F0D"),
                 focus = c("#D9C7A3"),
-                ripple = c("#33D9C7A3")
+                ripple = c("#33D9C7A3"),
+                dark = true
             )
             DarkPalettePreset.DEEP_OLIVE -> base.copy(
                 background = c("#0F1F17"),
@@ -118,7 +119,8 @@ object ToonTheme {
                 dangerTint = c("#3D2926"),
                 scrim = c("#990F1F17"),
                 focus = c("#C7CBB8"),
-                ripple = c("#33C7CBB8")
+                ripple = c("#33C7CBB8"),
+                dark = true
             )
         }
     }
