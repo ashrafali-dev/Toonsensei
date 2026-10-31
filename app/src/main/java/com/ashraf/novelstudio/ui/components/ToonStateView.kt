@@ -56,8 +56,8 @@ object ToonStateView {
                 content.addView(
                     progress,
                     LinearLayout.LayoutParams(
-                        ToonTheme.dp(context, 144),
-                        ToonTheme.dp(context, 3)
+                        ToonTheme.dp(context, ToonTheme.Metrics.progressWidthDp),
+                        ToonTheme.dp(context, ToonTheme.Metrics.progressHeightDp)
                     )
                 )
             }
