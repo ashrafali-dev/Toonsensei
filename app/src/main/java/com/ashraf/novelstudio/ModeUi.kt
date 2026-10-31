@@ -113,7 +113,7 @@ class ModeCapsule(ctx: Context) : View(ctx) {
 
     private val dens = ctx.resources.displayMetrics.density
     private val glyph = ModeGlyphPainter()
-    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0x14FFFFFF }
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = UiTheme.sheet }
     private val trackStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1f * dens
