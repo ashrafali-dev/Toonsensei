@@ -347,149 +347,100 @@ internal fun Context.iconButton(ic: Ic, desc: String, sizeDp: Int = 22, boxDp: I
         setOnClickListener { onClick() }
     }
 
-// ============================================================================ glow progress bar
+// ============================================================================ flat progress bar
 
 class GlowBar(ctx: Context) : View(ctx) {
-    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x24FFFFFF }
-    private val fillP = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val shine = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = UiTheme.strokeSoft }
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = UiTheme.accent }
     private var shown = 0f
     private var target = 0
-    private var phase = 0f
     private var move: ValueAnimator? = null
-    private val shimmer = ValueAnimator.ofFloat(0f, 1f).apply {
-        duration = 1500
-        repeatCount = ValueAnimator.INFINITE
-        interpolator = LinearInterpolator()
-        addUpdateListener { phase = it.animatedValue as Float; invalidate() }
-    }
 
-    /** 0..100, animated. */
+    /** 0..100 determinate progress. */
     var progress: Int
         get() = target
-        set(v) {
-            val t = v.coerceIn(0, 100)
-            if (t == target) return
-            target = t
+        set(value) {
+            val next = value.coerceIn(0, 100)
+            if (next == target) return
+            target = next
             move?.cancel()
-            move = ValueAnimator.ofFloat(shown, t.toFloat()).apply {
-                duration = 420
-                interpolator = DecelerateInterpolator()
-                addUpdateListener { shown = it.animatedValue as Float; invalidate() }
-                start()
+            if (!ToonTheme.Motion.enabled(context)) {
+                shown = next.toFloat()
+                invalidate()
+            } else {
+                move = ValueAnimator.ofFloat(shown, next.toFloat()).apply {
+                    duration = ToonTheme.Motion.standardMs
+                    interpolator = DecelerateInterpolator()
+                    addUpdateListener {
+                        shown = it.animatedValue as Float
+                        invalidate()
+                    }
+                    start()
+                }
             }
         }
 
-    override fun onVisibilityChanged(changedView: View, visibility: Int) {
-        super.onVisibilityChanged(changedView, visibility)
-        if (visibility == VISIBLE && isAttachedToWindow) { if (!shimmer.isStarted) shimmer.start() } else shimmer.cancel()
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        if (visibility == VISIBLE && !shimmer.isStarted) shimmer.start()
-    }
-
     override fun onDetachedFromWindow() {
-        shimmer.cancel()
         move?.cancel()
         super.onDetachedFromWindow()
     }
 
-    override fun onDraw(c: Canvas) {
+    override fun onDraw(canvas: Canvas) {
         val w = width.toFloat()
         val h = height.toFloat()
-        val r = h / 2f
-        c.drawRoundRect(0f, 0f, w, h, r, r, track)
-        val fw = maxOf(w * shown / 100f, if (shown > 0f) h else 0f)
-        if (fw <= 0f) return
-        fillP.shader = LinearGradient(0f, 0f, maxOf(fw, 1f), 0f, UiTheme.accentA, UiTheme.accentB, Shader.TileMode.CLAMP)
-        c.drawRoundRect(0f, 0f, fw, h, r, r, fillP)
-        val bw = w * 0.30f
-        val x = -bw + (fw + bw) * phase
-        shine.shader = LinearGradient(x, 0f, x + bw, 0f, intArrayOf(0x00FFFFFF, 0x70FFFFFF, 0x00FFFFFF), null, Shader.TileMode.CLAMP)
-        val save = c.save()
-        c.clipRect(0f, 0f, fw, h)
-        c.drawRoundRect(x, 0f, x + bw, h, r, r, shine)
-        c.restoreToCount(save)
+        val radius = h / 2f
+        canvas.drawRoundRect(0f, 0f, w, h, radius, radius, track)
+        val filled = w * shown / 100f
+        if (filled <= 0f) return
+        fillPaint.color = UiTheme.accent
+        canvas.drawRoundRect(0f, 0f, filled, h, radius, radius, fillPaint)
     }
 }
 
-// ============================================================================ extract button
+// ============================================================================ extract action
 
-/** The big centre button of the dock: a raised bubble, gradient disc + bolt, ringed by 24 ticks that show progress / activity. */
+/** Main dock action. Activity state is shown with a steady status dot and real determinate progress. */
 class ExtractButton(ctx: Context) : View(ctx) {
-    /** -1 = no ring, 0 = busy (spinning), 1..100 = determinate */
+    /** -1 = idle, 0 = busy/indeterminate, 1..100 = determinate progress. */
     var ringProgress: Int = -1
-        set(v) { field = v; invalidate() }
+        set(value) { field = value.coerceIn(-1, 100); invalidate() }
+
     var autoOn: Boolean = true
-        set(v) { field = v; invalidate() }
+        set(value) { field = value; invalidate() }
 
     private val dens = ctx.resources.displayMetrics.density
-    private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
     private val disc = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val ringBg = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 3f * dens; color = 0x2EFFFFFF }
-    private val ringFg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = 3f * dens; strokeCap = Paint.Cap.ROUND; color = Color.WHITE
+    private val ringTrack = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f * dens
+        color = UiTheme.strokeSoft
+    }
+    private val ringProgressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2.4f * dens
+        strokeCap = Paint.Cap.ROUND
+        color = UiTheme.accent
     }
     private val badge = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val bolt = IconDrawable(Ic.BOLT, Color.WHITE)
-    private val oval = RectF()
-    private var rot = 0f
+    private val glyph = IconDrawable(Ic.TEXT, UiTheme.onAccent)
+    private val ring = RectF()
+    private var mode = 0
+    private var activityColor: Int? = null
+    private var activityLabel = ""
 
-    /** 0 = Novel, 1 = Scan, 2 = Live. Tints the disc and the idle ticks (see [ModeUi]). */
-    var modeIndex: Int = 0
-        set(v) { if (field != v) { field = v; invalidate() } }
-
-    private val tick = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
-    private val bubble = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val bubbleStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = UiTheme.stroke }
-
-    // The little badge is also the live activity light. MainActivity feeds it real task state.
-    // A solid green/grey dot means idle; active OCR/translation stages pulse in their own colours.
-    private var activityIndicatorColor: Int? = null
-    private var activityIndicatorBlinking = false
-    private var activityIndicatorAlpha = 1f
-    private var activityIndicatorLabel = ""
-    private val activityIndicatorPulse = ValueAnimator.ofFloat(1f, 0.18f).apply {
-        duration = 520L
-        repeatMode = ValueAnimator.REVERSE
-        repeatCount = ValueAnimator.INFINITE
-        interpolator = DecelerateInterpolator()
-        addUpdateListener {
-            activityIndicatorAlpha = it.animatedValue as Float
+    var modeIndex: Int
+        get() = mode
+        set(value) {
+            mode = value.coerceIn(0, 2)
             invalidate()
         }
-    }
 
-    private val spin = ValueAnimator.ofFloat(0f, 360f).apply {
-        duration = 1000
-        repeatCount = ValueAnimator.INFINITE
-        interpolator = LinearInterpolator()
-        addUpdateListener { rot = it.animatedValue as Float; invalidate() }
-    }
-
-    /** Set the live status of the small badge without changing the bolt or progress ring. */
     fun setActivityIndicator(color: Int, blinking: Boolean, label: String) {
-        val changed = activityIndicatorColor != color ||
-            activityIndicatorBlinking != blinking ||
-            activityIndicatorLabel != label
-        activityIndicatorColor = color
-        activityIndicatorBlinking = blinking
-        activityIndicatorLabel = label
-        if (changed) {
-            contentDescription = "Extract chapter. $label"
-            invalidate()
-        }
-        if (blinking) {
-            if (!activityIndicatorPulse.isStarted) activityIndicatorPulse.start()
-        } else {
-            if (activityIndicatorPulse.isStarted) activityIndicatorPulse.cancel()
-            if (activityIndicatorAlpha != 1f) {
-                activityIndicatorAlpha = 1f
-                invalidate()
-            }
-        }
+        // The old pulsing light is intentionally static; status stays visible without flashing.
+        activityColor = color
+        activityLabel = label
+        contentDescription = if (label.isBlank()) "Extract chapter" else "Extract chapter. $label"
+        invalidate()
     }
 
     init {
@@ -499,91 +450,46 @@ class ExtractButton(ctx: Context) : View(ctx) {
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val s = (74f * dens).toInt()
-        setMeasuredDimension(resolveSize(s, widthMeasureSpec), resolveSize(s, heightMeasureSpec))
-    }
-
-    override fun setPressed(pressed: Boolean) {
-        super.setPressed(pressed)
-        animate().scaleX(if (pressed) 0.92f else 1f).scaleY(if (pressed) 0.92f else 1f).setDuration(110).start()
+        val size = (68f * dens).toInt()
+        setMeasuredDimension(resolveSize(size, widthMeasureSpec), resolveSize(size, heightMeasureSpec))
     }
 
     override fun onDetachedFromWindow() {
-        spin.cancel()
-        activityIndicatorPulse.cancel()
-        activityIndicatorAlpha = 1f
         super.onDetachedFromWindow()
     }
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        if (activityIndicatorBlinking && !activityIndicatorPulse.isStarted) activityIndicatorPulse.start()
-    }
-
-    override fun onDraw(c: Canvas) {
-        // The ring "comet" runs while a job is busy (ringProgress == 0) or the activity light is blinking.
-        val comet = ringProgress == 0 || (ringProgress < 0 && activityIndicatorBlinking)
-        if (comet && !spin.isStarted) spin.start()
-        if (!comet && spin.isStarted) spin.cancel()
-
+    override fun onDraw(canvas: Canvas) {
         val cx = width / 2f
         val cy = height / 2f
-        val r = minOf(width, height) / 2f
-        val mStart = ModeUi.start(modeIndex)
-        val mEnd = ModeUi.end(modeIndex)
+        val radius = minOf(width, height) / 2f
+        val outer = radius - 2f * dens
+        ring.set(cx - outer + 3f * dens, cy - outer + 3f * dens, cx + outer - 3f * dens, cy + outer - 3f * dens)
 
-        glow.shader = RadialGradient(cx, cy, r, intArrayOf(ModeUi.withAlpha(mStart, 0x44), ModeUi.withAlpha(mStart, 0)), floatArrayOf(0.55f, 1f), Shader.TileMode.CLAMP)
-        c.drawCircle(cx, cy, r, glow)
-
-        // the bubble the button sits in
-        val bubR = r - 2f * dens
-        bubble.color = UiTheme.sheet
-        c.drawCircle(cx, cy, bubR, bubble)
-        bubbleStroke.strokeWidth = 1f * dens
-        c.drawCircle(cx, cy, bubR, bubbleStroke)
-
-        // 24 ticks: idle = dim, comet = busy, filled up to N% = determinate progress
-        val n = 24
-        val tOuter = bubR - 3.5f * dens
-        val tInner = tOuter - 5f * dens
-        tick.strokeWidth = 2.4f * dens
-        val active = ringProgress >= 0 || activityIndicatorBlinking
-        val tickColor = if (active) (activityIndicatorColor ?: mStart) else mStart
-        val head = ((rot / 360f) * n).toInt() % n
-        val litCount = if (ringProgress > 0) (n * ringProgress / 100f).toInt() else -1
-        for (i in 0 until n) {
-            var a = 0.22f
-            if (comet) {
-                val behind = (head - i + n) % n
-                if (behind < 6) a = 1f - behind * 0.15f
-            } else if (litCount >= 0 && i < litCount) {
-                a = 1f
-            }
-            tick.color = ModeUi.withAlpha(tickColor, (a * 255f).toInt())
-            val ang = Math.toRadians(i * 360.0 / n - 90.0)
-            val ca = cos(ang).toFloat()
-            val sa = sin(ang).toFloat()
-            c.drawLine(cx + ca * tInner, cy + sa * tInner, cx + ca * tOuter, cy + sa * tOuter, tick)
+        canvas.drawCircle(cx, cy, outer, ringTrack)
+        if (ringProgress > 0) {
+            canvas.drawArc(ring, -90f, 360f * ringProgress / 100f, false, ringProgressPaint)
         }
 
-        // gradient disc + bolt
-        val br = tInner - 4f * dens
-        disc.shader = LinearGradient(cx - br, cy - br, cx + br, cy + br, mStart, mEnd, Shader.TileMode.CLAMP)
-        c.drawCircle(cx, cy, br, disc)
-        val s = (br * 1.05f).toInt()
-        bolt.setBounds((cx - s / 2f).toInt(), (cy - s / 2f).toInt(), (cx + s / 2f).toInt(), (cy + s / 2f).toInt())
-        bolt.draw(c)
+        val discRadius = outer - 6f * dens
+        disc.color = ModeUi.start(mode)
+        canvas.drawCircle(cx, cy, discRadius, disc)
 
-        // activity light, sitting on the bubble's top-right edge
-        val bx = cx + (bubR - 1f * dens) * 0.707f
-        val by = cy - (bubR - 1f * dens) * 0.707f
-        badge.alpha = 255
+        val glyphSize = (discRadius * 1.05f).toInt()
+        glyph.setBounds(
+            (cx - glyphSize / 2f).toInt(),
+            (cy - glyphSize / 2f).toInt(),
+            (cx + glyphSize / 2f).toInt(),
+            (cy + glyphSize / 2f).toInt()
+        )
+        glyph.draw(canvas)
+
+        val badgeRadius = 5f * dens
+        val bx = cx + outer * 0.68f
+        val by = cy - outer * 0.68f
         badge.color = UiTheme.bg
-        c.drawCircle(bx, by, 6.5f * dens, badge)
-        badge.color = activityIndicatorColor ?: if (autoOn) UiTheme.ok else UiTheme.faint
-        badge.alpha = (255f * if (activityIndicatorBlinking) activityIndicatorAlpha else 1f).toInt().coerceIn(0, 255)
-        c.drawCircle(bx, by, 4.5f * dens, badge)
-        badge.alpha = 255
+        canvas.drawCircle(bx, by, badgeRadius + 1.5f * dens, badge)
+        badge.color = activityColor ?: if (autoOn) UiTheme.ok else UiTheme.faint
+        canvas.drawCircle(bx, by, badgeRadius, badge)
     }
 }
 
