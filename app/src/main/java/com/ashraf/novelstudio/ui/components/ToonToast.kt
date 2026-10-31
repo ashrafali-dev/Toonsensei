@@ -83,7 +83,7 @@ object ToonToast {
         if (onDismiss != null) {
             val close = TextView(context).apply {
                 text = "×"
-                contentDescription = "Dismiss notification"
+                contentDescription = context.getString(com.ashraf.novelstudio.R.string.toon_action_dismiss)
                 textSize = 22f
                 setTextColor(ink)
                 gravity = Gravity.CENTER
