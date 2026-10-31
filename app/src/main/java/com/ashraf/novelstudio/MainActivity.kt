@@ -2880,6 +2880,40 @@ return t.length>=40?'TXT:'+t:'';
     private var chipStageSinceMs = 0L
 
     /** Second line of the status pill: which OCR engine, and whether the bubble detector and the AI painter really work. */
+    /** Task tray: what is running right now, in plain language (H23). */
+    private fun showTray() {
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Tasks")
+        val statuses = activityDotStatuses()
+        if (statuses.isEmpty()) {
+            sheet.shell.addContent(Toon.stateBlock(this, c, "Nothing running",
+                "Translations and OCR jobs appear here while they work."))
+        } else {
+            val group = Toon.group(this, c)
+            statuses.forEachIndexed { i, st ->
+                val row = Toon.listRow(this, c, st.label, icon = ToonIc.BOLT, chevron = false)
+                row.addView(View(this).apply {
+                    background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(st.color) }
+                }, LinearLayout.LayoutParams(dp(10), dp(10)).also { it.marginStart = dp(8) })
+                group.addView(row)
+                if (i != statuses.lastIndex) group.addView(Toon.divider(this, c))
+            }
+            sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(8)) })
+        }
+        sheet.shell.footer.addView(Toon.buttonGhost(this, c, "Stop background work", c.dangerInk) { sheet.close(); cancelAll() },
+            LinearLayout.LayoutParams(MP, dp(44)))
+        sheet.show()
+    }
+
+    /** The activity pill never takes touches (it sits over the page); this makes it a status button. */
+    private fun markInteractive(v: View, onClick: () -> Unit) {
+        v.contentDescription = "Translation status. Tap for details"
+        v.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        v.isClickable = true
+        v.isFocusable = true
+        v.setOnClickListener { onClick() }
+    }
+
     private fun chipDetailLine(): String {
         val det = when {
             BubbleDetector.isDownloading() -> "downloading"
@@ -4245,9 +4279,12 @@ return t.length>=40?'TXT:'+t:'';
             addView(glossaryFab, FrameLayout.LayoutParams(dp(38), dp(38), Gravity.BOTTOM or Gravity.END).also {
                 it.setMargins(0, 0, dp(14), dp(184))
             })
-            activityChip = ActivityChip(this@MainActivity)
+            activityChip = ActivityChip(this@MainActivity).apply {
+                markInteractive(this@MainActivity) { showTray() }
+            }
             addView(activityChip, FrameLayout.LayoutParams(WC, WC, Gravity.BOTTOM or Gravity.START).also {
                 it.setMargins(dp(12), 0, 0, dp(14))
+                it.bottomMargin = dp(82)   // above the dock, which floats over the page
             })
             addOnLayoutChangeListener { _, _, t, _, b, _, ot, _, ob ->
                 if (b - t != ob - ot) {
