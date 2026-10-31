@@ -26,10 +26,11 @@ object ToonDialog {
         .create()
         .also { dialog ->
             dialog.setOnShowListener {
-                val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                if (destructive) {
-                    button.setTextColor(context.getColor(R.color.toon_danger))
-                }
+                val colors = ToonTheme.colors(context)
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(
+                    if (destructive) colors.danger else colors.accentForeground
+                )
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(colors.muted)
             }
         }
 
@@ -43,6 +44,13 @@ object ToonDialog {
         .setMessage(message)
         .setPositiveButton(actionLabel ?: context.getString(R.string.toon_action_got_it), null)
         .create()
+        .also { dialog ->
+            dialog.setOnShowListener {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(
+                    ToonTheme.colors(context).accentForeground
+                )
+            }
+        }
 
     fun choices(
         context: Context,
@@ -53,4 +61,11 @@ object ToonDialog {
         .setTitle(title)
         .setItems(labels) { _, which -> onChoice(which) }
         .create()
+        .also { dialog ->
+            dialog.setOnShowListener {
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(
+                    ToonTheme.colors(context).muted
+                )
+            }
+        }
 }
