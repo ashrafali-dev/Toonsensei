@@ -21,7 +21,8 @@ object ToonCard {
             "Interactive cards require an accessibilityLabel."
         }
         val colors = ToonTheme.colors(context)
-        val shape = ToonComponents.rounded(context, colors.surface, radiusDp, colors.line)
+        val cardStroke = if (isInteractive) colors.lineStrong else colors.line
+        val shape = ToonComponents.rounded(context, colors.surface, radiusDp, cardStroke)
         return FrameLayout(context).apply {
             background = shape
             setPadding(
