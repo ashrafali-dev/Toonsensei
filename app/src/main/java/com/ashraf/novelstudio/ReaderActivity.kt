@@ -25,6 +25,7 @@ class ReaderActivity : Activity() {
     private lateinit var body: TextView
     private lateinit var scroll: ScrollView
     private lateinit var capsule: LinearLayout
+    private lateinit var themeBtn: android.widget.ImageView
     private lateinit var readBar: ProgressBar
 
     // Reader themes (draft B05): 0 paper (day), 1 sepia, 2 night (charcoal), 3 white. The user's
@@ -45,11 +46,25 @@ class ReaderActivity : Activity() {
         setColor(color)
     }
 
-    private fun btn(label: String, onClick: () -> Unit): TextView = TextView(this).apply {
+    private fun btn(label: String, desc: String, onClick: () -> Unit): TextView = TextView(this).apply {
         text = label
-        textSize = 18f
+        textSize = 15f
+        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
         gravity = Gravity.CENTER
-        layoutParams = LinearLayout.LayoutParams(dp(46), dp(46))
+        contentDescription = desc
+        layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
+        isClickable = true
+        setOnClickListener { onClick() }
+    }
+
+    /** Icon button on the reader capsule (48 dp, stroke icon from the Paper & Seal set). */
+    private fun iconBtn(ic: ToonIc, desc: String, onClick: () -> Unit): android.widget.ImageView = android.widget.ImageView(this).apply {
+        setImageDrawable(ToonIconDrawable(ic, ToonTheme.colors(this@ReaderActivity).title))
+        val p = dp(13)
+        setPadding(p, p, p, p)
+        contentDescription = desc
+        layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
+        isClickable = true
         setOnClickListener { onClick() }
     }
 
@@ -101,8 +116,8 @@ class ReaderActivity : Activity() {
 
         readBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
-            progressTintList = android.content.res.ColorStateList.valueOf(accent)
-            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x22FFFFFF)
+            progressTintList = android.content.res.ColorStateList.valueOf(if (theme == 2) UiTheme.palette.accent else ToonTheme.day.accent)
+            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(if (theme == 2) 0x33FFFFFF else 0x22000000)
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(3), Gravity.TOP
             )
@@ -119,11 +134,16 @@ class ReaderActivity : Activity() {
             gravity = Gravity.CENTER
             elevation = dp(12).toFloat()
             setPadding(dp(6), 0, dp(6), 0)
-            addView(btn("◀") { go(-1) })
-            addView(btn("A−") { setFont(fs - 1f) })
-            addView(btn("A+") { setFont(fs + 1f) })
-            addView(btn("🌙") { theme = (theme + 1) % 3; Prefs.put(this@ReaderActivity, "rtheme", theme.toString()); applyTheme() })
-            addView(btn("▶") { go(1) })
+            addView(iconBtn(ToonIc.BACK, "Previous chapter") { go(-1) })
+            addView(btn("A−", "Smaller text") { setFont(fs - 1f) })
+            addView(btn("A+", "Larger text") { setFont(fs + 1f) })
+            themeBtn = iconBtn(ToonIc.MOON, "Reading theme") {
+                theme = (theme + 1) % 4
+                Prefs.put(this@ReaderActivity, "rtheme", theme.toString())
+                applyTheme()
+            }
+            addView(themeBtn)
+            addView(iconBtn(ToonIc.FORWARD, "Next chapter") { go(1) })
         }
 
         val inner = LinearLayout(this).apply {
@@ -156,12 +176,17 @@ class ReaderActivity : Activity() {
         body.setTextColor(fg[theme])
         titleTv.setTextColor(fg[theme])
         header.setBackgroundColor(card[theme])
-        countTv.setTextColor(if (theme == 0) accent else fg[theme])
-        countTv.background = pillBg(if (theme == 0) 0xFF1E232E.toInt() else 0x22000000, 14)
+        countTv.setTextColor(if (theme == 2) accent else accent)
+        countTv.background = pillBg(if (theme == 2) 0xFF242322.toInt() else 0x22000000, 14)
         capsule.background = pillBg(pill[theme], 25)
         for (i in 0 until capsule.childCount) {
-            val b = capsule.getChildAt(i) as TextView
-            b.setTextColor(if (theme == 0) 0xFFC7D0E2.toInt() else 0xFFF2ECE0.toInt())
+            when (val v = capsule.getChildAt(i)) {
+                is TextView -> v.setTextColor(if (theme == 2) 0xFFE8E3D9.toInt() else fg[theme])
+                is android.widget.ImageView -> v.setImageDrawable(
+                    ToonIconDrawable(if (v === themeBtn) ToonIc.MOON else if (capsule.indexOfChild(v) == 0) ToonIc.BACK else ToonIc.FORWARD,
+                        if (theme == 2) 0xFFE8E3D9.toInt() else fg[theme])
+                )
+            }
         }
         body.textSize = fs
     }
