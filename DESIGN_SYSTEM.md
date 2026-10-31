@@ -108,7 +108,7 @@ All screen code reads semantic resources through `ToonTheme.Colors`. The light a
 
 ### 3.3 Accent presets
 
-Default is Seal Red. Appearance settings may select one of these presets; the token factory derives an appropriate foreground, tint, focus ring, and ripple from the selected accent.
+Default follows the base palette (Seal Red in Paper, warm bronze in Charcoal). Appearance settings may select one of these presets; the token factory derives an appropriate foreground, tint, focus ring, and ripple from the selected accent. The token reader checks the saved `uiAccentPreset` preference; an empty value retains the theme default.
 
 | Preset | Hex |
 |---|---|
@@ -146,9 +146,11 @@ The app owns only its own chrome and saved-content UI. Do not inject these typef
 | `meta` | 13 sp | 400 | Secondary metadata |
 | `label` | 14 sp | 500 | Buttons and compact controls |
 | `body` | 15 sp | 400 | Default app text |
+| `bodyLarge` | 17 sp | 400 | Emphasized / high-readability body |
 | `bodyLine` | 22 sp | — | Body baseline line-height target |
 | `reader` | 19 sp | 400 | Saved translation reading |
-| `title` | 20–22 sp | 500 | Screen and sheet titles |
+| `title` | 20 sp | 500 | Screen and sheet titles |
+| `titleLarge` | 22 sp | 500 | Major heading |
 | `display` | 26 sp | 600 | Wordmark / primary editorial heading |
 
 Font rules:
@@ -208,7 +210,7 @@ Banned: infinite animation, spring/overshoot, pulse/blink/bounce, shimmer, spinn
 
 ## 7. Component contracts
 
-All new app-owned UI uses these factories. A screen may compose them but may not introduce a private color, type, spacing, radius, or motion value.
+All new app-owned UI uses these factories. A screen may compose them but may not introduce a private color, type, spacing, radius, or motion value. Component-owned default labels are in `res/values/strings.xml`; screen text moves there as its screen is extracted.
 
 | Component | Contract |
 |---|---|
