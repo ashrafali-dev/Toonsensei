@@ -4679,6 +4679,7 @@ return t.length>=40?'TXT:'+t:'';
         var tgt = Langs.target(this)
         val c = UiTheme.palette
         val sheet = Toon.SheetDialog(this, c, if (firstRun) "What are you translating?" else "Translation language")
+        sheet.shell.setOnHierarchyChangeListener(null)
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), 0, dp(16), dp(8))
@@ -4752,6 +4753,7 @@ return t.length>=40?'TXT:'+t:'';
             toast("Translating " + (if (src == Langs.AUTO) "any language" else src) + " to " + tgt)
             downloadLanguageFont(tgt)
             if (firstRun) Handler(Looper.getMainLooper()).postDelayed({ if (!isFinishing && !isDestroyed) showFirstPromptChoice() }, 400L)
+            if (firstRun && !Prefs.bool(this, "tourDone")) Handler(Looper.getMainLooper()).postDelayed({ if (!isFinishing && !isDestroyed) startTour(manual = true) }, 900L)
         }
         val footerRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         footerRow.addView(save, LinearLayout.LayoutParams(0, dp(48), 1f))
