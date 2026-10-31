@@ -35,12 +35,12 @@ object ToonInput {
             this.inputType = inputType
             setText(initialValue)
             this.hint = hint
-            setHintTextColor(colors.faint)
+            setHintTextColor(colors.muted)
             setTextColor(colors.ink)
             textSize = ToonTheme.Type.body
             typeface = ToonTheme.Type.uiTypeface()
             isSingleLine = singleLine
-            minHeight = ToonTheme.dp(context, 48)
+            minHeight = ToonTheme.dp(context, ToonTheme.Metrics.minimumTouchDp)
             setPadding(
                 ToonTheme.dp(context, ToonTheme.Space.md),
                 ToonTheme.dp(context, ToonTheme.Space.xs),
