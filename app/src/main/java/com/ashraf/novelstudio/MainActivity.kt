@@ -3557,7 +3557,7 @@ return t.length>=40?'TXT:'+t:'';
         setTextColor(UiTheme.iconIdle)
         gravity = Gravity.CENTER
         setPadding(dp(14), 0, dp(14), 0)
-        background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, 0x14FFFFFF, 17, UiTheme.strokeSoft), 17)
+        background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, ToonTheme.withAlpha(UiTheme.palette.title, 0x14), 17, UiTheme.strokeSoft), 17)
         layoutParams = LinearLayout.LayoutParams(WC, dp(34)).also { it.setMargins(dp(3), dp(4), dp(3), dp(4)) }
         setOnClickListener { onClick() }
         if (onLong != null) setOnLongClickListener { onLong(); true }
@@ -4964,7 +4964,7 @@ return t.length>=40?'TXT:'+t:'';
                 background = Glass.ripple(
                     this@MainActivity,
                     if (active) Glass.solid(this@MainActivity, 0x2E7B8CFF, 16, UiTheme.accent, 1.5f)
-                    else Glass.solid(this@MainActivity, 0x12FFFFFF, 16, UiTheme.strokeSoft),
+                    else Glass.solid(this@MainActivity, ToonTheme.withAlpha(UiTheme.palette.title, 0x14), 16, UiTheme.strokeSoft),
                     16
                 )
                 layoutParams = LinearLayout.LayoutParams(WC, dp(32)).also { it.setMargins(dp(3), dp(4), dp(3), dp(4)) }
@@ -5001,7 +5001,7 @@ return t.length>=40?'TXT:'+t:'';
         }
 
         tabStrip.addView(iconButton(Ic.PLUS, "New tab", 17, 32, UiTheme.accent) { newBrowserTab("https://www.google.com/") }.also {
-            it.background = Glass.ripple(this, Glass.solid(this, 0x12FFFFFF, 16, UiTheme.strokeSoft), 16)
+            it.background = Glass.ripple(this, Glass.solid(this, ToonTheme.withAlpha(UiTheme.palette.title, 0x14), 16, UiTheme.strokeSoft), 16)
             it.layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).also { lp -> lp.setMargins(dp(3), dp(4), dp(6), dp(4)) }
         })
         val target = activeChip
@@ -5185,7 +5185,7 @@ return t.length>=40?'TXT:'+t:'';
             gravity = Gravity.CENTER
             setTextColor(UiTheme.palette.muted)
             setPadding(dp(10), 0, dp(10), 0)
-            background = Glass.solid(this@MainActivity, 0x14FFFFFF, 11)
+            background = Glass.solid(this@MainActivity, ToonTheme.withAlpha(UiTheme.palette.title, 0x14), 11)
             layoutParams = LinearLayout.LayoutParams(WC, dp(22)).also { it.marginStart = dp(10) }
         }
         val optionsBtn = iconButton(Ic.DOTS, "Tab options", 22, 44) { showTabOptions(dialog) }
@@ -10162,7 +10162,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             typeface = boldMedium
             setTextColor(UiTheme.faint)
             gravity = Gravity.CENTER
-            background = Glass.solid(this@MainActivity, 0x14FFFFFF, 10, UiTheme.strokeSoft)
+            background = Glass.solid(this@MainActivity, ToonTheme.withAlpha(UiTheme.palette.title, 0x14), 10, UiTheme.strokeSoft)
             setPadding(dp(7), dp(1), dp(7), dp(1))
         }
         val chev = ImageView(this).apply {
@@ -10207,8 +10207,8 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             state.text = s
             when (on) {
                 true -> { state.setTextColor(0xFF06210F.toInt()); state.background = Glass.solid(this@MainActivity, UiTheme.ok, 12) }
-                false -> { state.setTextColor(UiTheme.faint); state.background = Glass.solid(this@MainActivity, 0x14FFFFFF, 12) }
-                null -> { state.setTextColor(UiTheme.dim); state.background = Glass.solid(this@MainActivity, 0x14FFFFFF, 12) }
+                false -> { state.setTextColor(UiTheme.faint); state.background = Glass.solid(this@MainActivity, ToonTheme.withAlpha(UiTheme.palette.title, 0x14), 12) }
+                null -> { state.setTextColor(UiTheme.dim); state.background = Glass.solid(this@MainActivity, ToonTheme.withAlpha(UiTheme.palette.title, 0x14), 12) }
             }
         }
     }
@@ -10237,7 +10237,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             isClickable = true
             setOnClickListener { onClick() }
             if (ic != null) {
-                val box = FrameLayout(this@MainActivity).apply { background = Glass.oval(0x14FFFFFF) }
+                val box = FrameLayout(this@MainActivity).apply { background = Glass.oval(ToonTheme.withAlpha(UiTheme.palette.title, 0x14)) }
                 box.addView(ImageView(this@MainActivity).apply { setImageDrawable(IconDrawable(ic, UiTheme.iconIdle)) },
                     FrameLayout.LayoutParams(dp(18), dp(18), Gravity.CENTER))
                 addView(box, LinearLayout.LayoutParams(dp(34), dp(34)).also { it.marginEnd = dp(12) })
@@ -10248,7 +10248,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
         val view = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(inner, LinearLayout.LayoutParams(MP, WC))
-            if (!last) addView(View(this@MainActivity).apply { setBackgroundColor(0x10FFFFFF) },
+            if (!last) addView(View(this@MainActivity).apply { setBackgroundColor(UiTheme.palette.line) },
                 LinearLayout.LayoutParams(MP, dp(1)).also { it.marginStart = dp(58) })
         }
         return SheetRow(view, title, state).also { it.set(rawLabel) }
@@ -10278,7 +10278,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
                 this,
                 if (active) GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0x597B8CFF, 0x47B27CFF)).apply {
                     cornerRadius = dp(20).toFloat(); setStroke(dp(1), UiTheme.accent)
-                } else Glass.solid(this, 0x12FFFFFF, 20, UiTheme.strokeSoft),
+                } else Glass.solid(this, ToonTheme.withAlpha(UiTheme.palette.title, 0x14), 20, UiTheme.strokeSoft),
                 20
             )
         }
