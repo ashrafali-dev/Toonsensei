@@ -2953,6 +2953,7 @@ return t.length>=40?'TXT:'+t:'';
     private lateinit var modeChipDot: View
     private lateinit var modeCapsule: ModeCapsule
     private lateinit var homeView: HomeView
+    private lateinit var bottomNavHost: LinearLayout
     private lateinit var tourOverlay: TourOverlay
     private var menuBtnView: View? = null
     private lateinit var modeOverlay: ModeSwitchOverlay
@@ -4358,6 +4359,7 @@ return t.length>=40?'TXT:'+t:'';
             visibility = View.GONE
             elevation = dp(12).toFloat()
         }
+        bottomNavHost = bottomNav().apply { visibility = View.GONE; elevation = dp(6).toFloat() }
         modeOverlay = ModeSwitchOverlay(this)
         tourOverlay = TourOverlay(this)
         homeView = HomeView(this).apply {
@@ -4366,11 +4368,14 @@ return t.length>=40?'TXT:'+t:'';
             onSearch = { q -> go(q) }
             onMenu = { menu() }
             onHub = { part -> Hub.open(this@MainActivity, part) }
+            onMode = { i -> selectMode(i) }
+            currentMode = { currentModeIndex() }
         }
         val root = FrameLayout(this).apply {
             background = appBackground()
             addView(main, FrameLayout.LayoutParams(MP, MP))
             addView(homeView, FrameLayout.LayoutParams(MP, MP))
+            addView(bottomNavHost, FrameLayout.LayoutParams(MP, WC, Gravity.BOTTOM))
             addView(modeOverlay, FrameLayout.LayoutParams(dp(230), dp(230), Gravity.CENTER))
             addView(floatBoltHost, FrameLayout.LayoutParams(dp(60), dp(60), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).also { it.bottomMargin = dp(20) })
             addView(snackView, FrameLayout.LayoutParams(WC, WC, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).also { it.bottomMargin = dp(106) })
@@ -4414,11 +4419,44 @@ return t.length>=40?'TXT:'+t:'';
 
     // ------------------------------------------------------------------ home screen
 
+    /** Paper & Seal bottom navigation: Library and Menu, 56 dp plus the system inset. */
+    private fun bottomNav(): View {
+        val c = UiTheme.palette
+        fun item(ic: ToonIc, label: String, run: () -> Unit): LinearLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            isClickable = true; isFocusable = true
+            background = Glass.ripple(this@MainActivity, null, 12)
+            contentDescription = label
+            addView(ImageView(this@MainActivity).apply {
+                setImageDrawable(ToonIconDrawable(ic, c.text, 1.7f))
+            }, LinearLayout.LayoutParams(dp(22), dp(22)))
+            addView(TextView(this@MainActivity).apply {
+                text = label
+                textSize = ToonTheme.Type.micro
+                typeface = boldMedium
+                setTextColor(c.muted)
+                includeFontPadding = false
+                setPadding(0, dp(3), 0, 0)
+            })
+            setOnClickListener { run() }
+        }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(c.bg)
+            setPadding(0, dp(6), 0, dp(10))
+            addView(item(ToonIc.LIBRARY, "Library") { libraryNovels() }, LinearLayout.LayoutParams(0, dp(52), 1f))
+            addView(item(ToonIc.MENU, "Menu") { menu() }, LinearLayout.LayoutParams(0, dp(52), 1f))
+        }
+    }
+
     private fun homeVisible(): Boolean = ::homeView.isInitialized && homeView.visibility == View.VISIBLE
 
     private fun showHome() {
         if (!::homeView.isInitialized) return
         homeView.visibility = View.VISIBLE
+        if (::bottomNavHost.isInitialized) bottomNavHost.visibility = View.VISIBLE
         refreshHome()
         refreshPrefetchChip()
     }
@@ -4428,6 +4466,7 @@ return t.length>=40?'TXT:'+t:'';
         if (!::homeView.isInitialized || homeView.visibility != View.VISIBLE) return
         homeView.hideKeyboard()
         homeView.visibility = View.GONE
+        if (::bottomNavHost.isInitialized) bottomNavHost.visibility = View.GONE
         refreshPrefetchChip()
         if (!Prefs.bool(this, "tourDone")) {
             handler.postDelayed({
@@ -5622,6 +5661,29 @@ return t.length>=40?'TXT:'+t:'';
         DeepSeekRealtimeTranslation.isEnabled(this) -> ReadMode.REALTIME
         webModeOn() -> ReadMode.SCAN
         else -> ReadMode.NOVEL
+    }
+
+    /** Manual Lite is the WebToon pipeline with auto-OCR off: derived, never stored separately. */
+    private fun manualLiteOn(): Boolean = webModeOn() && !Prefs.bool(this, "rtAutoOcrEnabled", true)
+
+    /** 0 Novel, 1 Scanning, 2 Real-time, 3 Manual Lite — the four entries of the Home mode chips. */
+    private fun currentModeIndex(): Int = when {
+        DeepSeekRealtimeTranslation.isEnabled(this) -> 2
+        manualLiteOn() -> 3
+        webModeOn() -> 1
+        else -> 0
+    }
+
+    /** Home mode chip → reader state. Manual Lite keeps the chatbot ready for one-tap reads. */
+    private fun selectMode(index: Int) {
+        when (index) {
+            0 -> setReadMode(ReadMode.NOVEL)
+            1 -> { Prefs.putBool(this, "rtAutoOcrEnabled", true); setReadMode(ReadMode.SCAN) }
+            2 -> { Prefs.putBool(this, "rtAutoOcrEnabled", true); setReadMode(ReadMode.REALTIME) }
+            else -> { setReadMode(ReadMode.SCAN); Prefs.putBool(this, "rtAutoOcrEnabled", false); refreshModeChip() }
+        }
+        hideHome()
+        toast(ToonTheme.modeNames[index] + " mode")
     }
 
     private fun analyticsReadMode(): String = when (currentReadMode()) {
