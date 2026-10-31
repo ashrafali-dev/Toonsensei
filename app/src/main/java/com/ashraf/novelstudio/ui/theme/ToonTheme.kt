@@ -2,6 +2,7 @@ package com.ashraf.novelstudio.ui.theme
 
 import android.animation.ValueAnimator
 import android.content.Context
+import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Build
 import android.provider.Settings
@@ -42,9 +43,8 @@ object ToonTheme {
     )
 
     fun colors(context: Context): Colors {
-        val night = context.getColor(R.color.toon_bg)
         return Colors(
-            background = night,
+            background = context.getColor(R.color.toon_bg),
             surface = context.getColor(R.color.toon_surface),
             surfaceAlt = context.getColor(R.color.toon_surface_alt),
             ink = context.getColor(R.color.toon_ink),
@@ -75,6 +75,60 @@ object ToonTheme {
         (context.resources.configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+    enum class AccentPreset(val argb: Int) {
+        SEAL_RED(0xFF9C3D2E.toInt()),
+        DEEP_TEAL(0xFF2F6B5E.toInt()),
+        SLATE_BLUE(0xFF3D5A80.toInt()),
+        WARM_BRONZE(0xFF8A5A12.toInt()),
+        DUSK_PURPLE(0xFF6B4E8C.toInt()),
+        INK(0xFF1F1D1A.toInt())
+    }
+
+    /** Apply a user-selected accent while preserving the semantic palette contract. */
+    fun withAccent(base: Colors, preset: AccentPreset): Colors {
+        val accent = preset.argb
+        val surface = base.surface
+        val tint = blend(surface, accent, if (base.dark) 0.22f else 0.12f)
+        val onAccent = if (contrastRatio(accent, Color.WHITE) >=
+            contrastRatio(accent, Color.BLACK)) Color.WHITE else Color.BLACK
+        return base.copy(
+            accent = accent,
+            accentTint = tint,
+            onAccent = onAccent,
+            focus = accent,
+            ripple = (accent and 0x00FFFFFF) or 0x22000000
+        )
+    }
+
+    private fun blend(background: Int, foreground: Int, amount: Float): Int {
+        val t = amount.coerceIn(0f, 1f)
+        val inverse = 1f - t
+        val a = (Color.alpha(background) * inverse + Color.alpha(foreground) * t).toInt()
+        val r = (Color.red(background) * inverse + Color.red(foreground) * t).toInt()
+        val g = (Color.green(background) * inverse + Color.green(foreground) * t).toInt()
+        val b = (Color.blue(background) * inverse + Color.blue(foreground) * t).toInt()
+        return Color.argb(a, r, g, b)
+    }
+
+    private fun contrastRatio(first: Int, second: Int): Double {
+        val a = luminance(first)
+        val b = luminance(second)
+        val light = maxOf(a, b)
+        val dark = minOf(a, b)
+        return (light + 0.05) / (dark + 0.05)
+    }
+
+    private fun luminance(color: Int): Double {
+        fun channel(value: Int): Double {
+            val scaled = value / 255.0
+            return if (scaled <= 0.04045) scaled / 12.92
+            else Math.pow((scaled + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * channel(Color.red(color)) +
+            0.7152 * channel(Color.green(color)) +
+            0.0722 * channel(Color.blue(color))
+    }
 
     object Space {
         const val xxs = 4
