@@ -10634,10 +10634,18 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
         addTile(autoTile)
 
         // ---- grouped rows
+        val mc = UiTheme.palette
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(10), dp(14), dp(20))
             addView(sheetHandle())
+            addView(TextView(this@MainActivity).apply {
+                text = "Menu"
+                textSize = 24f
+                typeface = boldMedium
+                setTextColor(mc.title)
+                setPadding(dp(6), dp(0), dp(6), dp(6))
+            })
             addView(tiles, LinearLayout.LayoutParams(MP, WC))
         }
         fun buildGroup(idx: List<Int>): LinearLayout? {
@@ -10652,12 +10660,55 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             return group
         }
         val langRow = sheetRow(Ic.GLOBE, "Language: " + Langs.target(this), false) { dlg.dismiss(); showLanguageSheet(false) }
+        // Search filters the everyday groups by row title; groups with no match collapse out of view.
+        val filter = EditText(this).apply {
+            hint = "Search settings"
+            setSingleLine()
+            textSize = ToonTheme.Type.body
+            setTextColor(mc.title)
+            setHintTextColor(mc.muted)
+            background = ColorDrawable(Color.TRANSPARENT)
+            setPadding(0, 0, 0, 0)
+        }
+        val filterBox = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), 0, dp(14), 0)
+            background = GradientDrawable().apply { cornerRadius = dp(20).toFloat(); setColor(mc.surfaceAlt) }
+            addView(ImageView(this@MainActivity).apply {
+                setImageDrawable(IconDrawable(Ic.SEARCH, mc.muted))
+                layoutParams = LinearLayout.LayoutParams(dp(18), dp(18)).also { it.marginEnd = dp(10) }
+            })
+            addView(filter, LinearLayout.LayoutParams(0, MP, 1f))
+        }
+        val dailyHost = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         for ((name, idx) in daily) {
             val group = buildGroup(idx) ?: continue
             if (name == "TRANSLATE") group.addView(langRow.view, 0)
-            col.addView(sectionLabel(name))
-            col.addView(group, LinearLayout.LayoutParams(MP, WC))
+            dailyHost.addView(sectionLabel(name))
+            dailyHost.addView(group, LinearLayout.LayoutParams(MP, WC))
         }
+        filter.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) {}
+            override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val q = s?.toString()?.trim()?.lowercase().orEmpty()
+                for (g in 0 until dailyHost.childCount) {
+                    val v = dailyHost.getChildAt(g)
+                    if (v is LinearLayout && v.orientation == LinearLayout.VERTICAL) {
+                        var any = q.isEmpty()
+                        if (!any) for (r in 0 until v.childCount) {
+                            val row = v.getChildAt(r)
+                            val t = rows.entries.firstOrNull { it.value.view === row }?.value?.title?.text?.toString()?.lowercase()
+                            if (t != null && t.contains(q)) { any = true; break }
+                        }
+                        v.visibility = if (any) View.VISIBLE else View.GONE
+                    }
+                }
+            }
+        })
+        col.addView(filterBox, LinearLayout.LayoutParams(MP, dp(42)).also { it.setMargins(dp(4), dp(6), dp(4), dp(2)) })
+        col.addView(dailyHost, LinearLayout.LayoutParams(MP, WC))
         val adv = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
