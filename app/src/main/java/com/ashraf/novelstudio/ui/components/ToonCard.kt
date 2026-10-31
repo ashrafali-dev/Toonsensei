@@ -39,7 +39,10 @@ object ToonCard {
             isClickable = isInteractive
             isFocusable = isInteractive
             isFocusableInTouchMode = isInteractive
-            if (isInteractive) ToonComponents.applyFocusOutline(this, context, shape, colors.line)
+            if (isInteractive) {
+                ToonComponents.touchTarget(this, context)
+                ToonComponents.applyFocusOutline(this, context, shape, colors.line)
+            }
             contentDescription = accessibilityLabel?.toString()
             if (onClick != null) {
                 ToonComponents.exposeAsButton(this)
