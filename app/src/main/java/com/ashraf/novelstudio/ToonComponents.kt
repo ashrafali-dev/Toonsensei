@@ -712,6 +712,52 @@ class ChatRingButton(ctx: Context) : View(ctx) {
     }
 }
 
+/**
+ * Reading-mode pill for the dock: shows the current mode seal icon and name with a chevron.
+ * Tapping opens the mode sheet; the label is the full mode name so scan vs live is explicit.
+ */
+class ModePill(ctx: Context) : LinearLayout(ctx) {
+    var onClick: (() -> Unit)? = null
+    private var index = 0
+    private val c = ToonTheme.colors(ctx)
+    private val icon = ImageView(ctx)
+    private val label = TextView(ctx)
+    private val chevron = ImageView(ctx)
+
+    init {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER
+        isClickable = true; isFocusable = true
+        setPadding(ToonDp.px(ctx, 12), 0, ToonDp.px(ctx, 8), 0)
+        background = RippleDrawable(ColorStateList.valueOf(ToonTheme.withAlpha(c.title, 0x1A)),
+            GradientDrawable().apply { cornerRadius = ToonDp.px(ctx, 18).toFloat(); setColor(c.surfaceAlt) }, Gradientspec(18).build(ctx))
+        icon.setImageDrawable(ToonIconDrawable(ToonIc.BOOK, c.title))
+        label.textSize = ToonTheme.Type.label
+        label.typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+        label.setTextColor(c.title)
+        label.includeFontPadding = false
+        label.maxLines = 1
+        chevron.setImageDrawable(ToonIconDrawable(ToonIc.CHEVRON, c.muted))
+        addView(icon, LayoutParams(ToonDp.px(ctx, 16), ToonDp.px(ctx, 16)).also { it.marginEnd = ToonDp.px(ctx, 6) })
+        addView(label, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        addView(chevron, LayoutParams(ToonDp.px(ctx, 14), ToonDp.px(ctx, 14)).also { it.marginStart = ToonDp.px(ctx, 4) })
+        setOnClickListener { onClick?.invoke() }
+        setIndex(0)
+    }
+
+    /** 0 Novel, 1 Scanning, 2 Real-time, 3 Manual Lite. */
+    fun setIndex(i: Int) {
+        index = i.coerceIn(0, 3)
+        val seal = ToonTheme.modeColor(c, index)
+        (icon.drawable as? ToonIconDrawable)?.let { it.swap(Toon.modeIcon(index)); it.tint(seal) }
+        label.text = ToonTheme.modeNames[index]
+        contentDescription = "Reading mode: " + ToonTheme.modeNames[index] + ". Change mode"
+        minimumWidth = ToonDp.px(ctx, 96)
+    }
+
+    fun index(): Int = index
+}
+
 // ================================================================== dialog / sheet scaffolding
 
     /** Sheet shell: grabber, title, close, scrollable content, pinned footer. */

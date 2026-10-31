@@ -2949,6 +2949,7 @@ return t.length>=40?'TXT:'+t:'';
     private lateinit var shortcutStrip: LinearLayout
     private lateinit var modeBtn: ImageView
     private lateinit var chatRing: ChatRingButton
+    private lateinit var modePill: ModePill
     private lateinit var modeChip: LinearLayout
     private lateinit var modeChipText: TextView
     private lateinit var modeChipDot: View
@@ -2958,7 +2959,7 @@ return t.length>=40?'TXT:'+t:'';
     private lateinit var tourOverlay: TourOverlay
     private var menuBtnView: View? = null
     private lateinit var modeOverlay: ModeSwitchOverlay
-    private var modeCapsuleSeeded = false
+    private var modeCapsuleSeededIndex = -1
     private lateinit var dockBar: LinearLayout
     private lateinit var dockWrapView: FrameLayout
     private lateinit var chromeTopView: LinearLayout
@@ -4263,6 +4264,7 @@ return t.length>=40?'TXT:'+t:'';
         // The old text chip views above stay alive (other code still feeds them) but are no longer shown;
         // the three-icon capsule is the real mode control. One tap = switch, no sheet.
         modeCapsule = ModeCapsule(this).apply {
+            visibility = View.GONE
             onSelect = { idx ->
                 setReadMode(when (idx) {
                     0 -> ReadMode.NOVEL
@@ -4271,10 +4273,11 @@ return t.length>=40?'TXT:'+t:'';
                 })
             }
         }
+        // Paper & Seal: the capsule is replaced by a labelled mode pill that opens the mode sheet.
+        modePill = ModePill(this).apply { onClick = { showModeSheet() } }
         modeChip = LinearLayout(this).apply {
             gravity = Gravity.CENTER
-            contentDescription = "Reading mode"
-            addView(modeCapsule, LinearLayout.LayoutParams(MP, dp(38)))
+            addView(modePill, LinearLayout.LayoutParams(WC, dp(36)))
         }
         refreshModeChip()
         extractBtn = ExtractButton(this).apply {
@@ -4313,7 +4316,7 @@ return t.length>=40?'TXT:'+t:'';
             elevation = dp(12).toFloat()
             clipChildren = false   // the raised centre button may poke out above the dock
             clipToPadding = false  // dock has side padding, so clipToPadding (default true) would still cut the button at the dock's top edge
-            addView(modeChip, LinearLayout.LayoutParams(0, dp(42), 1.9f).also { it.setMargins(0, 0, dp(2), 0) })
+            addView(modeChip, LinearLayout.LayoutParams(0, dp(42), 1.6f).also { it.setMargins(0, 0, dp(2), 0) })
             addView(modeBtn)
             addView(dockBtn(Ic.BACK, "Previous chapter") { step("prev") })
             addView(extractBtn, extractLp())
@@ -4485,7 +4488,7 @@ return t.length>=40?'TXT:'+t:'';
 
     private fun tourSteps(): List<TourOverlay.Step> = listOf(
         TourOverlay.Step("Novel", "Reading a novel? Tap Novel, open a chapter, then tap the bolt button.") {
-            tourOverlay.rectOf(modeCapsule, modeCapsule.segmentBounds(0))
+            if (::modePill.isInitialized && modePill.isShown) tourOverlay.rectOf(modePill) else null
         },
         TourOverlay.Step("Bolt button", "Tap it to read the page and send it for translation. It works in Novel and Scan modes.") {
             tourOverlay.rectOf(extractBtn)
@@ -4494,13 +4497,13 @@ return t.length>=40?'TXT:'+t:'';
             if (::prefetchChip.isInitialized && prefetchChip.isShown) tourOverlay.rectOf(prefetchChip) else null
         },
         TourOverlay.Step("Scan", "For webtoons and comics. Tap Scan, open the comic, then tap the bolt button to start scanning.") {
-            tourOverlay.rectOf(modeCapsule, modeCapsule.segmentBounds(1))
+            if (::modePill.isInitialized && modePill.isShown) tourOverlay.rectOf(modePill) else null
         },
         TourOverlay.Step("Missed a bubble?", "In Scan and Live mode this search button appears on the right. If a bubble was missed or only half translated, tap it, drag the six dots over that bubble, then tap Read this area. Only that spot is read and translated again; the rest of the page stays as it is, and other work pauses meanwhile.") {
             reOcrBtn?.takeIf { it.isShown }?.let { tourOverlay.rectOf(it) }
         },
         TourOverlay.Step("Live", "Real-time mode for webtoons. Turn it on while the comic page is open, then wait a few seconds. If the text takes too long to appear, refresh the page once.") {
-            tourOverlay.rectOf(modeCapsule, modeCapsule.segmentBounds(2))
+            if (::modePill.isInitialized && modePill.isShown) tourOverlay.rectOf(modePill) else null
         },
         TourOverlay.Step("View", "Switch between the page, the page and chatbot side by side, or the chatbot alone. Handy for checking what was sent.") {
             tourOverlay.rectOf(modeBtn)
@@ -4521,7 +4524,7 @@ return t.length>=40?'TXT:'+t:'';
         hideHome()
         handler.postDelayed({
             if (isFinishing) return@postDelayed
-            if (!modeCapsule.isShown || !extractBtn.isShown) {
+            if (!modePill.isShown || !extractBtn.isShown) {
                 if (manual) toast("Open any page first, then start the tour again")
                 else if (attempt < 6 && !Prefs.bool(this, "tourDone")) {
                     // The page chrome is not ready yet: try again shortly instead of never asking for the language.
@@ -5725,13 +5728,12 @@ return t.length>=40?'TXT:'+t:'';
             ReadMode.SCAN -> 1
             ReadMode.REALTIME -> 2
         }
-        if (::modeCapsule.isInitialized) {
-            val first = !modeCapsuleSeeded
-            val changed = modeCapsule.setSelectedIndex(idx, !first)
-            modeCapsuleSeeded = true
-            // Any mode change (capsule tap, menu row, ...) gets the little scanner animation in the page centre.
-            if (changed && !first && ::modeOverlay.isInitialized) modeOverlay.play(idx)
-        }
+        if (::modePill.isInitialized) modePill.setIndex(if (manualLiteOn()) 3 else idx)
+        val firstMode = modeCapsuleSeededIndex < 0
+        val changed = idx != modeCapsuleSeededIndex
+        modeCapsuleSeededIndex = idx
+        // Any mode change (pill, menu row, ...) gets the little scanner animation in the page centre.
+        if (changed && !firstMode && ::modeOverlay.isInitialized) modeOverlay.play(idx)
         if (::extractBtn.isInitialized) extractBtn.modeIndex = idx
         refreshChatRing()
         refreshPrefetchChip()
@@ -5917,7 +5919,48 @@ return t.length>=40?'TXT:'+t:'';
         trackReadModeSelection()
     }
 
+    /** Paper & Seal mode sheet: four described options plus the view switcher. */
     private fun showModeSheet() {
+        val c = UiTheme.palette
+        val sheet = Toon.SheetDialog(this, c, "Reading mode")
+        val group = Toon.group(this, c)
+        val current = currentModeIndex()
+        for (i in 0..3) {
+            val seal = ToonTheme.modeColor(c, i)
+            val row = Toon.listRow(this, c, ToonTheme.modeNames[i], detail = ToonTheme.modeDescription(i), chevron = false, onClick = {
+                sheet.close()
+                selectModeInPlace(i)
+            })
+            val badge = Toon.badge(this, c, if (i == current) "Selected" else "", if (i == current) 1 else 0)
+            if (i == current) row.addView(badge, LinearLayout.LayoutParams(WC, WC).also { it.marginStart = dp(10) })
+            else row.addView(ImageView(this).apply { setImageDrawable(ToonIconDrawable(Toon.modeIcon(i), seal)) },
+                LinearLayout.LayoutParams(dp(20), dp(20)).also { it.marginStart = dp(10) })
+            group.addView(row)
+            if (i != 3) group.addView(Toon.divider(this, c))
+        }
+        sheet.shell.addContent(group, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(12)) })
+        sheet.shell.addContent(Toon.sectionLabel(this, c, "View"), LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(12), 0, dp(12), 0) })
+        val seg = Toon.Segment(this, c, listOf("Page", "Split", "Chatbot"), c.accent) { i ->
+            setMode(when (i) { 0 -> Mode.NOVEL; 1 -> Mode.SPLIT; else -> Mode.CHAT })
+            refreshChatRing()
+        }
+        seg.select(when (mode) { Mode.NOVEL -> 0; Mode.SPLIT -> 1; Mode.CHAT -> 2 }, animate = false)
+        sheet.shell.addContent(seg, LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(16), 0, dp(16), dp(16)) })
+        sheet.show()
+    }
+
+    /** Same as [selectMode] but without leaving Home (the sheet can be opened from Home too). */
+    private fun selectModeInPlace(index: Int) {
+        when (index) {
+            0 -> setReadMode(ReadMode.NOVEL)
+            1 -> { Prefs.putBool(this, "rtAutoOcrEnabled", true); setReadMode(ReadMode.SCAN) }
+            2 -> { Prefs.putBool(this, "rtAutoOcrEnabled", true); setReadMode(ReadMode.REALTIME) }
+            else -> { setReadMode(ReadMode.SCAN); Prefs.putBool(this, "rtAutoOcrEnabled", false); refreshModeChip() }
+        }
+        if (homeVisible()) refreshHome()
+    }
+
+    private fun showModeSheetLegacy() {
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(14), dp(16), dp(18))
