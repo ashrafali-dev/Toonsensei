@@ -2962,6 +2962,8 @@ return t.length>=40?'TXT:'+t:'';
     private enum class ReadMode { NOVEL, REALTIME, SCAN }
     private lateinit var extractBtn: ExtractButton
     private lateinit var progressBox: LinearLayout
+    private lateinit var stopScanBtn: TextView
+    private var scanStopRequested = false
     private lateinit var progressBar: BookwormProgress
     private lateinit var progressTv: TextView
     private lateinit var togglePill: TextView
@@ -4028,6 +4030,25 @@ return t.length>=40?'TXT:'+t:'';
             addView(progRow, LinearLayout.LayoutParams(MP, WC))
             addView(progressBar, LinearLayout.LayoutParams(MP, dp(44)).also { it.topMargin = dp(2) })
         }
+        // Page-by-page (manga) scans cannot tell where the chapter ends: the user ends the scan here, the pages read so
+        // far are used, and the reader goes back to the page the scan started on.
+        stopScanBtn = TextView(this).apply {
+            text = "Stop scanning · use pages so far"
+            textSize = 12.5f
+            typeface = boldMedium
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(dp(14), dp(8), dp(14), dp(8))
+            background = GradientDrawable().apply { cornerRadius = dp(16).toFloat(); setColor(0x33FFFFFF) }
+            visibility = View.GONE
+            setOnClickListener {
+                scanStopRequested = true
+                webModeHandle?.stopScan()
+                visibility = View.GONE
+                toast("Stopping the scan; reading the pages captured so far")
+            }
+        }
+        progressBox.addView(stopScanBtn, LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(4); it.bottomMargin = dp(4) })
 
         togglePill = TextView(this).apply {
             textSize = 12.5f
@@ -7110,6 +7131,7 @@ return t.length>=40?'TXT:'+t:'';
             else -> "scanning"
         })
         val jobSeq = ++webModeJobSerial
+        scanStopRequested = false
         webModeHandle?.cancel()
         webModeLastProgressAtMs = android.os.SystemClock.elapsedRealtime()
         webModePct = 1
@@ -9850,10 +9872,13 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             progressBar.progress = webModePct
             progressBar.running = true
             extractBtn.ringProgress = if (webModePct > 0) webModePct else 0
+            stopScanBtn.visibility = if (webModeHandle != null && !scanStopRequested && webModeStage.startsWith("Reading screen") &&
+                ScanMode.direction(this).horizontal) View.VISIBLE else View.GONE
             setProgressVisible(true)
             progressBox.bringToFront()
             return
         }
+        stopScanBtn.visibility = View.GONE
         val run = running
         if (run == null && queue.isEmpty()) {
             // keep the finish animation (worm → butterfly) alive until it has played out
