@@ -70,18 +70,29 @@ Branch: `ui/g1-theme-and-components`
 - [x] `ui/components/ToonBottomSheet.kt`: Material BottomSheetDialog wrapper.
 - [x] `ui/components/ToonToast.kt`: persistent in-layout notice shim; not Android Toast.
 - [x] `ui/components/ToonStateView.kt`: loading / empty / error / offline / permission primitive.
+- [x] Interactive button / chip / card / notice focus outline and 48 dp minimum touch target.
+- [x] Dark selected-accent foreground contrast derived to at least 4.5:1 on selected tint.
+- [x] Control edge token contrast ≥3:1 on Paper and Charcoal palettes.
+- [x] Static scan of 11 G1 Kotlin theme/component files: no raw hex colors, numeric dp literals in dp calls, or hardcoded numeric textSize assignments.
 - [x] Paper colors under `res/values/colors.xml`.
 - [x] Charcoal colors under `res/values-night/colors.xml`.
 - [x] Material Components theme overlays and night system-bar override.
 - [x] Material Components dependency pinned to `1.12.0` to avoid an AGP/compileSdk upgrade in this group.
 - [x] `DESIGN_SYSTEM.md` written from the uploaded ROADMAP and board spec.
 - [x] `docs/redesign/G1_SUMMARY.md` records G1 branch changes and unverified checks.
-- [~] Kotlin/Android resource compile and unit test.
-- [ ] Contrast, TalkBack, focus, 360 dp / 412 dp, and font-scale verification on device.
-- [ ] Baseline component screenshots and G1 summary note.
+- [x] Kotlin Release compilation + Android resource merge (`41217011068`; final tested component snapshot `1d95eca322ed871b4f15e05ee89fae30bb9ec868`).
+- [~] Static contrast calculations / 3:1 control edges / 4.5:1 text checks; runtime Light/Dark, TalkBack, keyboard focus, 360 dp / 412 dp, and font-scale checks still need a physical/emulated device.
+- [ ] Baseline component screenshots on device (not available in the current environment).
 - [ ] Codex skill auto-discovery confirmation on the owner's Codex installation.
 
-G1 exit gate: build passes, component tokens are reviewed, and both palettes are checked. No screen group starts until this gate is satisfied.
+G1 code/build gate: PASS. Physical-device and Codex-client verification remain open. G2 must wait for the owner to verify the branch on the target device and confirm Codex discovers the project skill.
+
+### G1 final build evidence
+
+- Final GitHub Actions run: [41217011068](https://github.com/ashrafali-dev/ToonSensei/actions/runs/41217011068) — Build / permanent certificate verification / artifact upload PASS.
+- Signed APK artifact: `NovelStudio-SIGNED-RELEASE-APK` (23,037,797 bytes; artifact id `13048647988`; expires 2026-11-30).
+- Final tested code snapshot: `1d95eca322ed871b4f15e05ee89fae30bb9ec868`. Workflow-only cleanup after that snapshot restored the original push trigger list.
+- Final build does not equal physical-device validation. Keep G2 blocked until device/Codex checks are done.
 
 ## G2 — Common overlays
 
