@@ -4,7 +4,7 @@ Version: 1.0.0-draft
 Source branch: `Adding-stop-on-scanning`
 Implementation branch: `ui/g1-theme-and-components`
 Platform: Android / Kotlin / programmatic Views / WebView
-Status: G1 foundation added; build and device audit pending.
+Status: G1 foundation builds and passes signed Release / certificate verification; physical device audit pending.
 
 This document is the single source of truth for app-owned UI tokens and component anatomy. It is grounded in the supplied `toon-sensei-ui-spec/ROADMAP.md` and its numbered HTML boards. The target branch's existing Kotlin code remains the authority for behavior and callbacks.
 
