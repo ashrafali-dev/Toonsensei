@@ -4283,8 +4283,7 @@ return t.length>=40?'TXT:'+t:'';
                 markInteractive(this@MainActivity) { showTray() }
             }
             addView(activityChip, FrameLayout.LayoutParams(WC, WC, Gravity.BOTTOM or Gravity.START).also {
-                it.setMargins(dp(12), 0, 0, dp(14))
-                it.bottomMargin = dp(82)   // above the dock, which floats over the page
+                it.setMargins(dp(12), 0, 0, dp(14))   // applyFloatingBars lifts it above the dock
             })
             addOnLayoutChangeListener { _, _, t, _, b, _, ot, _, ob ->
                 if (b - t != ob - ot) {
@@ -6330,6 +6329,7 @@ return t.length>=40?'TXT:'+t:'';
             reOcrBtn?.let { b -> (b.layoutParams as? FrameLayout.LayoutParams)?.let { it.bottomMargin = dp(134) + botH; b.layoutParams = it } }
             glossaryFab?.let { b -> (b.layoutParams as? FrameLayout.LayoutParams)?.let { it.bottomMargin = dp(184) + botH; b.layoutParams = it } }
             activityChip?.let { c -> (c.layoutParams as? FrameLayout.LayoutParams)?.let { it.bottomMargin = dp(14) + botH; c.layoutParams = it } }
+            chatRing?.let { r -> (r.layoutParams as? LinearLayout.LayoutParams)?.let { it.height = dp(48); r.layoutParams = it } }
             (progressBox.layoutParams as? FrameLayout.LayoutParams)?.let { it.topMargin = dp(10) + topH; progressBox.layoutParams = it }
             (scanDot.layoutParams as? FrameLayout.LayoutParams)?.let { it.topMargin = dp(10) + topH; scanDot.layoutParams = it }
         } catch (_: Exception) { }
@@ -10062,6 +10062,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             else if (r != null && r.contains("tr")) shownTranslated = true
             updatePill()
         }
+        refreshChatRing()
     }
 
     private fun updatePill() {
