@@ -51,9 +51,76 @@ object ToonTheme {
 
     fun colors(context: Context): Colors {
         val base = baseColors(context)
+        val paletteName = Prefs.get(context, "uiDarkPalette", "FOREST_LUXE").trim()
+        val palette = DarkPalettePreset.values().firstOrNull { it.name == paletteName }
+            ?: DarkPalettePreset.FOREST_LUXE
+        val themed = if (base.dark) withDarkPalette(base, palette) else base
         val selected = Prefs.get(context, "uiAccentPreset", "").trim()
         val preset = AccentPreset.values().firstOrNull { it.name == selected }
-        return if (preset == null) base else withAccent(base, preset)
+        return if (preset == null) themed else withAccent(themed, preset)
+    }
+
+    enum class DarkPalettePreset { FOREST_LUXE, DEEP_OLIVE }
+
+    /** The two owner-selected dark palettes. Paper remains the light palette. */
+    private fun withDarkPalette(base: Colors, preset: DarkPalettePreset): Colors {
+        fun c(hex: String) = Color.parseColor(hex)
+        return when (preset) {
+            DarkPalettePreset.FOREST_LUXE -> base.copy(
+                background = c("#0B0F0D"),
+                surface = c("#1F2A1F"),
+                surfaceAlt = c("#3E5A3F"),
+                ink = c("#E9E7DE"),
+                body = c("#E9E7DE"),
+                muted = c("#8CA98C"),
+                faint = c("#6B7F67"),
+                line = c("#3E5A3F"),
+                lineStrong = c("#6B7F67"),
+                accent = c("#D9C7A3"),
+                accentTint = c("#3E5A3F"),
+                accentForeground = c("#D9C7A3"),
+                onAccent = c("#0B0F0D"),
+                success = c("#8CA98C"),
+                successTint = c("#1F2A1F"),
+                successInk = c("#D7E3D5"),
+                warning = c("#D9C7A3"),
+                warningTint = c("#3E5A3F"),
+                warningLine = c("#B08D57"),
+                warningRing = c("#B08D57"),
+                danger = c("#E58C79"),
+                dangerTint = c("#3D2926"),
+                scrim = c("#990B0F0D"),
+                focus = c("#D9C7A3"),
+                ripple = c("#33D9C7A3")
+            )
+            DarkPalettePreset.DEEP_OLIVE -> base.copy(
+                background = c("#0F1F17"),
+                surface = c("#1E3A2E"),
+                surfaceAlt = c("#3E5A3F"),
+                ink = c("#E9EAE0"),
+                body = c("#E9EAE0"),
+                muted = c("#C7CBB8"),
+                faint = c("#6B7F67"),
+                line = c("#3E5A3F"),
+                lineStrong = c("#6B7F67"),
+                accent = c("#C7CBB8"),
+                accentTint = c("#3E5A3F"),
+                accentForeground = c("#C7CBB8"),
+                onAccent = c("#0F1F17"),
+                success = c("#8CA98C"),
+                successTint = c("#1E3A2E"),
+                successInk = c("#E9EAE0"),
+                warning = c("#D9C7A3"),
+                warningTint = c("#3D4337"),
+                warningLine = c("#B08D57"),
+                warningRing = c("#B08D57"),
+                danger = c("#E58C79"),
+                dangerTint = c("#3D2926"),
+                scrim = c("#990F1F17"),
+                focus = c("#C7CBB8"),
+                ripple = c("#33C7CBB8")
+            )
+        }
     }
 
     private fun baseColors(context: Context): Colors {
