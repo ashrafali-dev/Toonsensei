@@ -3951,12 +3951,12 @@ return t.length>=40?'TXT:'+t:'';
 
         // ================= address bar (glass capsule): [tabs] [ address ......... ] [menu]
         val addrIcon = ImageView(this).apply {
-            setImageDrawable(IconDrawable(Ic.GLOBE, UiTheme.dim))
-            layoutParams = LinearLayout.LayoutParams(dp(15), dp(15)).also { it.marginEnd = dp(8) }
+            setImageDrawable(IconDrawable(Ic.GLOBE, UiTheme.muted))
+            layoutParams = LinearLayout.LayoutParams(dp(16), dp(16)).also { it.marginEnd = dp(8) }
         }
 
         urlBar = EditText(this).apply {
-            hint = "Search or enter address"
+            hint = "Search or paste a link"
             setSingleLine()
             textSize = 14f
             imeOptions = EditorInfo.IME_ACTION_GO
@@ -3991,25 +3991,33 @@ return t.length>=40?'TXT:'+t:'';
         addressBox = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(13), 0, dp(2), 0)
-            background = Glass.field(this@MainActivity, 19, false)
+            setPadding(dp(14), 0, dp(2), 0)
+            background = GradientDrawable().apply {
+                cornerRadius = dp(20).toFloat()
+                setColor(UiTheme.palette.surfaceAlt)
+            }
             addView(addrIcon)
             addView(urlBar, LinearLayout.LayoutParams(0, MP, 1f))
-            addView(reloadBtn, LinearLayout.LayoutParams(dp(36), dp(36)))
-            layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).also {
-                it.marginStart = dp(8)
-                it.marginEnd = dp(4)
+            addView(reloadBtn, LinearLayout.LayoutParams(dp(40), dp(40)))
+            layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).also {
+                it.marginStart = dp(6)
+                it.marginEnd = dp(6)
             }
         }
 
         tabCountBtn = TextView(this).apply {
             text = browserTabs.size.toString()
             gravity = Gravity.CENTER
-            textSize = 13.5f
+            textSize = 12f
             typeface = boldMedium
             setTextColor(UiTheme.text)
-            background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, 0x00000000, 11, UiTheme.accent, 2), 11)
-            contentDescription = "Open tabs"
+            background = Glass.ripple(this@MainActivity, GradientDrawable().apply {
+                cornerRadius = dp(8).toFloat()
+                setColor(Color.TRANSPARENT)
+                setStroke(dp(2), UiTheme.palette.title)
+            }, 8)
+            minimumWidth = dp(44); minimumHeight = dp(44)
+            contentDescription = "Tabs, ${browserTabs.size} open"
             setOnClickListener { showTabGrid() }
             setOnLongClickListener { newBrowserTab("https://www.google.com/"); true }
         }
@@ -4017,15 +4025,14 @@ return t.length>=40?'TXT:'+t:'';
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(9), 0, dp(6), 0)
-            background = floatingBarBg(26)
-            elevation = dp(8).toFloat()
-            addView(tabCountBtn, LinearLayout.LayoutParams(dp(34), dp(34)))
+            setPadding(dp(6), 0, dp(6), 0)
+            background = floatingBarBg(20)
+            addView(tabCountBtn, LinearLayout.LayoutParams(dp(44), dp(44)))
             addView(addressBox)
         }
         val topWrap = FrameLayout(this).apply {
-            setPadding(dp(10), dp(8), dp(10), dp(4))
-            addView(topBar, FrameLayout.LayoutParams(MP, dp(52)))
+            setPadding(dp(6), dp(6), dp(6), dp(2))
+            addView(topBar, FrameLayout.LayoutParams(MP, dp(56)))
         }
 
         // tab rail (only visible with 2+ tabs) and quick-site shortcuts (only while typing an address)
@@ -4912,7 +4919,10 @@ return t.length>=40?'TXT:'+t:'';
     private fun renderTabs() {
         if (!::tabStrip.isInitialized) return
         tabStrip.removeAllViews()
-        if (::tabCountBtn.isInitialized) tabCountBtn.text = browserTabs.size.toString()
+        if (::tabCountBtn.isInitialized) {
+            tabCountBtn.text = browserTabs.size.toString()
+            tabCountBtn.contentDescription = "Tabs, ${browserTabs.size} open"
+        }
         if (::tabRail.isInitialized) tabRail.visibility = if (browserTabs.size > 1) View.VISIBLE else View.GONE
 
         var activeChip: View? = null
