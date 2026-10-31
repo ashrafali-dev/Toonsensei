@@ -4600,6 +4600,13 @@ return t.length>=40?'TXT:'+t:'';
         if (::bottomNavHost.isInitialized) bottomNavHost.visibility = View.VISIBLE
         refreshHome()
         refreshPrefetchChip()
+        // Reader steps are waiting for the first page: the user is back on Home, so show them now.
+        if (Prefs.bool(this, "tourHomeDone") && !Prefs.bool(this, "tourDone") &&
+            !(::tourOverlay.isInitialized && tourOverlay.isRunning())) {
+            handler.postDelayed({
+                if (!isFinishing && !homeVisible() && !Prefs.bool(this, "tourDone")) startTour(manual = true)
+            }, 600L)
+        }
     }
 
     /** Called from every place that opens a page, so the browser underneath becomes visible. */
@@ -4609,7 +4616,7 @@ return t.length>=40?'TXT:'+t:'';
         homeView.visibility = View.GONE
         if (::bottomNavHost.isInitialized) bottomNavHost.visibility = View.GONE
         refreshPrefetchChip()
-        if (!Prefs.bool(this, "tourDone")) {
+        if (!Prefs.bool(this, "tourDone") && Prefs.bool(this, "tourHomeDone")) {
             handler.postDelayed({
                 if (!isFinishing && !homeVisible() && !Prefs.bool(this, "tourDone")) startTour(manual = false)
             }, 1400L)
