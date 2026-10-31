@@ -3634,6 +3634,14 @@ return t.length>=40?'TXT:'+t:'';
             }
             snackHide?.let { handler.removeCallbacks(it) }
             snackView.animate().cancel()
+            val lower = msg.lowercase()
+            val isError = lower.contains("failed") || lower.contains("could not") || lower.contains("couldn't") ||
+                lower.contains("no text") || lower.contains("invalid") || lower.contains("required")
+            snackView.setTextColor(if (isError) UiTheme.palette.dangerInk else UiTheme.palette.onInk)
+            snackView.background = GradientDrawable().apply {
+                cornerRadius = dp(ToonTheme.Radius.field).toFloat()
+                setColor(if (isError) UiTheme.palette.dangerBg else UiTheme.palette.ink)
+            }
             snackView.text = msg
             snackView.visibility = View.VISIBLE
             snackView.alpha = 0f
