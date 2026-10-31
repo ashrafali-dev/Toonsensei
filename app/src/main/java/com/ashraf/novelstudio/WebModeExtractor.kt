@@ -1621,6 +1621,21 @@ internal class WebModeExtractor(
             val pagesPending = java.util.concurrent.atomic.AtomicInteger(0)
             val pageOcrError = java.util.concurrent.atomic.AtomicReference<OcrUnavailableException?>(null)
             if (pipelined) evalWait(wrap(ScanMode.jsHSave())) { null }
+            // Identity of the start page, taken from a SETTLED frame: two captures 350 ms apart must agree (a frame taken while
+            // the page is still painting never matches again later, which made the return walk back and forth forever).
+            var settledStartKey = 0L
+            if (pipelined) {
+                var prevK = 0L
+                for (attempt in 0 until 6) {
+                    try { Thread.sleep(if (attempt == 0) 500L else 350L) } catch (_: InterruptedException) { break }
+                    val f = try { captureView() } catch (_: Throwable) { null }
+                    val k = if (f != null) ScanMode.quickKey(f) else 0L
+                    try { f?.recycle() } catch (_: Throwable) {}
+                    if (k != 0L && k == prevK) { settledStartKey = k; break }
+                    prevK = k
+                }
+                OcrDiag.log("SCAN_PAGE", "start identity ${if (settledStartKey != 0L) "settled" else "NOT settled"} key=$settledStartKey")
+            }
             var lastShotKey = 0L
             var startKey = 0L          // fingerprint of the first captured page: the identity of the place the scan started
             var distinctPages = 0
@@ -1713,7 +1728,7 @@ internal class WebModeExtractor(
                     } else null
                     if (scanHorizontal) {
                         shotKey = ScanMode.quickKey(bmp)
-                        if (startKey == 0L && shotKey != 0L) startKey = shotKey
+                        if (startKey == 0L) startKey = if (settledStartKey != 0L) settledStartKey else shotKey
                     }
                     if (scanInfo != null && pipelined && readPool != null) {
                         // Hand the screenshot to the OCR pool; at most 6 shots wait in memory (about 4 MB each).
@@ -1778,12 +1793,17 @@ internal class WebModeExtractor(
                 if (startKey != 0L) {
                     var matched = false
                     var turnsBack = 0
+                    var prevCur = 0L
                     while (alive()) {
                         try { Thread.sleep(550L) } catch (_: InterruptedException) { break }
                         val cur = try { captureView() } catch (_: Throwable) { null }
                         val curKey = if (cur != null) ScanMode.quickKey(cur) else 0L
                         try { cur?.recycle() } catch (_: Throwable) {}
                         if (curKey == startKey) { matched = true; break }
+                        // Same screen as the previous look = the reader cannot go back any further (first page). Stop: more turns
+                        // would only move the reader forward again.
+                        if (curKey != 0L && curKey == prevCur) break
+                        prevCur = curKey
                         if (turnsBack >= distinctPages + 2) break
                         evalWait(wrap(LIB + ScanMode.jsPageTurn(scanDir != ScanDirection.RTL))) { null }
                         turnsBack++
@@ -2057,7 +2077,7 @@ internal class WebModeExtractor(
                         readSlice(
                             task.bitmap, st, task.offY, 1, task.fullW, task.fullH, task.src,
                             task.acc.texts, task.acc.bubbles, task.first, task.last, task.offX,
-                            fastMode = (req.visibleOnly && !req.forceFreshOcr) || paged, forceFresh = req.forceFreshOcr
+                            fastMode = (req.visibleOnly && !req.forceFreshOcr) || (paged && Prefs.bool(wv.context, "wmPagedFast", false)), forceFresh = req.forceFreshOcr
                         )
                     }
                 }
