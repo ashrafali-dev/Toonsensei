@@ -27,13 +27,13 @@ class ReaderActivity : Activity() {
     private lateinit var capsule: LinearLayout
     private lateinit var readBar: ProgressBar
 
-    // themes: 0 dark, 1 sepia, 2 white
-    private val bg = intArrayOf(0xFF07080D.toInt(), 0xFFF4ECD8.toInt(), 0xFFFFFFFF.toInt())
-    private val fg = intArrayOf(0xFFDDDDDD.toInt(), 0xFF3B2F1E.toInt(), 0xFF111111.toInt())
-    private val dim = intArrayOf(0xFF8B93A7.toInt(), 0xFF8A7B5C.toInt(), 0xFF777777.toInt())
-    private val card = intArrayOf(0xFF14181F.toInt(), 0x33FFFFFF, 0x11000000)
-    private val pill = intArrayOf(0xF21E232E.toInt(), 0xE63B2F1E.toInt(), 0xE6111111.toInt())
-    private val accent = UiTheme.accent
+    // themes: 0 Forest Luxe, 1 sepia, 2 white
+    private val bg get() = intArrayOf(UiTheme.bg, 0xFFF4ECD8.toInt(), 0xFFFFFFFF.toInt())
+    private val fg get() = intArrayOf(UiTheme.text, 0xFF3B2F1E.toInt(), 0xFF111111.toInt())
+    private val dim get() = intArrayOf(UiTheme.dim, 0xFF8A7B5C.toInt(), 0xFF777777.toInt())
+    private val card get() = intArrayOf(UiTheme.sheet, 0x33FFFFFF, 0x11000000)
+    private val pill get() = intArrayOf(UiTheme.surfaceAlt, 0xE63B2F1E.toInt(), 0xE6111111.toInt())
+    private val accent get() = UiTheme.accent
     private var novel = ""
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
@@ -53,6 +53,7 @@ class ReaderActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UiTheme.apply(this)
         novel = intent.getStringExtra("novel") ?: ""
         val id = intent.getLongExtra("id", -1L)
         list = Store.chapters(this, novel)
