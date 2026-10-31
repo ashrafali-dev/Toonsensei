@@ -305,7 +305,22 @@ internal object WebModeWriter {
         var score=canvasScore(list[i],spec);
         if(score<bestScore){bestScore=score;best=list[i];}
       }
-      return best;
+      if(best)return best;
+      // Geometry drifted since the scan (resize, toolbar toggle, re-created canvas). Bubbles are stored as
+      // fractions of the canvas, so the largest visible canvas of a similar shape is still the right page.
+      var fb=null,fbArea=0,want=spec.w/spec.h;
+      for(var j=0;j<list.length;j++){
+        var cv=list[j],r;
+        try{r=cv.getBoundingClientRect();}catch(e){continue;}
+        if(r.width<150||r.height<150||r.bottom<=0||r.right<=0)continue;
+        if(r.left>=(window.innerWidth||1e5)||r.top>=(window.innerHeight||1e5))continue;
+        var cs2;try{cs2=getComputedStyle(cv);}catch(e){cs2=null;}
+        if(cs2&&(cs2.display==='none'||cs2.visibility==='hidden'||parseFloat(cs2.opacity||'1')<0.05))continue;
+        if(Math.abs(r.width/r.height-want)>0.3)continue;
+        var a=r.width*r.height;
+        if(a>fbArea){fbArea=a;fb=cv;}
+      }
+      return fb;
     }
     // A cached element owns a source only when its actual candidate URL matches exactly.
     // Stripping the query string here is unsafe: some readers encode panel identity in it.
