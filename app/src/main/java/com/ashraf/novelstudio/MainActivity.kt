@@ -2870,12 +2870,18 @@ return t.length>=40?'TXT:'+t:'';
             if (text != chipStageText) { chipStageText = text; chipStageSinceMs = nowMs }
             val secs = ((nowMs - chipStageSinceMs) / 1000L).toInt()
             chip.update((if (secs >= 3) "$text · ${secs}s" else text) + "\n" + chipDetailLine(), color)
+            // Announce only when the stage changes (not per second), so TalkBack is not flooded.
+            if (lastAnnouncedStage != chipStageText) {
+                lastAnnouncedStage = chipStageText
+                announceForAccessibility((activityChip as? View)?.contentDescription?.toString() ?: "")
+            }
         } else if (++chipIdleTicks >= 2) {
             chipStageText = ""
             chip.update(null, 0)
         }
     }
 
+    private var lastAnnouncedStage = ""
     private var chipStageText = ""
     private var chipStageSinceMs = 0L
 
