@@ -2696,7 +2696,7 @@ return t.length>=40?'TXT:'+t:'';
 
         if (reOcrBusy) {
             statuses.add(ActivityDotStatus(
-                "manual-extract", 0xFF64B5F6.toInt(),
+                "manual-extract", UiTheme.accent,
                 if (webModeHandle == null) "Manual Extract: waiting for current OCR/translation to finish"
                 else "Manual Extract: reading visible panels with fresh OCR",
                 blinking = true
@@ -2705,8 +2705,8 @@ return t.length>=40?'TXT:'+t:'';
 
         if (aheadOcrHandle != null) {
             val color = when {
-                aheadStage.contains("loading image") || aheadStage.contains("fetching image") -> 0xFF40C4FF.toInt()
-                aheadStage.contains("cached") -> 0xFF64FFDA.toInt()
+                aheadStage.contains("loading image") || aheadStage.contains("fetching image") -> UiTheme.dim
+                aheadStage.contains("cached") -> UiTheme.ok
                 else -> 0xFF42A5F5.toInt()
             }
             statuses.add(ActivityDotStatus(
@@ -2717,14 +2717,14 @@ return t.length>=40?'TXT:'+t:'';
 
         if (rtAheadWorkerBusy) {
             statuses.add(ActivityDotStatus(
-                "ahead-translation", 0xFFFFAB40.toInt(),
+                "ahead-translation", UiTheme.accent,
                 "Pre-translating upcoming panels"
             ))
         }
 
         if (activePlacementIds.isNotEmpty()) {
             statuses.add(ActivityDotStatus(
-                "placement", 0xFF64FFDA.toInt(), "Placing translated text on the novel page"
+                "placement", UiTheme.ok, "Placing translated text on the novel page"
             ))
         }
 
@@ -2737,15 +2737,15 @@ return t.length>=40?'TXT:'+t:'';
             statuses.add(
                 when {
                     aheadTranslation -> ActivityDotStatus(
-                        "ahead-translation", 0xFFFFAB40.toInt(),
+                        "ahead-translation", UiTheme.accent,
                         "Pre-translating upcoming panels"
                     )
                     prefetched -> ActivityDotStatus(
-                        "prefetch-translation", 0xFFFFAB40.toInt(),
+                        "prefetch-translation", UiTheme.accent,
                         "Chatbot translating a prefetched chapter"
                     )
                     else -> ActivityDotStatus(
-                        "chatbot-translation", 0xFFFF80AB.toInt(),
+                        "chatbot-translation", UiTheme.accent,
                         if (livePanel) "Chatbot translating visible panels" else "Chatbot translating chapter"
                     )
                 }
@@ -2754,9 +2754,9 @@ return t.length>=40?'TXT:'+t:'';
 
         if (webModeHandle != null || (webModePct >= 0 && !stage.contains("sending to chatbot"))) {
             val color = when {
-                stage.contains("loading image") || stage.contains("fetching image") -> 0xFF40C4FF.toInt()
-                stage.contains("writing") || stage.contains("placing") || stage.contains("bubble") -> 0xFF64FFDA.toInt()
-                else -> 0xFFB388FF.toInt()
+                stage.contains("loading image") || stage.contains("fetching image") -> UiTheme.dim
+                stage.contains("writing") || stage.contains("placing") || stage.contains("bubble") -> UiTheme.ok
+                else -> UiTheme.accent
             }
             statuses.add(ActivityDotStatus("visible-ocr", color, "Current panel/chapter OCR: " +
                 webModeStage.ifBlank { "reading visible panels" }))
@@ -2764,9 +2764,9 @@ return t.length>=40?'TXT:'+t:'';
 
         if (webModePrefetchBusy) {
             val color = when {
-                prefetchStage.contains("loading image") || prefetchStage.contains("fetching image") -> 0xFF40C4FF.toInt()
-                prefetchStage.contains("writing") || prefetchStage.contains("placing") -> 0xFF64FFDA.toInt()
-                else -> 0xFF7E57C2.toInt()
+                prefetchStage.contains("loading image") || prefetchStage.contains("fetching image") -> UiTheme.dim
+                prefetchStage.contains("writing") || prefetchStage.contains("placing") -> UiTheme.ok
+                else -> UiTheme.dim
             }
             statuses.add(ActivityDotStatus(
                 "next-chapter-ocr", color,
@@ -2776,7 +2776,7 @@ return t.length>=40?'TXT:'+t:'';
 
         if (prefetchLoading && !webModePrefetchBusy) {
             statuses.add(ActivityDotStatus(
-                "next-chapter-load", 0xFF40C4FF.toInt(),
+                "next-chapter-load", UiTheme.dim,
                 "Loading/extracting the next chapter for prefetch"
             ))
         }
@@ -2785,7 +2785,7 @@ return t.length>=40?'TXT:'+t:'';
             val prefetchedQueued = queue.any { prefetchGeneratedKeys.contains(keyOf(it)) }
             statuses.add(ActivityDotStatus(
                 if (prefetchedQueued) "prefetch-queued" else "chatbot-queued",
-                0xFFFFC107.toInt(),
+                UiTheme.accent,
                 if (prefetchedQueued) "Prefetched chapter waiting in the chatbot queue"
                 else "Translation waiting in the chatbot queue",
                 blinking = false
@@ -2828,17 +2828,17 @@ return t.length>=40?'TXT:'+t:'';
         val text: String?
         val color: Int
         when {
-            reOcrBusy -> { text = "Re-reading this screen"; color = 0xFF64B5F6.toInt() }
-            sending -> { text = "Sending to chatbot"; color = 0xFFFFAB40.toInt() }
+            reOcrBusy -> { text = "Re-reading this screen"; color = UiTheme.accent }
+            sending -> { text = "Sending to chatbot"; color = UiTheme.accent }
             // Say WHICH reading is running and with WHICH engine. One merged "Reading the page" label (and one
             // timer) hid whether the 56 s were spent on the screen in front of the reader or on panels ahead.
             keys.contains("visible-ocr") ->
-                { text = "Reading this screen · " + shortOcrEngineName(); color = 0xFFB388FF.toInt() }
+                { text = "Reading this screen · " + shortOcrEngineName(); color = UiTheme.accent }
             keys.contains("next-chapter-ocr") ->
-                { text = "Reading next chapter · " + shortOcrEngineName(); color = 0xFFB388FF.toInt() }
+                { text = "Reading next chapter · " + shortOcrEngineName(); color = UiTheme.accent }
             keys.contains("read-ahead-ocr") ->
-                { text = "Reading ahead · " + shortOcrEngineName(); color = 0xFF7E57C2.toInt() }
-            keys.contains("placement") -> { text = "Adding the translation"; color = 0xFF64FFDA.toInt() }
+                { text = "Reading ahead · " + shortOcrEngineName(); color = UiTheme.dim }
+            keys.contains("placement") -> { text = "Adding the translation"; color = UiTheme.ok }
             keys.any { it == "chatbot-translation" || it == "ahead-translation" || it == "prefetch-translation" } -> {
                 val fresh = android.os.SystemClock.elapsedRealtime() - chatPhaseAtMs < 2_500L
                 text = when (if (fresh) chatPhase else 2) {
@@ -2846,7 +2846,7 @@ return t.length>=40?'TXT:'+t:'';
                     3 -> "Checking the answer"
                     else -> "Translating"
                 }
-                color = 0xFFFF80AB.toInt()
+                color = UiTheme.accent
             }
             else -> { text = null; color = 0 }
         }
@@ -3438,20 +3438,20 @@ return t.length>=40?'TXT:'+t:'';
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
-    // ================================================================== theme ("Aurora Glass", see Ui.kt)
-    private val cBg = UiTheme.bg
-    private val cSurface = 0xFF0C0E15.toInt()
-    private val cPill = 0xFF171A24.toInt()
-    private val cChip = 0xFF1D2130.toInt()
-    private val cField = 0xFF141722.toInt()
-    private val cFieldStroke = 0xFF2A2F42.toInt()
-    private val cStroke = 0xFF262B3C.toInt()
-    private val cCard = 0xFF141722.toInt()
-    private val cCardActive = 0xFF1C2238.toInt()
-    private val cTxt = UiTheme.text
-    private val cDim = UiTheme.dim
-    private val cAccent = UiTheme.accent
-    private val cSheet = UiTheme.sheet
+    // ================================================================== shared semantic palette
+    private val cBg get() = UiTheme.bg
+    private val cSurface get() = UiTheme.sheet
+    private val cPill get() = UiTheme.sheet
+    private val cChip get() = UiTheme.surfaceAlt
+    private val cField get() = UiTheme.sheet
+    private val cFieldStroke get() = UiTheme.stroke
+    private val cStroke get() = UiTheme.strokeSoft
+    private val cCard get() = UiTheme.sheet
+    private val cCardActive get() = UiTheme.surfaceAlt
+    private val cTxt get() = UiTheme.text
+    private val cDim get() = UiTheme.dim
+    private val cAccent get() = UiTheme.accent
+    private val cSheet get() = UiTheme.sheet
 
     private fun pillBg(color: Int, radiusDp: Int, stroke: Int = 0, strokeColor: Int = 0): GradientDrawable =
         GradientDrawable().apply {
@@ -3528,19 +3528,7 @@ return t.length>=40?'TXT:'+t:'';
             it.layoutParams = LinearLayout.LayoutParams(0, dp(46), 1f)
         }
 
-    private fun appBackground(): Drawable {
-        fun glow(cx: Float, cy: Float, color: Int, radiusDp: Int) = GradientDrawable().apply {
-            gradientType = GradientDrawable.RADIAL_GRADIENT
-            gradientRadius = dp(radiusDp).toFloat()
-            setGradientCenter(cx, cy)
-            colors = intArrayOf(color, color and 0x00FFFFFF)
-        }
-        return LayerDrawable(arrayOf(
-            ColorDrawable(UiTheme.bg),
-            glow(0.05f, 0.0f, 0x387B8CFF, 340),
-            glow(1.0f, 1.0f, 0x2EB27CFF, 380)
-        ))
-    }
+    private fun appBackground(): Drawable = ColorDrawable(UiTheme.bg)
 
     // ---- floating message (replaces the system Toast, which cannot be styled)
     private fun showSnack(msg: String) {
@@ -3571,6 +3559,7 @@ return t.length>=40?'TXT:'+t:'';
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UiTheme.apply(this)
         OcrRescan.resetDebug(this)   // OCR debug is a per-session tool: never leave it on by accident
         // Android 13+: lets the "scanning in background" notification show (the service works without it).
         if (Build.VERSION.SDK_INT >= 33 && !Prefs.bool(this, "askedNotifPerm") &&
@@ -4000,7 +3989,7 @@ return t.length>=40?'TXT:'+t:'';
         progressPct = TextView(this).apply {
             textSize = 13.5f
             typeface = boldMedium
-            setTextColor(0xFFCFD5FF.toInt())
+            setTextColor(UiTheme.accent)
         }
         val progStop = iconButton(Ic.CLOSE, "Stop translation", 13, 28, UiTheme.iconIdle) { cancelAll() }.apply {
             background = Glass.ripple(this@MainActivity, Glass.oval(0x1FFFFFFF))
@@ -4019,14 +4008,12 @@ return t.length>=40?'TXT:'+t:'';
             visibility = View.GONE
             clipChildren = false // lets the mascot's sparkles overshoot the bar a little
             setPadding(dp(14), dp(10), dp(10), dp(6))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(0xF2282C3E.toInt(), 0xF2181B28.toInt())
-            ).apply {
+            background = GradientDrawable().apply {
                 cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), 0x668C9CFF)
+                setColor(UiTheme.sheet)
+                setStroke(dp(1), UiTheme.stroke)
             }
-            elevation = dp(10).toFloat()
+            elevation = 0f
             addView(progRow, LinearLayout.LayoutParams(MP, WC))
             addView(progressBar, LinearLayout.LayoutParams(MP, dp(44)).also { it.topMargin = dp(2) })
         }
@@ -4053,19 +4040,20 @@ return t.length>=40?'TXT:'+t:'';
         togglePill = TextView(this).apply {
             textSize = 12.5f
             typeface = boldMedium
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.onAccent)
             gravity = Gravity.CENTER
             setPadding(dp(14), 0, dp(17), 0)
             compoundDrawablePadding = dp(8)
-            val gi = IconDrawable(Ic.GLOBE, Color.WHITE)
+            val gi = IconDrawable(Ic.GLOBE, UiTheme.onAccent)
             gi.setBounds(0, 0, dp(16), dp(16))
             setCompoundDrawablesRelative(gi, null, null, null)
             visibility = View.GONE
-            background = GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(0xEB7B8CFF.toInt(), 0xEBB27CFF.toInt())
-            ).apply { cornerRadius = dp(19).toFloat() }
-            elevation = dp(8).toFloat()
+            background = GradientDrawable().apply {
+                cornerRadius = dp(19).toFloat()
+                setColor(UiTheme.accent)
+                setStroke(dp(1), UiTheme.stroke)
+            }
+            elevation = 0f
             setOnClickListener { toggleView() }
         }
 
@@ -4106,7 +4094,7 @@ return t.length>=40?'TXT:'+t:'';
             scanDot = View(this@MainActivity).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(0xFF69F0AE.toInt())
+                    setColor(UiTheme.ok)
                 }
                 elevation = dp(7).toFloat()
                 visibility = View.GONE
@@ -4267,14 +4255,12 @@ return t.length>=40?'TXT:'+t:'';
             setTextColor(UiTheme.text)
             maxWidth = dp(330)
             setPadding(dp(18), dp(12), dp(18), dp(12))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(0xF2292D3F.toInt(), 0xF2181B28.toInt())
-            ).apply {
-                cornerRadius = dp(22).toFloat()
-                setStroke(dp(1), 0x38FFFFFF)
+            background = GradientDrawable().apply {
+                cornerRadius = dp(18).toFloat()
+                setColor(UiTheme.sheet)
+                setStroke(dp(1), UiTheme.stroke)
             }
-            elevation = dp(16).toFloat()
+            elevation = 0f
             visibility = View.GONE
             setOnClickListener { hideSnack() }
         }
@@ -4617,7 +4603,7 @@ return t.length>=40?'TXT:'+t:'';
         s.builtInZoomControls = true
         s.displayZoomControls = false
         s.userAgentString = UA
-        wv.setBackgroundColor(0xFF0B0D14.toInt())
+        wv.setBackgroundColor(UiTheme.bg)
         wv.overScrollMode = View.OVER_SCROLL_NEVER
         wv.isVerticalScrollBarEnabled = false
         wv.isHorizontalScrollBarEnabled = false
@@ -4786,10 +4772,7 @@ return t.length>=40?'TXT:'+t:'';
 
     // ---- tab rail: a slim row of chips (visible with 2+ tabs). The active chip is filled with the
     // accent tint and shows a close button; the others switch instantly (state is saved/restored).
-    private val tabHues = listOf(
-        0xFF27324F.toInt(), 0xFF3A2A52.toInt(), 0xFF1F3D3A.toInt(),
-        0xFF3D2F27.toInt(), 0xFF283A52.toInt(), 0xFF42283A.toInt()
-    )
+    private val tabHues get() = listOf(UiTheme.accent, UiTheme.ok, UiTheme.surfaceAlt, UiTheme.dim)
 
     private fun tabHost(tab: BrowserTab): String = Uri.parse(tab.url).host?.removePrefix("www.") ?: ""
 
@@ -4815,8 +4798,8 @@ return t.length>=40?'TXT:'+t:'';
                 setPadding(dp(6), 0, dp(if (active) 4 else 12), 0)
                 background = Glass.ripple(
                     this@MainActivity,
-                    if (active) Glass.solid(this@MainActivity, 0x2E7B8CFF, 16, UiTheme.accent, 1.5f)
-                    else Glass.solid(this@MainActivity, 0x12FFFFFF, 16, UiTheme.strokeSoft),
+                    if (active) Glass.solid(this@MainActivity, UiTheme.accentTint, 16, UiTheme.accent, 1.5f)
+                    else Glass.solid(this@MainActivity, UiTheme.sheet, 16, UiTheme.strokeSoft),
                     16
                 )
                 layoutParams = LinearLayout.LayoutParams(WC, dp(32)).also { it.setMargins(dp(3), dp(4), dp(3), dp(4)) }
@@ -5002,7 +4985,7 @@ return t.length>=40?'TXT:'+t:'';
         val cardH = (colW * 1.34f).toInt()
 
         lateinit var dialog: Dialog
-        val root = FrameLayout(this).apply { setBackgroundColor(0xEB07080D.toInt()) }
+        val root = FrameLayout(this).apply { setBackgroundColor(UiTheme.bg) }
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
 
         // ---- header: "Tabs" + count, options, close
@@ -5018,7 +5001,7 @@ return t.length>=40?'TXT:'+t:'';
             gravity = Gravity.CENTER
             setTextColor(0xFFCFD5FF.toInt())
             setPadding(dp(10), 0, dp(10), 0)
-            background = Glass.solid(this@MainActivity, 0x387B8CFF, 11)
+            background = Glass.solid(this@MainActivity, UiTheme.accentTint, 11)
             layoutParams = LinearLayout.LayoutParams(WC, dp(22)).also { it.marginStart = dp(10) }
         }
         val optionsBtn = iconButton(Ic.DOTS, "Tab options", 22, 44) { showTabOptions(dialog) }
@@ -5120,7 +5103,7 @@ return t.length>=40?'TXT:'+t:'';
                 loadTabThumbnail(tab)
 
                 val card = FrameLayout(this).apply {
-                    background = Glass.solid(this@MainActivity, 0xFF12141D.toInt(), 22)
+                    background = Glass.solid(this@MainActivity, UiTheme.sheet, 22, UiTheme.strokeSoft)
                     clipToOutline = true
                     elevation = dp(if (active) 10 else 3).toFloat()
                     layoutParams = GridLayout.LayoutParams().apply {
@@ -5143,10 +5126,7 @@ return t.length>=40?'TXT:'+t:'';
                     }, FrameLayout.LayoutParams(MP, MP))
                 } else {
                     card.addView(FrameLayout(this).apply {
-                        background = GradientDrawable(
-                            GradientDrawable.Orientation.TL_BR,
-                            intArrayOf(tabHue(tab), 0xFF0E1018.toInt())
-                        )
+                        background = GradientDrawable().apply { setColor(tabHue(tab)) }
                         addView(TextView(this@MainActivity).apply {
                             text = tabInitial(tab)
                             textSize = 26f
@@ -5159,10 +5139,7 @@ return t.length>=40?'TXT:'+t:'';
                 }
 
                 card.addView(View(this).apply {
-                    background = GradientDrawable(
-                        GradientDrawable.Orientation.TOP_BOTTOM,
-                        intArrayOf(0x0007080D, 0xF207080D.toInt())
-                    )
+                    background = GradientDrawable().apply { setColor(UiTheme.bg); alpha = 225 }
                 }, FrameLayout.LayoutParams(MP, dp(84), Gravity.BOTTOM))
 
                 val host = tabHost(tab)
@@ -5197,7 +5174,7 @@ return t.length>=40?'TXT:'+t:'';
                 card.addView(View(this).apply {
                     background = Glass.solid(
                         this@MainActivity, 0x00000000, 22,
-                        if (active) UiTheme.accent else 0x24FFFFFF, if (active) 2.5f else 1f
+                        if (active) UiTheme.accent else UiTheme.strokeSoft, if (active) 2f else 1f
                     )
                     isClickable = false
                 }, FrameLayout.LayoutParams(MP, MP))
@@ -6070,8 +6047,9 @@ return t.length>=40?'TXT:'+t:'';
 
     /** Dark translucent pill used behind the top bar and the dock (readable over any page). */
     private fun floatingBarBg(radiusDp: Int): GradientDrawable =
-        GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xEE232739.toInt(), 0xEE141726.toInt())).apply {
+        GradientDrawable().apply {
             cornerRadius = dp(radiusDp).toFloat()
+            setColor(UiTheme.sheet)
             setStroke(dp(1), UiTheme.stroke)
         }
 
@@ -6300,7 +6278,7 @@ return t.length>=40?'TXT:'+t:'';
         val bar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(0xFF141726.toInt())
+            setBackgroundColor(UiTheme.sheet)
             setPadding(dp(16), dp(8), dp(8), dp(8))
             addView(TextView(this@MainActivity).apply {
                 text = "🔐 Login"
@@ -6312,7 +6290,7 @@ return t.length>=40?'TXT:'+t:'';
                 text = "Close"
                 textSize = 15f
                 typeface = boldMedium
-                setTextColor(UiTheme.accentA)
+                setTextColor(UiTheme.accent)
                 setPadding(dp(14), dp(10), dp(14), dp(10))
                 setOnClickListener { dialog.dismiss() }
             })
@@ -10229,7 +10207,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             "🧠 What the App Learned About This Site",
             "🔬 OCR Log — copy everything",
             "🧹 Clear OCR Log (then reproduce the problem)",
-            menuDetectorLabel(), menuRealtimeAutoOcrLabel(), menuScanDirLabel()
+            menuDetectorLabel(), menuRealtimeAutoOcrLabel(), menuScanDirLabel(), menuDarkPaletteLabel()
         )
         // Rows that are not offered here. Their underlying features and code remain unchanged.
         val hidden = setOf(2, 6, 8, 10, 11, 13, 17, 18, 25)
@@ -10238,7 +10216,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             7 to Ic.RELOAD, 9 to Ic.MOON, 12 to Ic.SPARK, 14 to Ic.BOLT, 15 to Ic.SHIELD,
             16 to Ic.RELOAD, 19 to Ic.BOOK, 20 to Ic.TEXT, 21 to Ic.SLIDERS, 23 to Ic.TEXT, 24 to Ic.LOCK,
             27 to Ic.SHIELD, 28 to Ic.TEXT, 29 to Ic.SLIDERS, 30 to Ic.BOLT, 31 to Ic.GLOBE, 32 to Ic.SPARK, 33 to Ic.SPARK, 34 to Ic.BOLT, 35 to Ic.SPARK, 36 to Ic.TEXT, 37 to Ic.TEXT, 38 to Ic.TEXT,
-            39 to Ic.RELOAD, 40 to Ic.CLOCK, 41 to Ic.CLOCK, 22 to Ic.SEARCH, 42 to Ic.SEARCH, 43 to Ic.BOLT, 44 to Ic.CLOCK, 45 to Ic.SEARCH, 46 to Ic.SPARK, 47 to Ic.SPARK, 48 to Ic.BOLT, 49 to Ic.RELOAD, 50 to Ic.SEARCH, 51 to Ic.SPARK, 52 to Ic.SEARCH, 53 to Ic.SLIDERS, 54 to Ic.SPARK, 55 to Ic.BOLT, 56 to Ic.SHARE, 57 to Ic.SEARCH, 58 to Ic.SEARCH, 59 to Ic.RELOAD, 60 to Ic.SEARCH, 61 to Ic.BOLT, 62 to Ic.BOLT
+            39 to Ic.RELOAD, 40 to Ic.CLOCK, 41 to Ic.CLOCK, 22 to Ic.SEARCH, 42 to Ic.SEARCH, 43 to Ic.BOLT, 44 to Ic.CLOCK, 45 to Ic.SEARCH, 46 to Ic.SPARK, 47 to Ic.SPARK, 48 to Ic.BOLT, 49 to Ic.RELOAD, 50 to Ic.SEARCH, 51 to Ic.SPARK, 52 to Ic.SEARCH, 53 to Ic.SLIDERS, 54 to Ic.SPARK, 55 to Ic.BOLT, 56 to Ic.SHARE, 57 to Ic.SEARCH, 58 to Ic.SEARCH, 59 to Ic.RELOAD, 60 to Ic.SEARCH, 61 to Ic.BOLT, 62 to Ic.BOLT, 63 to Ic.SLIDERS
         )
         // Everyday rows stay open; everything technical lives behind one ADVANCED fold.
         val daily = listOf(
@@ -10247,7 +10225,7 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             "TRANSLATE" to listOf(5, 33, 54, 7),
             "OCR" to listOf(62, 53, 50, 57, 58, 59, 60),
             "READER" to listOf(9, 20, 23),
-            "APP" to listOf(55)
+            "APP" to listOf(55, 63)
         )
         val advanced = listOf(
             "TRANSLATION" to listOf(47, 12, 19, 14, 26, 30, 39, 40, 44, 46),
@@ -10261,6 +10239,23 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
 
         fun onItem(i: Int) {
             when (i) {
+                63 -> {
+                    val current = Prefs.get(this, "uiDarkPalette", "FOREST_LUXE")
+                    val selected = if (current == "DEEP_OLIVE") 1 else 0
+                    AlertDialog.Builder(this)
+                        .setTitle("Dark colour palette")
+                        .setSingleChoiceItems(arrayOf("Forest Luxe", "Deep Olive"), selected) { dialog, which ->
+                            Prefs.put(this, "uiDarkPalette", if (which == 1) "DEEP_OLIVE" else "FOREST_LUXE")
+                            dialog.dismiss()
+                            refresh(i, menuDarkPaletteLabel())
+                            AlertDialog.Builder(this)
+                                .setMessage("Saved. The selected palette applies the next time Novel Studio starts, when Android is using Dark theme.")
+                                .setPositiveButton("OK", null)
+                                .show()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                }
                 0 -> { dlg.dismiss(); libraryNovels() }
                 1 -> { dlg.dismiss(); browserHistoryDialog() }
                 3 -> { dlg.dismiss(); saveBookmark() }
@@ -11028,7 +11023,10 @@ ${rows.take(220).joinToString("\n")}
         (if (Prefs.auto(this)) "✅" else "⬜") + " ⚡ Background translation (insert into site)"
 
     private fun menuDarkLabel(): String =
-        "🌙 Dark Mode: " + arrayOf("Off", "Auto", "Force")[darkMode()]
+        "🌙 Web Dark Mode: " + arrayOf("Off", "Auto", "Force")[darkMode()]
+
+    private fun menuDarkPaletteLabel(): String =
+        "🎨 Dark Palette: " + if (Prefs.get(this, "uiDarkPalette", "FOREST_LUXE") == "DEEP_OLIVE") "Deep Olive" else "Forest Luxe"
 
     private fun menuAutoPasteLabel(): String =
         (if (Prefs.bool(this, "autoPaste")) "✅" else "⬜") + " Copy Mode: Auto Paste"
