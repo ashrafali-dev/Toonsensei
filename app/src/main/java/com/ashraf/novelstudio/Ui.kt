@@ -34,10 +34,9 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Novel Studio design system ("Aurora Glass").
- * Everything visual that is shared between screens lives here: colours, vector icons drawn with
- * Canvas (no emoji in the chrome), glass surfaces, the glow progress bar, the extract button
- * with its progress ring, and the bottom-sheet / full-screen dialog helpers.
+ * Novel Studio's shared Forest Luxe / Paper design system.
+ * Semantic colours, flat surfaces, vector icons, progress controls and sheet helpers
+ * live here so the browser chrome and app-owned screens share one palette.
  */
 object UiTheme {
     var bg = 0xFF0B0F0D.toInt()
@@ -528,7 +527,7 @@ object Sheets {
         v.alpha = 0f
         v.post {
             v.translationY = v.height * 0.3f
-            v.animate().translationY(0f).alpha(1f).setDuration(260).setInterpolator(DecelerateInterpolator()).start()
+            v.animate().translationY(0f).alpha(1f).setDuration(ToonTheme.Motion.standardMs).setInterpolator(DecelerateInterpolator()).start()
         }
     }
 
