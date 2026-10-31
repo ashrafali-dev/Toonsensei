@@ -62,7 +62,7 @@ All screen code reads semantic resources through `ToonTheme.Colors`. The light a
 | `toon_muted` | `#6B665E` | Secondary text |
 | `toon_faint` | `#6B665E` | Non-essential metadata |
 | `toon_line` | `#E3DED3` | Hairline divider |
-| `toon_line_strong` | `#CFC8BA` | Control edge |
+| `toon_line_strong` | `#8E887E` | Control edge; 3.12:1 on Paper background |
 | `toon_accent` | `#9C3D2E` | Active mode, focus, main CTA |
 | `toon_accent_tint` | `#F0E1DB` | Selected/soft accent surface |
 | `toon_on_accent` | `#FFFFFF` | Text on accent |
@@ -91,7 +91,7 @@ All screen code reads semantic resources through `ToonTheme.Colors`. The light a
 | `toon_muted` | `#9A958A` | Secondary text |
 | `toon_faint` | `#6F6A60` | Non-essential metadata only |
 | `toon_line` | `#2EE8E4DA` | Subtle hairline |
-| `toon_line_strong` | `#45E8E4DA` | Control edge |
+| `toon_line_strong` | `#66E8E4DA` | Control edge; about 3.15:1 on Charcoal surface |
 | `toon_accent` | `#C9AE7C` | Active mode, focus, main CTA |
 | `toon_accent_tint` | `#3A3328` | Selected/soft accent surface |
 | `accentForeground` | Derived from selected accent | Selected label, badge text and focus ring; at least 4.5:1 on the selected tint |
@@ -136,7 +136,7 @@ Measured against the supplied base palette:
 - Charcoal accent on its on-color: 8.06:1; on accent tint: 5.84:1.
 - Charcoal danger on background: 6.35:1.
 
-The dark `toon_faint` color is about 3.2:1 against the dark background. It is reserved for non-essential metadata/decorative use and must not carry an instruction, error, label, or status by itself. The translucent line tokens are for non-interactive separators; use the accent focus token for active/focused controls.
+The dark `toon_faint` color is about 3.2:1 against the dark background. It is reserved for non-essential metadata/decorative use and must not carry an instruction, error, label, or status by itself. The translucent `toon_line` tokens are for non-interactive separators; `toon_line_strong` is reserved for control boundaries. Control edge contrast is at least 3:1 on both themes; use the accent focus token for active/focused controls.
 
 ## 4. Typography
 
