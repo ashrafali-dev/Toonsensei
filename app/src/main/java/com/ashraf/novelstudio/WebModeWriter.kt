@@ -115,7 +115,7 @@ internal object WebModeWriter {
         // has really loaded: a slow / failed / evicted clean image used to leave the ORIGINAL lettering showing under
         // the translation with no cover at all (the "text appears but nothing behind it, sometimes" bug).
         entry.el.addEventListener('load',function(){entry.loaded=true;try{forceNext=true;sched();}catch(e){}});
-        entry.el.addEventListener('error',function(){entry.loaded=false;});
+        entry.el.addEventListener('error',function(){entry.loaded=false;try{forceNext=true;sched();}catch(e){}});
       }
       if(entry.url!==url){entry.url=url;entry.loaded=false;entry.el.src=url;}
       if(entry.el.complete&&entry.el.naturalWidth>0)entry.loaded=true;
@@ -184,7 +184,12 @@ internal object WebModeWriter {
       // Restore the speech-bubble silhouette from the detector's mask rectangles. These are local cover shapes,
       // not text-removal pixels: the cleaner below still erases only the detected glyph mask and its small margin.
       // If no reliable silhouette exists, use the small OCR-box cover as a conservative fallback.
-      if(!it.er){
+      // A bubble whose lettering the local cleaner already erased gets NO cover rectangle by default: the cleaned
+      // image is authoritative, and these rectangles are painted with it.bg (when bg came from the artwork around a
+      // white balloon, that drew solid black bars across it, matching the steppy cv edges). If the cleaned image
+      // fails to load, the original lettering would sit under the translation, so a fallback box is attached and
+      // shown only after that failure is known (see the clean-image load handler).
+      if(!it.er&&!it.cl){
         cover=document.createElement('div');cover.className='__ns_cover';
         cover.style.cssText='position:absolute;left:0;top:0;display:none;box-sizing:border-box;overflow:visible;'
           +'pointer-events:none;will-change:transform;background:'+(hasCv?'transparent':it.bg)+';';
@@ -820,8 +825,7 @@ internal object WebModeWriter {
               cover.style.transform='translate3d('+R.ox0+'px,'+R.oy0+'px,0)'+(R.angle?' rotate('+R.angle+'deg)':'');
             }
             var wantCover='block';
-            if(cover.__nsWaitClean){var ce=cleanImgs[norm(R.s)];if(ce&&ce.loaded)wantCover='none';}
-            if(cover.style.display!==wantCover)cover.style.display=wantCover;
+            if(cover.__nsWaitClean){var ce=cleanImgs[norm(R.s)];if(ce&&ce.loaded)wantCover='none';}            if(cover.style.display!==wantCover)cover.style.display=wantCover;
           }
           // If the text moved away from its source bubble, retain the source cover AND add a
           // matching card under the relocated text so it stays readable over artwork.
