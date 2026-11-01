@@ -3101,6 +3101,17 @@ return t.length>=40?'TXT:'+t:'';
     private var attentionNeeded = false
     private var attentionText = ""
     private var tasksDialog: Dialog? = null
+    // Phase 3: page-loading chrome (spec board 26)
+    private var reloadBtnView: ImageView? = null
+    private var loadLineView: View? = null
+    private var slowNoticeView: View? = null
+    private var pageLoading = false
+    private var pageLoadStartMs = 0L
+    private val slowNoticeRunnable = Runnable {
+        if (pageLoading && System.currentTimeMillis() - pageLoadStartMs >= 8_000L) {
+            slowNoticeView?.let { if (it.visibility != View.VISIBLE) { it.visibility = View.VISIBLE; it.alpha = 0f; it.animate().alpha(1f).setDuration(180).start() } }
+        }
+    }
     private var snackHide: Runnable? = null
     private var progressShown = false
     private var pulse: ValueAnimator? = null
@@ -4009,7 +4020,10 @@ return t.length>=40?'TXT:'+t:'';
             setOnLongClickListener { showTabGrid(); true }
         }
 
-        val reloadBtn = iconButton(Ic.RELOAD, "Reload", 19, 36, UiTheme.iconIdle) { reloadPage() }.apply {
+        val reloadBtn = iconButton(Ic.RELOAD, "Reload", 19, 36, UiTheme.iconIdle) {
+            if (pageLoading) novelWv.stopLoading() else reloadPage()
+        }.apply {
+            reloadBtnView = this
             setOnLongClickListener { novelWv.reload(); chatWv.reload(); toast("🔄 Reloading both pages"); true }
         }
 
@@ -4056,6 +4070,12 @@ return t.length>=40?'TXT:'+t:'';
         val topWrap = FrameLayout(this).apply {
             setPadding(0, dp(6), 0, 0)
             addView(topBar, FrameLayout.LayoutParams(MP, dp(54)))
+            // The 2 dp page-load line under the address bar (spec board 26).
+            loadLineView = View(this@MainActivity).apply {
+                setBackgroundColor(UiTheme.seal)
+                visibility = View.GONE
+            }
+            addView(loadLineView, FrameLayout.LayoutParams(0, dp(2), Gravity.BOTTOM))
         }
 
         // tab rail (only visible with 2+ tabs) and quick-site shortcuts (only while typing an address)
@@ -4241,6 +4261,17 @@ return t.length>=40?'TXT:'+t:'';
             addView(scanDot, FrameLayout.LayoutParams(dp(7), dp(7), Gravity.TOP or Gravity.END).also {
                 it.setMargins(0, dp(10), dp(10), 0)
             })
+            // Slow-connection notice inside the page area (spec board 26).
+            slowNoticeView = TextView(this@MainActivity).apply {
+                text = "Still loading - the connection is slow"
+                textSize = 14f
+                typeface = medium
+                setTextColor(UiTheme.amberInk)
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                background = Ui.tintCard(this@MainActivity, UiTheme.amberSoft, UiTheme.amber, 14)
+                visibility = View.GONE
+            }
+            addView(slowNoticeView, FrameLayout.LayoutParams(MP, WC, Gravity.TOP).also { it.setMargins(dp(10), dp(10), dp(10), 0) })
             reOcrBtn = android.widget.ImageView(this@MainActivity).apply {
                 setImageDrawable(IconDrawable(Ic.SEARCH, UiTheme.iconIdle))
                 background = GradientDrawable().apply {
@@ -5231,8 +5262,8 @@ return t.length>=40?'TXT:'+t:'';
                 setPadding(dp(6), 0, dp(if (active) 4 else 12), 0)
                 background = Glass.ripple(
                     this@MainActivity,
-                    if (active) Glass.solid(this@MainActivity, 0x2E7B8CFF, 16, UiTheme.accent, 1.5f)
-                    else Glass.solid(this@MainActivity, 0x12FFFFFF, 16, UiTheme.strokeSoft),
+                    if (active) Glass.solid(this@MainActivity, UiTheme.surface2, 16, UiTheme.text, 1)
+                    else Glass.solid(this@MainActivity, 0x00000000, 16, UiTheme.stroke),
                     16
                 )
                 layoutParams = LinearLayout.LayoutParams(WC, dp(32)).also { it.setMargins(dp(3), dp(4), dp(3), dp(4)) }
@@ -5350,24 +5381,70 @@ return t.length>=40?'TXT:'+t:'';
         persistBrowserTabs()
     }
 
+    /** Failed page (spec board 26): static mascot, plain retry. */
+    private fun showPageFailed(url: String) {
+        if (isFinishing || isDestroyed || homeVisible()) return
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(30), dp(14), dp(30), dp(26))
+            background = Sheets.sheetBackground(this@MainActivity)
+        }
+        col.addView(MascotView(this), LinearLayout.LayoutParams(dp(96), dp(96)).also { it.gravity = Gravity.CENTER_HORIZONTAL })
+        col.addView(Ui.text(this, "Couldn't open this page", Ui.H2, UiTheme.text, bold = true), LinearLayout.LayoutParams(WC, WC).also {
+            it.gravity = Gravity.CENTER_HORIZONTAL; it.topMargin = dp(6)
+        })
+        col.addView(Ui.caption(this, "Check the connection and try again."), LinearLayout.LayoutParams(WC, WC).also {
+            it.gravity = Gravity.CENTER_HORIZONTAL; it.topMargin = dp(4); it.bottomMargin = dp(12)
+        })
+        val retry = Ui.btnPrimary(this, "Retry")
+        col.addView(retry, LinearLayout.LayoutParams(WC, dp(48)).also { it.gravity = Gravity.CENTER_HORIZONTAL })
+        val dlg = Sheets.create(this, col)
+        retry.setOnClickListener { dlg.dismiss(); if (url.isNotEmpty()) novelWv.loadUrl(url) else novelWv.reload() }
+        dlg.show()
+    }
+
+    /** Long-press on a link (spec board 27 card 1): a calm sheet; confirms read like "Copied". */
     private fun showLinkMenu(url: String) {
-        val shown = if (url.length > 70) url.take(67) + "…" else url
-        AlertDialog.Builder(this)
-            .setTitle(shown)
-            .setItems(arrayOf("Open in new tab", "Open in background tab", "Copy link address")) { _, which ->
-                when (which) {
-                    0 -> newBrowserTab(url)
-                    1 -> {
-                        saveCurrentTabState()
-                        browserTabs.add(BrowserTab("New Tab", url))
-                        renderTabs()
-                        persistBrowserTabs()
-                        toast("Opened in background tab (${browserTabs.size})")
-                    }
-                    2 -> { copy(url); toast("Link copied") }
-                }
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(12), dp(16), dp(24))
+            background = Sheets.sheetBackground(this@MainActivity)
+        }
+        col.addView(Ui.sheetHandle(this), LinearLayout.LayoutParams(dp(36), dp(4)).also {
+            it.gravity = Gravity.CENTER_HORIZONTAL; it.bottomMargin = dp(10)
+        })
+        val host = try { Uri.parse(url).host?.removePrefix("www.") ?: url } catch (_: Exception) { url }
+        col.addView(Ui.caption(this, host), LinearLayout.LayoutParams(MP, WC).also {
+            it.bottomMargin = dp(4); it.marginStart = dp(8)
+        })
+        fun row(ic: Ic, label: String, onTap: () -> Unit): View {
+            val r = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = dp(52)
+                setPadding(dp(8), 0, dp(8), 0)
+                background = Glass.ripple(this@MainActivity, null, 12)
+                contentDescription = label
             }
-            .show()
+            r.addView(ImageView(this).apply { setImageDrawable(IconDrawable(ic, UiTheme.faint)) }, LinearLayout.LayoutParams(dp(20), dp(20)).also { it.marginEnd = dp(14) })
+            r.addView(Ui.text(this, label, Ui.BODY, UiTheme.text), LinearLayout.LayoutParams(0, WC, 1f))
+            r.setOnClickListener { onTap() }
+            return r
+        }
+        val dlg = Sheets.create(this, col)
+        col.addView(row(Ic.PLUS, "Open in new tab") { dlg.dismiss(); newBrowserTab(url) })
+        col.addView(row(Ic.TASKS, "Open in background tab") {
+            dlg.dismiss()
+            saveCurrentTabState()
+            browserTabs.add(BrowserTab("New Tab", url))
+            renderTabs()
+            persistBrowserTabs()
+            Notify.log("Opened in background tab (${browserTabs.size})")
+            toast("Opened in background tab (${browserTabs.size})")
+        })
+        col.addView(row(Ic.LINK, "Copy link address") { dlg.dismiss(); copy(url); Notify.log("Copied link address"); toast("Copied") })
+        dlg.show()
     }
 
     private fun newBrowserTab(url: String) {
@@ -5412,30 +5489,30 @@ return t.length>=40?'TXT:'+t:'';
 
     private fun showTabGrid(filter: String = "") {
         saveCurrentTabState()
-        val pad = dp(14)
-        val gap = dp(10)
+        val pad = dp(20)
+        val gap = dp(12)
         val colW = (resources.displayMetrics.widthPixels - pad * 2 - gap) / 2
-        val cardH = (colW * 1.34f).toInt()
+        val cardH = dp(242)
 
         lateinit var dialog: Dialog
-        val root = FrameLayout(this).apply { setBackgroundColor(0xEB07080D.toInt()) }
+        val root = FrameLayout(this).apply { setBackgroundColor(UiTheme.bg) }
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
 
-        // ---- header: "Tabs" + count, options, close
+        // ---- header: "Tabs" + count, options (spec board 23)
         val title = TextView(this).apply {
             text = "Tabs"
-            textSize = 25f
+            textSize = 24f
             setTextColor(UiTheme.text)
-            typeface = boldMedium
+            typeface = medium
         }
         val countChip = TextView(this).apply {
-            textSize = 12.5f
-            typeface = boldMedium
+            textSize = 13f
+            typeface = medium
             gravity = Gravity.CENTER
-            setTextColor(0xFFCFD5FF.toInt())
+            setTextColor(UiTheme.text)
             setPadding(dp(10), 0, dp(10), 0)
-            background = Glass.solid(this@MainActivity, 0x387B8CFF, 11)
-            layoutParams = LinearLayout.LayoutParams(WC, dp(22)).also { it.marginStart = dp(10) }
+            background = Glass.solid(this@MainActivity, UiTheme.surface2, 12)
+            layoutParams = LinearLayout.LayoutParams(WC, dp(24)).also { it.marginStart = dp(10) }
         }
         val optionsBtn = iconButton(Ic.DOTS, "Tab options", 22, 44) { showTabOptions(dialog) }
         val closeBtn = iconButton(Ic.CLOSE, "Close", 22, 44) { dialog.dismiss() }
@@ -5452,11 +5529,11 @@ return t.length>=40?'TXT:'+t:'';
         column.addView(header, LinearLayout.LayoutParams(MP, WC))
 
         // ---- search
-        val searchIcon = ImageView(this).apply { setImageDrawable(IconDrawable(Ic.SEARCH, UiTheme.dim)) }
+        val searchIcon = ImageView(this).apply { setImageDrawable(IconDrawable(Ic.SEARCH, UiTheme.faint)) }
         val searchInput = EditText(this).apply {
             hint = "Search tabs"
             setSingleLine()
-            textSize = 14.5f
+            textSize = 14f
             setTextColor(UiTheme.text)
             setHintTextColor(UiTheme.faint)
             background = ColorDrawable(Color.TRANSPARENT)
@@ -5467,12 +5544,12 @@ return t.length>=40?'TXT:'+t:'';
         val searchBox = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), 0, dp(14), 0)
-            background = Glass.field(this@MainActivity, 21, false)
+            setPadding(dp(16), 0, dp(16), 0)
+            background = Glass.solid(this@MainActivity, UiTheme.surface1, 23, UiTheme.stroke, 1)
             addView(searchIcon, LinearLayout.LayoutParams(dp(18), dp(18)).also { it.marginEnd = dp(10) })
             addView(searchInput, LinearLayout.LayoutParams(0, MP, 1f))
         }
-        column.addView(searchBox, LinearLayout.LayoutParams(MP, dp(42)).also { it.setMargins(pad, dp(6), pad, dp(8)) })
+        column.addView(searchBox, LinearLayout.LayoutParams(MP, dp(46)).also { it.setMargins(dp(20), dp(4), dp(20), dp(14)) })
 
         // ---- grid
         val emptyView = TextView(this).apply {
@@ -5500,26 +5577,26 @@ return t.length>=40?'TXT:'+t:'';
         column.addView(scroll, LinearLayout.LayoutParams(MP, 0, 1f))
         root.addView(column, FrameLayout.LayoutParams(MP, MP))
 
-        // ---- "New tab" pill
+        // ---- "New tab" button (ink pill, bottom-right; spec board 23)
         val newTab = TextView(this).apply {
             text = "New tab"
             textSize = 15f
             typeface = boldMedium
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.bg)
             gravity = Gravity.CENTER
-            setPadding(dp(20), 0, dp(26), 0)
+            setPadding(dp(24), 0, dp(24), 0)
             compoundDrawablePadding = dp(8)
-            val pi = IconDrawable(Ic.PLUS, Color.WHITE, 2.2f)
+            val pi = IconDrawable(Ic.PLUS, UiTheme.bg)
             pi.setBounds(0, 0, dp(20), dp(20))
             setCompoundDrawablesRelative(pi, null, null, null)
-            background = Glass.accent(this@MainActivity, 27)
+            background = Glass.solid(this@MainActivity, UiTheme.text, 26)
             elevation = dp(12).toFloat()
             setOnClickListener {
                 dialog.dismiss()
                 newBrowserTab("https://www.google.com/")
             }
         }
-        root.addView(newTab, FrameLayout.LayoutParams(WC, dp(54), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).also { it.bottomMargin = dp(26) })
+        root.addView(newTab, FrameLayout.LayoutParams(WC, dp(52), Gravity.BOTTOM or Gravity.END).also { it.bottomMargin = dp(24); it.marginEnd = dp(16) })
 
         fun refreshCards(query: String) {
             grid.removeAllViews()
@@ -5535,10 +5612,14 @@ return t.length>=40?'TXT:'+t:'';
                 val active = i == activeTabIndex
                 loadTabThumbnail(tab)
 
-                val card = FrameLayout(this).apply {
-                    background = Glass.solid(this@MainActivity, 0xFF12141D.toInt(), 22)
+                // Card per spec board 23: [letter + host + close] / white thumb (radius 10) / two-line title.
+                val card = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    background = Glass.solid(
+                        this@MainActivity, UiTheme.surface1, 18,
+                        if (active) UiTheme.seal else UiTheme.stroke, if (active) 2f else 1f
+                    )
                     clipToOutline = true
-                    elevation = dp(if (active) 10 else 3).toFloat()
                     layoutParams = GridLayout.LayoutParams().apply {
                         width = colW
                         height = cardH
@@ -5550,73 +5631,69 @@ return t.length>=40?'TXT:'+t:'';
                     }
                 }
 
-                // preview: the live thumbnail, or a tinted tile with the site's initial
+                val host = tabHost(tab)
+                // header: letter tile + host + close
+                val head = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(10), 0, dp(2), 0)
+                    addView(TextView(this@MainActivity).apply {
+                        text = tabInitial(tab)
+                        textSize = 11f
+                        typeface = boldMedium
+                        gravity = Gravity.CENTER
+                        setTextColor(Color.WHITE)
+                        background = Glass.oval(tabHue(tab))
+                    }, LinearLayout.LayoutParams(dp(22), dp(22)).also { it.marginEnd = dp(8) })
+                    addView(TextView(this@MainActivity).apply {
+                        text = host
+                        textSize = 12f
+                        setTextColor(UiTheme.faint)
+                        maxLines = 1
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                    }, LinearLayout.LayoutParams(0, WC, 1f))
+                    addView(iconButton(Ic.CLOSE, "Close tab", 16, 36, UiTheme.faint) {
+                        closeBrowserTab(i)
+                        refreshCards(searchInput.text.toString().trim())
+                    }, LinearLayout.LayoutParams(dp(36), dp(36)))
+                }
+                card.addView(head, LinearLayout.LayoutParams(MP, dp(40)))
+
+                // thumb: live capture, else the tint tile with the site's initial; white surface like the board
+                val thumbBox = FrameLayout(this).apply {
+                    clipToOutline = true
+                    background = GradientDrawable().apply {
+                        setColor(Color.WHITE)
+                        cornerRadius = dp(10).toFloat()
+                    }
+                }
                 val thumb = tab.thumbnail
                 if (thumb != null && !thumb.isRecycled) {
-                    card.addView(ImageView(this).apply {
+                    thumbBox.addView(ImageView(this).apply {
                         scaleType = ImageView.ScaleType.CENTER_CROP
                         setImageBitmap(thumb)
                     }, FrameLayout.LayoutParams(MP, MP))
                 } else {
-                    card.addView(FrameLayout(this).apply {
-                        background = GradientDrawable(
-                            GradientDrawable.Orientation.TL_BR,
-                            intArrayOf(tabHue(tab), 0xFF0E1018.toInt())
-                        )
-                        addView(TextView(this@MainActivity).apply {
-                            text = tabInitial(tab)
-                            textSize = 26f
-                            typeface = boldMedium
-                            gravity = Gravity.CENTER
-                            setTextColor(Color.WHITE)
-                            background = Glass.oval(0x2EFFFFFF)
-                        }, FrameLayout.LayoutParams(dp(58), dp(58), Gravity.CENTER).also { it.bottomMargin = dp(26) })
+                    thumbBox.addView(TextView(this).apply {
+                        text = tabInitial(tab)
+                        textSize = 26f
+                        typeface = boldMedium
+                        gravity = Gravity.CENTER
+                        setTextColor(tabHue(tab))
                     }, FrameLayout.LayoutParams(MP, MP))
                 }
+                card.addView(thumbBox, LinearLayout.LayoutParams(MP, dp(150)).also { it.setMargins(dp(10), 0, dp(10), 0) })
 
-                card.addView(View(this).apply {
-                    background = GradientDrawable(
-                        GradientDrawable.Orientation.TOP_BOTTOM,
-                        intArrayOf(0x0007080D, 0xF207080D.toInt())
-                    )
-                }, FrameLayout.LayoutParams(MP, dp(84), Gravity.BOTTOM))
-
-                val host = tabHost(tab)
-                card.addView(LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(dp(12), 0, dp(12), dp(10))
-                    addView(TextView(this@MainActivity).apply {
-                        text = tabTitle(tab)
-                        textSize = 12.5f
-                        typeface = medium
-                        setTextColor(UiTheme.text)
-                        maxLines = 2
-                        ellipsize = android.text.TextUtils.TruncateAt.END
-                    })
-                    if (host.isNotBlank()) addView(TextView(this@MainActivity).apply {
-                        text = host
-                        textSize = 11f
-                        setTextColor(UiTheme.dim)
-                        maxLines = 1
-                        ellipsize = android.text.TextUtils.TruncateAt.END
-                    })
-                }, FrameLayout.LayoutParams(MP, WC, Gravity.BOTTOM))
-
-                card.addView(iconButton(Ic.CLOSE, "Close tab", 12, 30, Color.WHITE) {
-                    closeBrowserTab(i)
-                    refreshCards(searchInput.text.toString().trim())
-                }.also {
-                    it.background = Glass.ripple(this, Glass.oval(0x8C0A0C12.toInt(), 0x33FFFFFF, dp(1)))
-                }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.TOP or Gravity.END).also { it.setMargins(0, dp(8), dp(8), 0) })
-
-                // border drawn above the content so the thumbnail cannot cover it
-                card.addView(View(this).apply {
-                    background = Glass.solid(
-                        this@MainActivity, 0x00000000, 22,
-                        if (active) UiTheme.accent else 0x24FFFFFF, if (active) 2.5f else 1f
-                    )
-                    isClickable = false
-                }, FrameLayout.LayoutParams(MP, MP))
+                card.addView(TextView(this).apply {
+                    text = tabTitle(tab)
+                    textSize = 14f
+                    typeface = medium
+                    setTextColor(UiTheme.text)
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    setLineSpacing(0f, 1.1f)
+                    setPadding(dp(10), dp(8), dp(10), dp(12))
+                }, LinearLayout.LayoutParams(MP, dp(52)))
 
                 grid.addView(card)
                 card.alpha = 0f
@@ -6915,7 +6992,13 @@ return t.length>=40?'TXT:'+t:'';
             return false
         }
 
+        override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
+            super.onReceivedError(view, request, error)
+            if (view === novelWv && request?.isForMainFrame == true) showPageFailed(request.url?.toString() ?: "")
+        }
+
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            slowNoticeView?.visibility = View.GONE
             if (view === novelWv && url != null) {
                 AdBlock.pageHost = Uri.parse(url).host?.lowercase()
                 // Processed images belong to the current page only; never reuse them on another chapter.
@@ -7044,6 +7127,44 @@ return t.length>=40?'TXT:'+t:'';
             // Novel reader should stay in the same WebView. Popup/new-window
             // navigation is a common ad/redirect path; never open it here.
             return false
+        }
+
+        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+            super.onProgressChanged(view, newProgress)
+            if (view !== novelWv) return
+            val loading = newProgress < 100
+            if (loading != pageLoading) {
+                pageLoading = loading
+                if (loading) {
+                    pageLoadStartMs = System.currentTimeMillis()
+                    handler.removeCallbacks(slowNoticeRunnable)
+                    handler.postDelayed(slowNoticeRunnable, 8_000L)
+                } else {
+                    handler.removeCallbacks(slowNoticeRunnable)
+                    slowNoticeView?.visibility = View.GONE
+                }
+                reloadBtnView?.setImageDrawable(IconDrawable(if (loading) Ic.CLOSE else Ic.RELOAD, UiTheme.iconIdle))
+                reloadBtnView?.contentDescription = if (loading) "Stop loading" else "Reload"
+            }
+            val line = loadLineView ?: return
+            if (loading) {
+                if (line.visibility != View.VISIBLE) { line.visibility = View.VISIBLE; line.alpha = 1f }
+                val w = (line.parent as? View)?.width ?: 0
+                if (w > 0) {
+                    val lp = line.layoutParams
+                    lp.width = maxOf(dp(12), (w * newProgress / 100f).toInt())
+                    line.layoutParams = lp
+                }
+            } else {
+                line.animate().cancel()
+                line.animate().alpha(0f).setDuration(180).withEndAction {
+                    line.visibility = View.GONE
+                    line.alpha = 1f
+                }.start()
+                val lp = line.layoutParams
+                lp.width = 0
+                line.layoutParams = lp
+            }
         }
     }
 

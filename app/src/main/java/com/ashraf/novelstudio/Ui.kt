@@ -24,6 +24,7 @@ import android.view.Window
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -657,5 +658,154 @@ object Sheets {
 class MaxHeightScroll(ctx: Context, private val maxHeightPx: Int) : ScrollView(ctx) {
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, View.MeasureSpec.makeMeasureSpec(maxHeightPx, View.MeasureSpec.AT_MOST))
+    }
+}
+
+// ============================================================================ dialog helpers (spec board 28)
+
+/**
+ * Flat standard dialogs. New code should use these instead of AlertDialog; the 34 legacy
+ * AlertDialogs migrate gradually, callbacks unchanged.
+ */
+object Dialogs {
+
+    private fun modalFrame(a: Activity, content: View): Dialog {
+        val frame = FrameLayout(a).apply {
+            setPadding(a.dpi(40), 0, a.dpi(40), 0)
+            addView(content, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        val d = Dialog(a)
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        d.setContentView(frame)
+        d.window?.let { w ->
+            w.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            val lp = w.attributes
+            lp.width = WindowManager.LayoutParams.MATCH_PARENT
+            lp.height = WindowManager.LayoutParams.WRAP_CONTENT
+            lp.gravity = Gravity.CENTER
+            w.attributes = lp
+            w.setDimAmount(0.5f)
+        }
+        d.setOnShowListener { Sheets.slideUp(frame) }
+        return d
+    }
+
+    private fun buttonRow(c: Context, cancelLabel: String, okLabel: String, danger: Boolean, onCancel: () -> Unit, onOk: () -> Unit): View {
+        val row = LinearLayout(c).apply { orientation = LinearLayout.HORIZONTAL }
+        val cancel = Ui.btnGhost(c, cancelLabel)
+        cancel.setOnClickListener { onCancel() }
+        row.addView(cancel, LinearLayout.LayoutParams(0, c.dpi(48), 1f).also { it.marginEnd = c.dpi(10) })
+        val ok = if (danger) {
+            // destructive confirm: solid Seal, paper label
+            TextView(c).apply {
+                text = okLabel
+                textSize = Ui.BODY
+                setTextColor(Color.WHITE)
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setPadding(c.dpi(24), 0, c.dpi(24), 0)
+                background = Glass.ripple(c, Glass.solid(c, UiTheme.seal, 26), 26)
+            }
+        } else Ui.btnPrimary(c, okLabel)
+        ok.setOnClickListener { onOk() }
+        row.addView(ok, LinearLayout.LayoutParams(0, c.dpi(48), 1f))
+        return row
+    }
+
+    /** Centered confirm dialog: title 18, body 14, Cancel + OK (danger = solid Seal). */
+    fun confirm(
+        a: Activity, title: String, body: String?,
+        okLabel: String = "OK", cancelLabel: String = "Cancel",
+        danger: Boolean = false, onOk: () -> Unit
+    ): Dialog {
+        val col = LinearLayout(a).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(a.dpi(24), a.dpi(24), a.dpi(24), a.dpi(24))
+            background = Glass.solid(a, UiTheme.surface1, 24, UiTheme.stroke, 1)
+        }
+        col.addView(Ui.text(a, title, 18f, UiTheme.text, bold = true))
+        if (!body.isNullOrBlank()) col.addView(
+            Ui.text(a, body, 14f, UiTheme.faint),
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).also { it.topMargin = a.dpi(8) }
+        )
+        lateinit var d: Dialog
+        col.addView(
+            buttonRow(a, cancelLabel, okLabel, danger, { d.dismiss() }, { d.dismiss(); onOk() }),
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).also { it.topMargin = a.dpi(22) }
+        )
+        d = modalFrame(a, col)
+        d.show()
+        return d
+    }
+
+    /** Centered input dialog: title 18, one field, Cancel + Save. */
+    fun input(
+        a: Activity, title: String, value: String = "",
+        hint: String = "", okLabel: String = "Save",
+        onOk: (String) -> Unit
+    ): Dialog {
+        val col = LinearLayout(a).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(a.dpi(24), a.dpi(24), a.dpi(24), a.dpi(24))
+            background = Glass.solid(a, UiTheme.surface1, 24, UiTheme.stroke, 1)
+        }
+        col.addView(Ui.text(a, title, 18f, UiTheme.text, bold = true))
+        val field = android.widget.EditText(a).apply {
+            setText(value)
+            this.hint = hint
+            setTextColor(UiTheme.text)
+            setHintTextColor(UiTheme.faint)
+            textSize = 16f
+            setPadding(a.dpi(16), 0, a.dpi(16), 0)
+            background = Glass.field(a, 14, true)
+        }
+        col.addView(field, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, a.dpi(52)).also { it.topMargin = a.dpi(14) })
+        lateinit var d: Dialog
+        col.addView(
+            buttonRow(a, "Cancel", okLabel, false, { d.dismiss() }, { d.dismiss(); onOk(field.text.toString()) }),
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).also { it.topMargin = a.dpi(22) }
+        )
+        d = modalFrame(a, col)
+        d.show()
+        return d
+    }
+
+    /** Bottom-sheet single choice: radio dots, tap to pick. */
+    fun choice(
+        a: Activity, title: String, options: List<String>,
+        checked: Int = -1, onPick: (Int) -> Unit
+    ): Dialog {
+        val col = LinearLayout(a).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(a.dpi(24), a.dpi(12), a.dpi(24), a.dpi(24))
+            background = Sheets.sheetBackground(a)
+        }
+        col.addView(Ui.sheetHandle(a), LinearLayout.LayoutParams(a.dpi(36), a.dpi(4)).also {
+            it.gravity = Gravity.CENTER_HORIZONTAL; it.bottomMargin = a.dpi(10)
+        })
+        col.addView(Ui.text(a, title, 18f, UiTheme.text, bold = true), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).also { it.bottomMargin = a.dpi(6) })
+        val d = Sheets.create(a, col)
+        options.forEachIndexed { i, label ->
+            val radio = View(a).apply {
+                background = Glass.oval(
+                    if (i == checked) UiTheme.seal else UiTheme.surface1,
+                    UiTheme.seal,
+                    a.dpi(if (i == checked) 6 else 1)
+                )
+            }
+            val row = LinearLayout(a).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = a.dpi(52)
+                background = Glass.ripple(a, null, 12)
+                contentDescription = label
+            }
+            row.addView(radio, LinearLayout.LayoutParams(a.dpi(20), a.dpi(20)).also { it.marginEnd = a.dpi(14) })
+            row.addView(Ui.text(a, label, Ui.BODY, UiTheme.text))
+            row.setOnClickListener { d.dismiss(); onPick(i) }
+            col.addView(row)
+        }
+        d.show()
+        return d
     }
 }
