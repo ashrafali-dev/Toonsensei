@@ -37,7 +37,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-jobs:
   build:
     runs-on: ubuntu-latest
     steps:
