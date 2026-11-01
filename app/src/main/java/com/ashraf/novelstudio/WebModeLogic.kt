@@ -207,10 +207,13 @@ internal object WebModeLogic {
         val host = balloons.firstOrNull { b ->
             tcx >= b[0] && tcx <= b[2] && tcy >= b[1] && tcy <= b[3]
         } ?: return false
-        val area = (host[2] - host[0]).toFloat() * (host[3] - host[1]).toFloat()
-        if (area <= 0f) return false
+        val boxArea = (br - bl).coerceAtLeast(0f) * (bb - bt).coerceAtLeast(0f)
+        if (boxArea <= 0f) return false
         val inside = (Math.min(br, host[2].toFloat()) - Math.max(bl, host[0].toFloat())).coerceAtLeast(0f) *
             (Math.min(bb, host[3].toFloat()) - Math.max(bt, host[1].toFloat())).coerceAtLeast(0f)
-        return inside / area >= minCoverage
+        // Fraction of the TEXT BOX that lies inside the balloon. A small line inside a big balloon is fully
+        // covered (1.0); a wide box that sticks out of a small balloon is not, however much of the balloon it
+        // happens to span.
+        return inside / boxArea >= minCoverage
     }
 }
