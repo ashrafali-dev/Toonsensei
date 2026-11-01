@@ -27,6 +27,11 @@ jobs:
       - name: Unit tests
         run: gradle :app:testDebugUnitTest --no-daemon --stacktrace
 
+      - name: Overlay renderer tests (real page JS under Node)
+        run: |
+          node scripts/test-clean-cover.js
+          node scripts/test-webmode-overlay-layout.js
+
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
