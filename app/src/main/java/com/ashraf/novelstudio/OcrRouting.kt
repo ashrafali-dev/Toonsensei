@@ -164,11 +164,11 @@ internal class RoutingOcrEngine : OcrEngine {
         const val SMALL_CROP_MAX_PX = 200 * 200
 
         /** True when a crop is too small for a remote read to be worth the round trip. */
-        fun preferLocalForSmallCrop(bitmap: Bitmap): Boolean =
+        internal fun preferLocalForSmallCrop(bitmap: Bitmap): Boolean =
             preferLocalForSmallCrop(bitmap.width, bitmap.height)
 
         /** Size-only form, so the routing rule is unit-testable without an Android bitmap. */
-        fun preferLocalForSmallCrop(width: Int, height: Int): Boolean =
+        internal fun preferLocalForSmallCrop(width: Int, height: Int): Boolean =
             width > 0 && height > 0 && width * height <= SMALL_CROP_MAX_PX
     }
 
