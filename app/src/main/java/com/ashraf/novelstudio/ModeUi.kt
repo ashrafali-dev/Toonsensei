@@ -29,8 +29,9 @@ import kotlin.math.sin
  */
 object ModeUi {
     val names = arrayOf("Novel", "Scan", "Live")
-    private val starts = intArrayOf(UiTheme.accentA, 0xFF4ADEB0.toInt(), 0xFFFF8FB5.toInt())
-    private val ends = intArrayOf(UiTheme.accentB, 0xFF1D9E75.toInt(), 0xFFD4537E.toInt())
+    // Flat redesign: a single quiet ink identity for every mode (no per-mode gradients).
+    private val starts = intArrayOf(UiTheme.text, UiTheme.text, UiTheme.text)
+    private val ends = intArrayOf(UiTheme.text, UiTheme.text, UiTheme.text)
 
     fun start(i: Int): Int = starts[i.coerceIn(0, 2)]
     fun end(i: Int): Int = ends[i.coerceIn(0, 2)]
@@ -113,11 +114,11 @@ class ModeCapsule(ctx: Context) : View(ctx) {
 
     private val dens = ctx.resources.displayMetrics.density
     private val glyph = ModeGlyphPainter()
-    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0x14FFFFFF }
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = UiTheme.surface2 }
     private val trackStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1f * dens
-        color = UiTheme.strokeSoft
+        color = UiTheme.stroke
     }
     private val thumb = Paint(Paint.ANTI_ALIAS_FLAG)
     private val rect = RectF()
@@ -191,15 +192,14 @@ class ModeCapsule(ctx: Context) : View(ctx) {
 
         val a = pos.toInt().coerceIn(0, 1)
         val t = pos - a
-        val c0 = ModeUi.lerp(ModeUi.start(a), ModeUi.start(a + 1), t)
-        val c1 = ModeUi.lerp(ModeUi.end(a), ModeUi.end(a + 1), t)
-        thumb.shader = LinearGradient(rect.left, rect.top, rect.right, rect.bottom, c0, c1, Shader.TileMode.CLAMP)
+        thumb.shader = null
+        thumb.color = UiTheme.text
         c.drawRoundRect(rect, th / 2f, th / 2f, thumb)
 
         for (i in 0..2) {
             val cx = pad + segW * (i + 0.5f)
             val d = min(1f, abs(pos - i))
-            glyph.draw(c, i, cx, h / 2f, 17f * dens, ModeUi.lerp(Color.WHITE, UiTheme.iconIdle, d))
+            glyph.draw(c, i, cx, h / 2f, 17f * dens, ModeUi.lerp(UiTheme.bg, UiTheme.faint, d))
         }
     }
 
@@ -331,31 +331,17 @@ class ModeSwitchOverlay(ctx: Context) : View(ctx) {
         c.saveLayerAlpha(0f, 0f, w, h, (env * 255f).toInt())
         c.scale(sc, sc, cx, cy)
 
-        val col = ModeUi.mid(mode)
+        val col = UiTheme.text
         val cardW = 170f * dens
 
-        // soft coloured glow behind the card
-        if (glowShader == null || glowMode != mode || glowSize != cardW) {
-            glowShader = RadialGradient(
-                cx, cy, cardW * 0.9f,
-                ModeUi.withAlpha(col, 0x55), ModeUi.withAlpha(col, 0), Shader.TileMode.CLAMP
-            )
-            glowMode = mode
-            glowSize = cardW
-        }
-        p.shader = glowShader
-        c.drawCircle(cx, cy, cardW * 0.9f, p)
-        p.shader = null
-
-        // glass card
+        // flat card (no glow)
         rect.set(cx - cardW / 2f, cy - cardW / 2f, cx + cardW / 2f, cy + cardW / 2f)
-        p.color = UiTheme.sheet
-        p.alpha = 0xEE
-        c.drawRoundRect(rect, 30f * dens, 30f * dens, p)
-        p.alpha = 255
-        st.color = 0x33FFFFFF
+        p.shader = null
+        p.color = UiTheme.surface1
+        c.drawRoundRect(rect, 20f * dens, 20f * dens, p)
+        st.color = UiTheme.stroke
         st.strokeWidth = 1f * dens
-        c.drawRoundRect(rect, 30f * dens, 30f * dens, st)
+        c.drawRoundRect(rect, 20f * dens, 20f * dens, st)
 
         // document geometry shared by Novel and Scan
         val dw = 70f * dens
@@ -375,7 +361,7 @@ class ModeSwitchOverlay(ctx: Context) : View(ctx) {
 
     private fun drawNovel(c: Canvas, col: Int, dl: Float, dt: Float, dw: Float, dh: Float) {
         rect.set(dl, dt, dl + dw, dt + dh)
-        p.color = 0x10FFFFFF
+        p.color = UiTheme.surface2
         c.drawRoundRect(rect, 9f * dens, 9f * dens, p)
         st.color = col
         st.strokeWidth = 2.2f * dens

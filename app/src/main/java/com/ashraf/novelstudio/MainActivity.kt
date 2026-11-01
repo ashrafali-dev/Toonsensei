@@ -3528,19 +3528,8 @@ return t.length>=40?'TXT:'+t:'';
             it.layoutParams = LinearLayout.LayoutParams(0, dp(46), 1f)
         }
 
-    private fun appBackground(): Drawable {
-        fun glow(cx: Float, cy: Float, color: Int, radiusDp: Int) = GradientDrawable().apply {
-            gradientType = GradientDrawable.RADIAL_GRADIENT
-            gradientRadius = dp(radiusDp).toFloat()
-            setGradientCenter(cx, cy)
-            colors = intArrayOf(color, color and 0x00FFFFFF)
-        }
-        return LayerDrawable(arrayOf(
-            ColorDrawable(UiTheme.bg),
-            glow(0.05f, 0.0f, 0x387B8CFF, 340),
-            glow(1.0f, 1.0f, 0x2EB27CFF, 380)
-        ))
-    }
+    /** Flat charcoal background (no aurora glow). */
+    private fun appBackground(): Drawable = ColorDrawable(UiTheme.bg)
 
     // ---- floating message (replaces the system Toast, which cannot be styled)
     private fun showSnack(msg: String) {
@@ -6068,11 +6057,11 @@ return t.length>=40?'TXT:'+t:'';
         applyFloatingBars()
     }
 
-    /** Dark translucent pill used behind the top bar and the dock (readable over any page). */
+    /** Flat bar behind the top bar and the dock (charcoal, 1 dp hairline on the inner edge). */
     private fun floatingBarBg(radiusDp: Int): GradientDrawable =
-        GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xEE232739.toInt(), 0xEE141726.toInt())).apply {
-            cornerRadius = dp(radiusDp).toFloat()
-            setStroke(dp(1), UiTheme.stroke)
+        GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(UiTheme.bg)
         }
 
     /**
