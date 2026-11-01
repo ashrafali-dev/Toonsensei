@@ -5,11 +5,13 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.graphics.DashPathEffect
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -38,53 +40,67 @@ class RescanSelector(
     private var ly = 0f
 
     private val dimPaint = Paint().apply { color = 0x70000000 }
-    private val framePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent; style = Paint.Style.STROKE; strokeWidth = 2.5f * d }
-    private val dotFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
-    private val dotRing = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent; style = Paint.Style.STROKE; strokeWidth = 3f * d }
+    // Spec board 17: dashed Seal frame over a faint Seal tint; six dots are Seal with a light halo.
+    private val framePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = accent
+        style = Paint.Style.STROKE
+        strokeWidth = 2f * d
+        pathEffect = DashPathEffect(floatArrayOf(8 * d, 6 * d), 0f)
+    }
+    private val frameFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ModeUi.withAlpha(accent, 0x12) }
+    private val dotFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent }
+    private val dotRing = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = UiTheme.text; style = Paint.Style.STROKE; strokeWidth = 2f * d }
 
     init {
         setWillNotDraw(false)
         isClickable = true
         bar = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
-            background = GradientDrawable().apply { setColor(0xEE232739.toInt()); cornerRadius = 26 * d }
-            elevation = 12 * d
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
         }
-        fun btn(label: String, filled: Boolean, click: () -> Unit) = TextView(ctx).apply {
-            text = label
-            textSize = 14f
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            setPadding((18 * d).toInt(), 0, (18 * d).toInt(), 0)
-            background = GradientDrawable().apply {
-                cornerRadius = 20 * d
-                setColor(if (filled) accent else 0x33FFFFFF)
+        // Board 17: two circular actions stacked on the right edge - Read (Seal) and Cancel (surface).
+        fun circleBtn(ic: Ic, label: String, filled: Boolean, desc: String, click: () -> Unit): View {
+            val inner = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                contentDescription = desc
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(if (filled) accent else UiTheme.surface1)
+                    if (!filled) setStroke((1 * d).toInt().coerceAtLeast(1), UiTheme.stroke)
+                }
+                addView(ImageView(ctx).apply {
+                    setImageDrawable(IconDrawable(ic, if (filled) Color.WHITE else UiTheme.text))
+                }, LinearLayout.LayoutParams((22 * d).toInt(), (22 * d).toInt()))
+                addView(TextView(ctx).apply {
+                    text = label
+                    textSize = 11f
+                    typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                    setTextColor(if (filled) Color.WHITE else UiTheme.text)
+                    gravity = Gravity.CENTER
+                }, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).also { it.topMargin = (2 * d).toInt() })
+                setOnClickListener { click() }
             }
-            setOnClickListener { click() }
+            return inner
         }
-        bar.addView(btn("Cancel", false) { onCancel() }, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, (40 * d).toInt()))
-        bar.addView(btn("Read this area", true) {
+        bar.addView(circleBtn(Ic.CHECK, "Read", true, "Read this area") {
             if (width > 0 && height > 0) onScan(l / width, t / height, r / width, b / height)
-        }, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, (40 * d).toInt()).also { it.leftMargin = (10 * d).toInt() })
-        addView(bar, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).also {
-            it.bottomMargin = (28 * d).toInt()
+        }, LinearLayout.LayoutParams((64 * d).toInt(), (64 * d).toInt()))
+        bar.addView(circleBtn(Ic.CLOSE, "Cancel", false, "Cancel") { onCancel() }, LinearLayout.LayoutParams((64 * d).toInt(), (64 * d).toInt()).also {
+            it.topMargin = (10 * d).toInt()
+        })
+        addView(bar, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END).also {
+            it.rightMargin = (10 * d).toInt()
         })
     }
 
     /**
-     * Raises the Cancel / Read-this-area bar by [px] so it never hides behind the bottom dock
-     * (in the webtoon view the page is drawn full-height UNDER the dock).
+     * Kept API: lifts the action column to match the host's bottom offset (dock overlay mode).
      */
     fun setBarLift(px: Int) {
         val v = px.coerceAtLeast(0)
         if (v == lift) return
         lift = v
-        val lp = bar.layoutParams as? LayoutParams ?: return
-        lp.bottomMargin = baseBarMargin + lift
-        bar.layoutParams = lp
     }
 
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) {
@@ -110,10 +126,11 @@ class RescanSelector(
         c.drawRect(0f, b, w, h, dimPaint)
         c.drawRect(0f, t, l, b, dimPaint)
         c.drawRect(r, t, w, b, dimPaint)
-        c.drawRect(l, t, r, b, framePaint)
+        c.drawRect(l, t, r, b, frameFill)
+        c.drawRoundRect(android.graphics.RectF(l, t, r, b), 6 * d, 6 * d, framePaint)
         for (p in dots()) {
-            c.drawCircle(p[0], p[1], 9 * d, dotFill)
-            c.drawCircle(p[0], p[1], 9 * d, dotRing)
+            c.drawCircle(p[0], p[1], 8 * d, dotRing)
+            c.drawCircle(p[0], p[1], 8 * d - 1 * d, dotFill)
         }
     }
 

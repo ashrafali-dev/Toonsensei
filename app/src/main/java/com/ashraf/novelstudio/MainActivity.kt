@@ -79,7 +79,7 @@ private data class BrowserTab(
 )
 
 class MainActivity : Activity() {
-    private enum class Mode { NOVEL, CHAT, SPLIT }
+    private enum class Mode { NOVEL, CHAT, SPLIT, PEEK }
 
     private val MAX_RETAINED_TAB_STATES = 2
     private val UA = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
@@ -772,7 +772,7 @@ class MainActivity : Activity() {
         aheadOcrHandle?.cancel(); aheadOcrHandle = null; aheadOcrSeq++
         aheadOcrStage = ""; aheadOcrPct = -1
         val sel = RescanSelector(this, UiTheme.accentA, { fl, ft, fr, fb ->
-            val ov = rescanOverlay
+            val ov = rescanSelector
             if (ov != null) {
                 val a = IntArray(2); val w = IntArray(2)
                 ov.getLocationOnScreen(a); novelWv.getLocationOnScreen(w)
@@ -786,27 +786,53 @@ class MainActivity : Activity() {
                 reOcrRegion(x0, y0, x1, y1)
             }
         }, { closeRescanSelector(true) })
-        rescanOverlay = sel
-        host.addView(sel, FrameLayout.LayoutParams(MP, MP))
-        sel.elevation = dp(30).toFloat()
-        sel.bringToFront()
+        // Board 17: title bar on top, the selector fills the middle, a quiet caption at the bottom.
+        val wrap = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(this@MainActivity).apply {
+                text = "Drag the dots over the bubble"
+                textSize = 14f
+                typeface = medium
+                setTextColor(UiTheme.text)
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(20), 0, dp(20), 0)
+                background = GradientDrawable().apply { setColor(UiTheme.bg) }
+            }, LinearLayout.LayoutParams(MP, dp(56)))
+            val hairW = maxOf(1, (resources.displayMetrics.density * 0.5f).toInt())
+            addView(View(this@MainActivity).apply { setBackgroundColor(UiTheme.stroke) }, LinearLayout.LayoutParams(MP, hairW))
+            addView(sel, LinearLayout.LayoutParams(MP, 0, 1f))
+            addView(View(this@MainActivity).apply { setBackgroundColor(UiTheme.stroke) }, LinearLayout.LayoutParams(MP, hairW))
+            addView(TextView(this@MainActivity).apply {
+                text = "Only this spot is read again. Other work pauses meanwhile."
+                textSize = 12f
+                setTextColor(UiTheme.faint)
+                gravity = Gravity.CENTER
+                setPadding(dp(16), dp(10), dp(16), dp(16))
+                background = GradientDrawable().apply { setColor(UiTheme.bg) }
+            }, LinearLayout.LayoutParams(MP, WC))
+        }
+        rescanOverlay = wrap
+        rescanSelector = sel
+        host.addView(wrap, FrameLayout.LayoutParams(MP, MP))
+        wrap.elevation = dp(30).toFloat()
+        wrap.bringToFront()
         // The bottom dock is drawn over this overlay in the webtoon view: keep the buttons above it.
         val liftBar = {
             try {
                 val a = IntArray(2); val dk = IntArray(2)
-                sel.getLocationOnScreen(a); dockWrapView.getLocationOnScreen(dk)
-                val overlap = a[1] + sel.height - dk[1]
+                wrap.getLocationOnScreen(a); dockWrapView.getLocationOnScreen(dk)
+                val overlap = a[1] + wrap.height - dk[1]
                 sel.setBarLift(if (dockWrapView.isShown && overlap > 0) overlap + dp(10) else 0)
             } catch (_: Exception) { }
         }
         liftBar()
-        sel.viewTreeObserver.addOnGlobalLayoutListener { if (sel.isAttachedToWindow) liftBar() }
-        toast("Drag the dots over the bubble, then tap Read this area")
+        wrap.viewTreeObserver.addOnGlobalLayoutListener { if (wrap.isAttachedToWindow) liftBar() }
     }
 
     private fun closeRescanSelector(resume: Boolean) {
         val sel = rescanOverlay ?: return
         rescanOverlay = null
+        rescanSelector = null
         (sel.parent as? ViewGroup)?.removeView(sel)
         if (resume && !reOcrBusy) {
             rtPausedForReOcr = false
@@ -2125,6 +2151,7 @@ Each marker must remain faithful to its own ${Langs.source(this)} text in meanin
         worker.evaluateJavascript(Js.sendState()) { raw ->
             if (seq != rtAheadWorkerSeq || !rtAheadWorkerBusy || rtAheadWorkerJobKey != jobKey) return@evaluateJavascript
             val state = decode(raw).substringBefore("|").trim()
+            if (state.startsWith("sent:")) { markBotTested() }
             if (state.startsWith("sent:") || state.startsWith("failed")) { chatSendingAtMs = 0L; quietChatKeyboard() }
             when {
                 state.startsWith("sent:") -> {
@@ -3320,7 +3347,8 @@ return t.length>=40?'TXT:'+t:'';
     private var reOcrRun = 0
     private var reOcrBtn: android.widget.ImageView? = null
     private var glossaryFab: android.widget.ImageView? = null
-    private var rescanOverlay: RescanSelector? = null
+    private var rescanOverlay: View? = null
+    private var rescanSelector: RescanSelector? = null
 
     // ---- early-user tips: a few short pop-ups during the first hours of real use, then never again
     private val usageTick = object : Runnable {
@@ -3580,7 +3608,7 @@ return t.length>=40?'TXT:'+t:'';
 
     // ================================================================== theme ("Aurora Glass", see Ui.kt)
     private val cBg = UiTheme.bg
-    private val cSurface = 0xFF0C0E15.toInt()
+    private val cSurface = UiTheme.bg
     private val cPill = 0xFF171A24.toInt()
     private val cChip = 0xFF1D2130.toInt()
     private val cField = 0xFF141722.toInt()
@@ -3648,18 +3676,30 @@ return t.length>=40?'TXT:'+t:'';
         if (onLong != null) setOnLongClickListener { onLong(); true }
     }
 
-    /** Segment of the chatbot selector; the active one is filled with the accent gradient. */
-    private fun botChip(label: String, active: Boolean, onClick: () -> Unit, onLong: (() -> Unit)?): TextView = TextView(this).apply {
-        text = label
-        textSize = 12.5f
-        typeface = if (active) boldMedium else medium
-        setTextColor(if (active) Color.WHITE else UiTheme.dim)
-        gravity = Gravity.CENTER
-        setPadding(dp(15), 0, dp(15), 0)
-        background = if (active) Glass.accent(this@MainActivity, 17) else Glass.ripple(this@MainActivity, null, 17)
-        layoutParams = LinearLayout.LayoutParams(WC, dp(34)).also { it.setMargins(dp(3), 0, dp(3), 0) }
-        setOnClickListener { onClick() }
-        if (onLong != null) setOnLongClickListener { onLong(); true }
+    /** Segment of the chatbot selector (board 37): scrolling tab, active one underlined Seal. */
+    private fun botChip(label: String, active: Boolean, onClick: () -> Unit, onLong: (() -> Unit)?): View {
+        val tab = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            contentDescription = label
+            isClickable = true
+        }
+        val t = TextView(this).apply {
+            text = label
+            textSize = 13f
+            typeface = if (active) boldMedium else medium
+            setTextColor(if (active) UiTheme.text else UiTheme.faint)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), 0, dp(16), 0)
+        }
+        val underline = View(this).apply {
+            setBackgroundColor(if (active) UiTheme.seal else Color.TRANSPARENT)
+        }
+        tab.addView(t, LinearLayout.LayoutParams(WC, 0, 1f))
+        tab.addView(underline, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(2)))
+        tab.layoutParams = LinearLayout.LayoutParams(WC, dp(46))
+        tab.setOnClickListener { onClick() }
+        if (onLong != null) tab.setOnLongClickListener { onLong(); true }
+        return tab
     }
 
     /** Icon slot of the bottom dock. */
@@ -4125,9 +4165,18 @@ return t.length>=40?'TXT:'+t:'';
             addView(strip, ViewGroup.LayoutParams(WC, dp(46)))
         }
         val stripDivider = View(this).apply { setBackgroundColor(UiTheme.strokeSoft) }
+        // Board 37: the provider tabs scroll; the plus button is fixed at the trailing edge.
+        val stripPlus = iconButton(Ic.PLUS, "Add chatbot", 20, 48, UiTheme.iconIdle) { addBotDialog() }
+        val stripBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundColor(cSurface)
+            addView(stripScroll, LinearLayout.LayoutParams(0, WC, 1f))
+            addView(View(this@MainActivity).apply { setBackgroundColor(UiTheme.stroke) }, LinearLayout.LayoutParams(dp(1), LinearLayout.LayoutParams.MATCH_PARENT))
+            addView(stripPlus, LinearLayout.LayoutParams(dp(48), dp(46)))
+        }
         chatBox = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(stripScroll, LinearLayout.LayoutParams(MP, WC))
+            addView(stripBar, LinearLayout.LayoutParams(MP, WC))
             addView(stripDivider, LinearLayout.LayoutParams(MP, dp(1)))
             addView(chatWv, LinearLayout.LayoutParams(MP, 0, 1f))
         }
@@ -4272,40 +4321,36 @@ return t.length>=40?'TXT:'+t:'';
                 visibility = View.GONE
             }
             addView(slowNoticeView, FrameLayout.LayoutParams(MP, WC, Gravity.TOP).also { it.setMargins(dp(10), dp(10), dp(10), 0) })
+            // Comic tools pill (spec boards 7/8): one vertical card, re-scan on top, glossary below,
+            // pinned to the right edge above the dock.
             reOcrBtn = android.widget.ImageView(this@MainActivity).apply {
                 setImageDrawable(IconDrawable(Ic.SEARCH, UiTheme.iconIdle))
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(0xEE232739.toInt())
-                    setStroke(dp(1), UiTheme.stroke)
-                }
-                val pad = dp(10)
+                val pad = dp(11)
                 setPadding(pad, pad, pad, pad)
-                elevation = dp(10).toFloat()
+                background = Glass.ripple(this@MainActivity, null, 24)
                 contentDescription = "Re-scan a bubble area"
                 visibility = View.GONE
                 setOnClickListener { showRescanSelector() }
             }
-            addView(reOcrBtn, FrameLayout.LayoutParams(dp(42), dp(42), Gravity.BOTTOM or Gravity.END).also {
-                it.setMargins(0, 0, dp(12), dp(134))
-            })
-            // Glossary for the chapter on screen (Scanning + Real-time).
             glossaryFab = android.widget.ImageView(this@MainActivity).apply {
                 setImageDrawable(IconDrawable(Ic.BOOK, UiTheme.iconIdle))
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(0xEE232739.toInt())
-                    setStroke(dp(1), UiTheme.stroke)
-                }
-                val pad = dp(9)
+                val pad = dp(11)
                 setPadding(pad, pad, pad, pad)
-                elevation = dp(10).toFloat()
+                background = Glass.ripple(this@MainActivity, null, 24)
                 contentDescription = "Glossary for this chapter"
                 visibility = View.GONE
                 setOnClickListener { chapterGlossaryDialog() }
             }
-            addView(glossaryFab, FrameLayout.LayoutParams(dp(38), dp(38), Gravity.BOTTOM or Gravity.END).also {
-                it.setMargins(0, 0, dp(14), dp(184))
+            val toolsPill = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                background = Glass.solid(this@MainActivity, UiTheme.surface1, 24, UiTheme.stroke, 1)
+                elevation = dp(4).toFloat()
+                addView(reOcrBtn, LinearLayout.LayoutParams(dp(46), dp(46)))
+                addView(View(this@MainActivity).apply { setBackgroundColor(UiTheme.strokeSoft) }, LinearLayout.LayoutParams(MP, maxOf(1, dp(0))))
+                addView(glossaryFab, LinearLayout.LayoutParams(dp(46), dp(46)))
+            }
+            addView(toolsPill, FrameLayout.LayoutParams(WC, WC, Gravity.BOTTOM or Gravity.END).also {
+                it.setMargins(0, 0, dp(10), dp(96))
             })
             // Floating ActivityChip is retired (spec phase 1); StatusModel owns status display now.
             addOnLayoutChangeListener { _, _, t, _, b, _, ot, _, ob ->
@@ -5911,11 +5956,13 @@ return t.length>=40?'TXT:'+t:'';
             Mode.NOVEL -> Ic.BOOK
             Mode.CHAT -> Ic.CHAT
             Mode.SPLIT -> Ic.SPLIT
+            Mode.PEEK -> Ic.TASKS
         }, UiTheme.iconIdle))
         modeBtn.contentDescription = when (m) {
             Mode.NOVEL -> "Novel only"
             Mode.CHAT -> "Chatbot only"
             Mode.SPLIT -> "Split view"
+            Mode.PEEK -> "Chatbot peek"
         }
         activeWv = if (m == Mode.CHAT) chatWv else novelWv
         if (barsHidden && m != Mode.NOVEL) setBarsHidden(false)
@@ -5997,6 +6044,26 @@ return t.length>=40?'TXT:'+t:'';
 
                 // Ensure the lower chatbot pane wins hit-testing as well as drawing.
                 // WebViews can retain stale sibling Z ordering after their bounds change.
+                novelBox.elevation = 0f
+                chatBox.elevation = dp(2).toFloat()
+                content.bringChildToFront(novelBox)
+                content.bringChildToFront(chatBox)
+                chatWv.bringToFront()
+            }
+
+            Mode.PEEK -> {
+                // Peek (spec board 22): the site keeps most of the screen, the chatbot shows a small
+                // strip at the bottom (it stays alive, so login and replies keep working).
+                val chatH = (h * 0.28f).toInt()
+                val novelH = h - chatH
+                novelBox.translationY = 0f
+                chatBox.translationY = 0f
+                novelBox.clipBounds = null
+                chatBox.clipBounds = null
+                novelBox.layoutParams = FrameLayout.LayoutParams(MP, novelH)
+                chatBox.layoutParams = FrameLayout.LayoutParams(MP, chatH).apply {
+                    topMargin = novelH
+                }
                 novelBox.elevation = 0f
                 chatBox.elevation = dp(2).toFloat()
                 content.bringChildToFront(novelBox)
@@ -6273,6 +6340,7 @@ return t.length>=40?'TXT:'+t:'';
             Mode.SPLIT -> "Split view"
             Mode.NOVEL -> "Novel only"
             Mode.CHAT -> "Chatbot only"
+            Mode.PEEK -> "Chatbot peek"
         } + "  (tap to change)"
         viewBtn.text = viewLabel()
         viewBtn.setOnClickListener { cycleMode(); viewBtn.text = viewLabel() }
@@ -6609,10 +6677,12 @@ return t.length>=40?'TXT:'+t:'';
         } catch (_: Exception) { }
     }
 
+    /** Dock chat ring tap: Peek -> Full chatbot -> Half and half -> Site only (spec board 22). */
     private fun cycleMode() {
         setMode(when (mode) {
             Mode.SPLIT -> Mode.NOVEL
-            Mode.NOVEL -> Mode.CHAT
+            Mode.NOVEL -> Mode.PEEK
+            Mode.PEEK -> Mode.CHAT
             Mode.CHAT -> Mode.SPLIT
         })
     }
@@ -6700,9 +6770,9 @@ return t.length>=40?'TXT:'+t:'';
             val o = a.getJSONObject(i)
             val u = o.getString("u")
             val active = Uri.parse(u).host != null && Uri.parse(u).host == Uri.parse(cur).host
-            strip.addView(botChip(o.getString("n"), active, { openBot(u) }, { removeBot(i) }))
+            val name = o.getString("n") + (if (active) " \u2605" else "")   // star marks the default (board 34/37)
+            strip.addView(botChip(name, active, { openBot(u) }, { showBotActions(i) }))
         }
-        strip.addView(botChip("+", false, { addBotDialog() }, null))
     }
 
     private fun botKey(u: String): String = Uri.parse(u).host?.lowercase() ?: u.trim().lowercase()
@@ -6740,44 +6810,153 @@ return t.length>=40?'TXT:'+t:'';
     }
 
     private fun removeBot(i: Int) {
-        AlertDialog.Builder(this)
-            .setMessage("Remove this chatbot from the list?")
-            .setPositiveButton("Delete") { _, _ ->
-                val a = bots()
-                a.remove(i)
-                Prefs.put(this, "bots", a.toString())
-                buildStrip()
-            }
-            .setNegativeButton("No", null)
-            .show()
+        val a = bots()
+        val o = a.optJSONObject(i) ?: return
+        Dialogs.confirm(this, "Remove " + o.optString("n") + "?", "It leaves your chatbot list. Nothing else changes.", okLabel = "Remove", danger = true) {
+            a.remove(i)
+            Prefs.put(this, "bots", a.toString())
+            buildStrip()
+        }
     }
 
-    private fun addBotDialog() {
-        val n = EditText(this).apply { hint = "Name" }
-        val u = EditText(this).apply {
-            hint = "https://…"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+    private val defaultBotHosts = listOf("chatgpt.com", "gemini.google.com", "claude.ai", "chat.deepseek.com", "grok.com")
+    private fun isCustomBot(url: String): Boolean {
+        val host = Uri.parse(url)?.host ?: return true
+        return defaultBotHosts.none { host.endsWith(it) }
+    }
+
+    /** The provider answered once, so typing + reading work end to end (board 34 "Works" badge). */
+    private fun markBotTested() {
+        if (Prefs.get(this, "bot_ok_" + currentBotKey, "") != "1") {
+            Prefs.put(this, "bot_ok_" + currentBotKey, "1")
         }
-        val l = LinearLayout(this).apply {
+    }
+
+    /** Long-press on a provider tab (boards 34/36): default star, tested badge, Rename/Remove for custom bots. */
+    private fun showBotActions(i: Int) {
+        val a = bots()
+        val o = a.optJSONObject(i) ?: return
+        val name = o.optString("n")
+        val url = o.optString("u")
+        val host = Uri.parse(url)?.host?.removePrefix("www.") ?: url
+        val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(8), dp(16), 0)
-            addView(n)
-            addView(u)
+            setPadding(dp(20), dp(12), dp(20), dp(24))
+            background = Sheets.sheetBackground(this@MainActivity)
         }
-        AlertDialog.Builder(this)
-            .setTitle("Add Chatbot")
-            .setView(l)
-            .setPositiveButton("Add") { _, _ ->
-                var url = u.text.toString().trim()
-                if (url.isEmpty()) return@setPositiveButton
-                if (!url.startsWith("http")) url = "https://$url"
-                val a = bots()
-                a.put(bot(n.text.toString().ifBlank { url }, url))
-                Prefs.put(this, "bots", a.toString())
-                buildStrip()
+        col.addView(Ui.sheetHandle(this), LinearLayout.LayoutParams(dp(36), dp(4)).also {
+            it.gravity = Gravity.CENTER_HORIZONTAL; it.bottomMargin = dp(12)
+        })
+        val head = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        head.addView(Ui.text(this, name, Ui.H2, UiTheme.text, bold = true), LinearLayout.LayoutParams(0, WC, 1f))
+        val tested = Prefs.get(this, "bot_ok_" + botKey(url), "") == "1"
+        val badge = TextView(this).apply {
+            text = if (tested) "Works" else "Not tested yet"
+            textSize = 11f
+            setTextColor(if (tested) UiTheme.sageInk else UiTheme.amberInk)
+            setPadding(dp(8), dp(2), dp(8), dp(2))
+            background = Glass.solid(this@MainActivity, if (tested) UiTheme.sageSoft else UiTheme.amberSoft, 8)
+        }
+        head.addView(badge, LinearLayout.LayoutParams(WC, WC))
+        col.addView(head)
+        col.addView(Ui.caption(this, host), LinearLayout.LayoutParams(MP, WC).also { it.bottomMargin = dp(10) })
+        fun row(label: String, danger: Boolean = false, tap: () -> Unit): View {
+            val r = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = dp(52)
+                setPadding(dp(8), 0, dp(8), 0)
+                background = Glass.ripple(this@MainActivity, null, 12)
+                contentDescription = label
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+            r.addView(Ui.text(this, label, Ui.BODY, if (danger) UiTheme.sealInk else UiTheme.text), LinearLayout.LayoutParams(0, WC, 1f))
+            r.setOnClickListener { tap() }
+            return r
+        }
+        val dlg = Sheets.create(this, col)
+        col.addView(row("Make default") { dlg.dismiss(); openBot(url) })
+        if (isCustomBot(url)) {
+            col.addView(row("Rename") {
+                dlg.dismiss()
+                Dialogs.input(this@MainActivity, "Rename chatbot", value = name) { nn ->
+                    if (nn.isNotBlank()) {
+                        o.put("n", nn.trim())
+                        Prefs.put(this@MainActivity, "bots", a.toString())
+                        buildStrip()
+                    }
+                }
+            })
+        }
+        col.addView(row(if (isCustomBot(url)) "Remove" else "Remove from list", danger = true) { dlg.dismiss(); removeBot(i) })
+        dlg.show()
+    }
+
+    /** Add a custom chatbot (spec board 35): name + URL, one info note, nothing else. */
+    private fun addBotDialog() {
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(12), dp(20), dp(24))
+            background = Sheets.sheetBackground(this@MainActivity)
+        }
+        col.addView(Ui.sheetHandle(this), LinearLayout.LayoutParams(dp(36), dp(4)).also {
+            it.gravity = Gravity.CENTER_HORIZONTAL; it.bottomMargin = dp(12)
+        })
+        col.addView(Ui.text(this, "Add chatbot", Ui.H2, UiTheme.text, bold = true))
+        fun field(label: String, hint: String): EditText {
+            val l = Ui.caption(this, label)
+            col.addView(l, LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(18); it.bottomMargin = dp(8) })
+            val f = EditText(this).apply {
+                this.hint = hint
+                setTextColor(UiTheme.text)
+                setHintTextColor(UiTheme.faint)
+                textSize = 16f
+                setPadding(dp(16), 0, dp(16), 0)
+                background = Glass.field(this@MainActivity, 14, false)
+                setSingleLine(true)
+                setOnFocusChangeListener { _, has -> background = Glass.field(this@MainActivity, 14, has) }
+            }
+            col.addView(f, LinearLayout.LayoutParams(MP, dp(52)))
+            return f
+        }
+        val nameField = field("Display name", "Mistral")
+        val urlField = field("Website address", "https://chat.example.com/")
+        urlField.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+
+        val info = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = Glass.solid(this@MainActivity, UiTheme.surface2, 16)
+        }
+        info.addView(ImageView(this).apply { setImageDrawable(IconDrawable(Ic.INFO, UiTheme.faint)) }, LinearLayout.LayoutParams(dp(20), dp(20)).also { it.marginEnd = dp(12) })
+        info.addView(TextView(this).apply {
+            text = "It opens in the chatbot pane. Log in there once. Typing and reading the reply work on most chat sites. If they do not, you can still use the site by hand."
+            textSize = 14f
+            setTextColor(UiTheme.dim)
+            setLineSpacing(0f, 1.2f)
+        }, LinearLayout.LayoutParams(0, WC, 1f))
+        col.addView(info, LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(20) })
+
+        val save = Ui.btnPrimary(this, "Save")
+        col.addView(save, LinearLayout.LayoutParams(MP, dp(52)).also { it.topMargin = dp(18) })
+        val dlg = Sheets.create(this, col)
+        save.setOnClickListener {
+            var url = urlField.text.toString().trim()
+            if (url.isEmpty()) {
+                toast("\u26A0\uFE0F Website address is missing")
+                return@setOnClickListener
+            }
+            if (!url.startsWith("http")) url = "https://$url"
+            val a = bots()
+            a.put(bot(nameField.text.toString().ifBlank { url }, url))
+            Prefs.put(this, "bots", a.toString())
+            buildStrip()
+            dlg.dismiss()
+        }
+        dlg.show()
     }
 
     private fun isChatLoginUrl(uri: Uri): Boolean {
