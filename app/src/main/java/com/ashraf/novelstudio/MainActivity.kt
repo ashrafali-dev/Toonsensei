@@ -2078,6 +2078,7 @@ Each marker must remain faithful to its own ${Langs.source(this)} text in meanin
             webModeStage = "Pre-translating upcoming panel"
             webModePct = 1
             updateProgressUi()
+            attentionNeeded = false
             chatSendingAtMs = System.currentTimeMillis()
             suppressImeForAutoSend()
             fun dispatchAheadSend(busyTries: Int) {
@@ -2810,7 +2811,6 @@ return t.length>=40?'TXT:'+t:'';
      * stage ends so quick stages do not flicker.
      */
     private fun updateActivityChip(statuses: List<ActivityDotStatus>) {
-        val chip = activityChip ?: return
         CrashLog.context = novelWv.url.orEmpty().take(160) + " | mode=" + mode + " | webMode=" + webModeOn() +
             " | realtime=" + DeepSeekRealtimeTranslation.isEnabled(this) + " | forceLoad=" + forceLoadOn()
         reOcrBtn?.let { b ->
@@ -2850,17 +2850,143 @@ return t.length>=40?'TXT:'+t:'';
             }
             else -> { text = null; color = 0 }
         }
+        val nowMs = android.os.SystemClock.elapsedRealtime()
         if (text != null) {
             chipIdleTicks = 0
-            // Show how long this stage has been running, so "which step is slow?" is answered on the screen itself:
-            // Reading the page 25s = download/OCR; Waiting for the chatbot 25s = the chatbot, not the OCR.
-            val nowMs = android.os.SystemClock.elapsedRealtime()
+            // Track how long this stage has been running; the Tasks tray shows the ages again.
             if (text != chipStageText) { chipStageText = text; chipStageSinceMs = nowMs }
-            val secs = ((nowMs - chipStageSinceMs) / 1000L).toInt()
-            chip.update((if (secs >= 3) "$text · ${secs}s" else text) + "\n" + chipDetailLine(), color)
         } else if (++chipIdleTicks >= 2) {
             chipStageText = ""
-            chip.update(null, 0)
+        }
+        val secs = if (chipStageText.isEmpty()) 0 else ((nowMs - chipStageSinceMs) / 1000L).toInt()
+        feedStatusModel(statuses, text, color, secs)
+    }
+
+    // ---------------------------------------------------------------- status model feed + chrome
+
+    /** Feeds the single status model from the live lane collectors (called every 450 ms by the indicator). */
+    private fun feedStatusModel(statuses: List<ActivityDotStatus>, topText: String?, topColor: Int, secs: Int) {
+        val lanes = StatusModel.sortLanes(statuses.map { StatusModel.Lane(it.key, it.label, it.color, it.blinking) })
+        val keys = statuses.map { it.key }
+        val pct = when {
+            webModePct in 0..100 -> webModePct
+            running != null && progress in 1..100 -> progress
+            else -> -1
+        }
+        val provider = currentBotLabel()
+        val rows = ArrayList<StatusModel.TrayRow>()
+        // 1) Chatbot lane (provider, determinate bar when the job reports markers)
+        val translating = keys.any { it == "chatbot-translation" || it == "ahead-translation" || it == "prefetch-translation" }
+        val queued = keys.any { it == "chatbot-queued" || it == "prefetch-queued" }
+        val chatSub = when {
+            translating -> "Translating"
+            queued -> "Waiting for the chatbot"
+            else -> "Idle"
+        }
+        rows += StatusModel.TrayRow(
+            "Chatbot" + (if (provider.isNotBlank()) " · $provider" else ""), chatSub,
+            if (translating && secs > 0) "${secs} s" else "",
+            if (translating && pct >= 0) "$pct%" else "",
+            if (translating) UiTheme.seal else if (queued) UiTheme.amber else UiTheme.faint,
+            if (translating) pct else -1
+        )
+        // 2) Next chapter lane
+        val nextStage = when {
+            keys.contains("next-chapter-ocr") -> webModePrefetchStage.ifBlank { "reading panels" }
+            keys.contains("next-chapter-load") -> "loading the chapter"
+            else -> ""
+        }
+        rows += StatusModel.TrayRow(
+            "Next chapter", if (nextStage.isNotEmpty()) "Reading · " + shortOcrEngineName() else "Idle",
+            "", "", if (nextStage.isNotEmpty()) UiTheme.faint else UiTheme.faint, -1
+        )
+        // 3) Read-ahead lane
+        val aheadCount = rtAheadTranslationCache.size + prefetchedTranslationIds.size
+        val aheadSub = when {
+            keys.contains("read-ahead-ocr") -> "Reading ahead · " + shortOcrEngineName()
+            keys.contains("ahead-translation") -> "Pre-translating upcoming panels"
+            else -> "Idle"
+        }
+        rows += StatusModel.TrayRow(
+            "Read ahead", aheadSub,
+            if (aheadCount > 0) "$aheadCount ready" else "", "",
+            if (aheadSub != "Idle") UiTheme.faint else UiTheme.sage, -1
+        )
+        // 4) Queue
+        rows += StatusModel.TrayRow(
+            "Queue", if (queue.isNotEmpty()) "Waiting for the chatbot" else "Empty",
+            if (queue.isNotEmpty()) queue.size.toString() else "", "",
+            if (queue.isNotEmpty()) UiTheme.amber else UiTheme.faint, -1
+        )
+        statusModel.update(lanes, rows, pct, attentionNeeded, attentionText)
+    }
+
+    /** Pushes the model to every piece of chrome that reads it (rings, top line, badges, banner). */
+    private fun updateStatusChrome() {
+        if (!::chatRing.isInitialized) return
+        val m = statusModel
+        chatRing.pct = m.chatPct
+        chatRing.busy = m.busy
+        chatRing.attention = m.needsAttention
+        if (::floatRing.isInitialized) {
+            floatRing.pct = m.chatPct
+            floatRing.busy = m.busy
+            floatRing.attention = m.needsAttention
+        }
+        if (::extractBtn.isInitialized) extractBtn.busy = m.busy || m.needsAttention
+        if (::topLineView.isInitialized) {
+            topLineView.pct = m.chatPct
+            topLineView.busy = m.busy
+            topLineView.visibility = if (barsHidden && (m.busy || m.needsAttention)) View.VISIBLE else View.GONE
+        }
+        if (::floatRingHost.isInitialized) floatRingHost.visibility = if (barsHidden) View.VISIBLE else View.GONE
+        val nextReady = prefetchedTranslationIds.isNotEmpty() || activePrefetchedTranslationKey != null
+        nextBadgeView?.visibility = if (nextReady) View.VISIBLE else View.GONE
+        syncAttentionBanner()
+    }
+
+    /** Class C notice (spec board 13): amber banner under the top bar until handled or dismissed. */
+    private fun syncAttentionBanner() {
+        val host = bannerHost ?: return
+        if ((statusModel.needsAttention || attentionNeeded) && !homeVisible()) {
+            if (host.childCount == 0) {
+                val ask = attentionText.ifBlank { statusModel.attentionMessage.ifBlank { "Could not reach the chatbot" } }
+                host.addView(
+                    Notify.buildBanner(this, ask, "Open chatbot", {
+                        statusModel.clearAttention()
+                        attentionNeeded = false
+                        host.removeAllViews()
+                        host.visibility = View.GONE
+                        setMode(Mode.CHAT)
+                    }, {
+                        statusModel.clearAttention()
+                        attentionNeeded = false
+                        host.removeAllViews()
+                        host.visibility = View.GONE
+                    }),
+                    LinearLayout.LayoutParams(MP, WC).also { it.setMargins(dp(10), dp(8), dp(10), 0) }
+                )
+            }
+            host.visibility = View.VISIBLE
+        } else {
+            host.removeAllViews()
+            host.visibility = View.GONE
+        }
+    }
+
+    /** Display name of the active chatbot (matches the strip's active chip). */
+    private fun currentBotLabel(): String {
+        try {
+            val a = bots()
+            val cur = Prefs.get(this, "botUrl", a.optJSONObject(0)?.optString("u", "") ?: "")
+            for (i in 0 until a.length()) {
+                val o = a.getJSONObject(i)
+                val host = Uri.parse(o.optString("u"))?.host
+                if (host != null && host == Uri.parse(cur)?.host) return o.optString("n")
+            }
+            return a.optJSONObject(0)?.optString("n", "") ?: ""
+        } catch (_: Exception) {
+            return ""
         }
     }
 
@@ -2911,22 +3037,10 @@ return t.length>=40?'TXT:'+t:'';
                     try { chatWv.resumeTimers() } catch (_: Exception) { }
                 }
 
-                // The large button badge and the older tiny in-content dot mirror the same live stage.
-                if (::extractBtn.isInitialized) {
-                    extractBtn.setActivityIndicator(status.color, status.blinking, status.label)
-                }
-                scanDot.visibility = View.VISIBLE
-                scanDot.contentDescription = status.label
-                (scanDot.background as? GradientDrawable)?.setColor(status.color)
-                if (::modeChipDot.isInitialized) (modeChipDot.background as? GradientDrawable)?.setColor(status.color)
+                // StatusModel is the single status source now (ui spec phase 1). The floating chip,
+                // the 1.4 s dot cycle, scanDot and modeChipDot are retired.
                 refreshModeChip()
                 updateActivityChip(statuses)
-                if (status.blinking) {
-                    scanDotPhase = !scanDotPhase
-                    scanDot.alpha = if (scanDotPhase) 1f else 0.22f
-                } else {
-                    scanDot.alpha = 1f
-                }
             }
             handler.postDelayed(this, 450L)
         }
@@ -2973,6 +3087,20 @@ return t.length>=40?'TXT:'+t:'';
     private lateinit var addressBox: LinearLayout
     private lateinit var progressPct: TextView
     private lateinit var snackView: TextView
+
+    // -------- status board redesign (spec phase 1: StatusModel, chat ring, tasks tray) --------
+    private val statusModel = StatusModel()
+    private lateinit var chatRing: ChatRingView
+    private lateinit var chatRingWrap: FrameLayout
+    private lateinit var floatRing: ChatRingView
+    private lateinit var floatRingHost: FrameLayout
+    private lateinit var topLineView: TopLineProgress
+    private lateinit var dockCenterBox: LinearLayout
+    private var nextBadgeView: NextBadgeView? = null
+    private var bannerHost: LinearLayout? = null
+    private var attentionNeeded = false
+    private var attentionText = ""
+    private var tasksDialog: Dialog? = null
     private var snackHide: Runnable? = null
     private var progressShown = false
     private var pulse: ValueAnimator? = null
@@ -3413,6 +3541,7 @@ return t.length>=40?'TXT:'+t:'';
         val gapMs = chatbotRequestGapMs
         nextChatbotRequestAtMs = now + gapMs
         rtAheadNextSendAtMs = maxOf(rtAheadNextSendAtMs, now + gapMs)
+        attentionNeeded = false
         chatSendingAtMs = System.currentTimeMillis()
         chatWv.evaluateJavascript(Js.send(text, true, force = busyTries >= 120, preferNative = isNativeTapHost())) { raw ->
             quietChatKeyboard()
@@ -3901,27 +4030,31 @@ return t.length>=40?'TXT:'+t:'';
         tabCountBtn = TextView(this).apply {
             text = browserTabs.size.toString()
             gravity = Gravity.CENTER
-            textSize = 13.5f
+            textSize = 12f
             typeface = boldMedium
             setTextColor(UiTheme.text)
-            background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, 0x00000000, 11, UiTheme.accent, 2), 11)
+            background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, 0x00000000, 8, UiTheme.text, 1), 8)
             contentDescription = "Open tabs"
             setOnClickListener { showTabGrid() }
             setOnLongClickListener { newBrowserTab("https://www.google.com/"); true }
         }
 
+        val moreBtn = iconButton(Ic.DOTS, "Menu", 22, 44, UiTheme.text) { menu() }
+
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(9), 0, dp(6), 0)
-            background = floatingBarBg(26)
-            elevation = dp(8).toFloat()
-            addView(tabCountBtn, LinearLayout.LayoutParams(dp(34), dp(34)))
+            setPadding(dp(6), 0, dp(6), 0)
+            background = floatingBarBg(0)
+            elevation = 0f
+            addView(iconButton(Ic.BACK, "Back", 24, 44, UiTheme.text) { if (novelWv.canGoBack()) novelWv.goBack() }, LinearLayout.LayoutParams(dp(44), dp(44)))
             addView(addressBox)
+            addView(tabCountBtn, LinearLayout.LayoutParams(dp(26), dp(26)).also { it.setMargins(dp(2), 0, dp(2), 0) })
+            addView(moreBtn, LinearLayout.LayoutParams(dp(44), dp(44)))
         }
         val topWrap = FrameLayout(this).apply {
-            setPadding(dp(10), dp(8), dp(10), dp(4))
-            addView(topBar, FrameLayout.LayoutParams(MP, dp(52)))
+            setPadding(0, dp(6), 0, 0)
+            addView(topBar, FrameLayout.LayoutParams(MP, dp(54)))
         }
 
         // tab rail (only visible with 2+ tabs) and quick-site shortcuts (only while typing an address)
@@ -3951,6 +4084,7 @@ return t.length>=40?'TXT:'+t:'';
         val browserChrome = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(topWrap, LinearLayout.LayoutParams(MP, WC))
+            addView(View(this@MainActivity).apply { setBackgroundColor(UiTheme.stroke) }, LinearLayout.LayoutParams(MP, maxOf(1, (resources.displayMetrics.density * 0.5f).toInt())))
             addView(shortcutScroll, LinearLayout.LayoutParams(MP, WC))
         }
 
@@ -4089,7 +4223,9 @@ return t.length>=40?'TXT:'+t:'';
             addView(novelBox, FrameLayout.LayoutParams(MP, MP))
             addView(chatBox, FrameLayout.LayoutParams(MP, MP))
             addView(modeTransitionCover, FrameLayout.LayoutParams(MP, MP))
-            addView(progressBox, FrameLayout.LayoutParams(MP, WC, Gravity.TOP).also { it.setMargins(dp(10), dp(10), dp(10), 0) })
+            // The old floating status card is retired (spec phase 1); the chat ring, the top
+            // progress line and the Tasks tray carry the same information. progressBox is kept
+            // constructed (legacy code still writes into it) but never added to the layout.
             addView(togglePill, FrameLayout.LayoutParams(WC, dp(38), Gravity.BOTTOM or Gravity.END).also { it.setMargins(0, 0, dp(12), dp(12)) })
             addView(prefetchChip, FrameLayout.LayoutParams(WC, dp(28), Gravity.BOTTOM or Gravity.START).also { it.setMargins(dp(12), 0, 0, dp(12)) })
             scanDot = View(this@MainActivity).apply {
@@ -4139,10 +4275,7 @@ return t.length>=40?'TXT:'+t:'';
             addView(glossaryFab, FrameLayout.LayoutParams(dp(38), dp(38), Gravity.BOTTOM or Gravity.END).also {
                 it.setMargins(0, 0, dp(14), dp(184))
             })
-            activityChip = ActivityChip(this@MainActivity)
-            addView(activityChip, FrameLayout.LayoutParams(WC, WC, Gravity.BOTTOM or Gravity.START).also {
-                it.setMargins(dp(12), 0, 0, dp(14))
-            })
+            // Floating ActivityChip is retired (spec phase 1); StatusModel owns status display now.
             addOnLayoutChangeListener { _, _, t, _, b, _, ot, _, ob ->
                 if (b - t != ob - ot) {
                     // NOVEL / CHAT panes are already MATCH_PARENT, so a height change (bars sliding away,
@@ -4186,9 +4319,14 @@ return t.length>=40?'TXT:'+t:'';
             }
         }
         modeChip = LinearLayout(this).apply {
-            gravity = Gravity.CENTER
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), 0, dp(10), 0)
+            background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, UiTheme.surface2, 22), 22)
             contentDescription = "Reading mode"
-            addView(modeCapsule, LinearLayout.LayoutParams(MP, dp(38)))
+            addView(modeChipText, LinearLayout.LayoutParams(WC, WC))
+            addView(ImageView(this@MainActivity).apply { setImageDrawable(IconDrawable(Ic.CHEVDOWN, UiTheme.faint)) }, LinearLayout.LayoutParams(dp(16), dp(16)).also { it.marginStart = dp(4) })
+            setOnClickListener { showModePickSheet() }
         }
         refreshModeChip()
         extractBtn = ExtractButton(this).apply {
@@ -4196,6 +4334,7 @@ return t.length>=40?'TXT:'+t:'';
                 object : GestureDetector.SimpleOnGestureListener() {
                     override fun onDown(e: MotionEvent): Boolean = true
                     override fun onSingleTapUp(e: MotionEvent): Boolean {
+                        if (extractBtn.busy) { stopFromDock(); return true }
                         if (manualRealtimeExtractEnabled()) {
                             extractCopy()
                             return true
@@ -4203,6 +4342,7 @@ return t.length>=40?'TXT:'+t:'';
                         return true
                     }
                     override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                        if (extractBtn.busy) { stopFromDock(); return true }
                         if (!manualRealtimeExtractEnabled()) extractCopy()
                         return true
                     }
@@ -4217,29 +4357,50 @@ return t.length>=40?'TXT:'+t:'';
             setOnTouchListener { _, event -> tapDetector.onTouchEvent(event) }
             isClickable = true
             isLongClickable = true
-            translationY = -dp(8).toFloat()   // raised out of the dock (headroom for it lives in dockWrap's top padding)
         }
+        // Next chapter button carries a sage badge when the next chapter is already translated (spec board 3).
+        val nextWrap = FrameLayout(this).apply {
+            addView(dockBtn(Ic.FORWARD, "Next chapter") { step("next") }, FrameLayout.LayoutParams(dp(48), dp(48)))
+            val badge = NextBadgeView(this@MainActivity).apply { visibility = View.GONE }
+            nextBadgeView = badge
+            addView(badge, FrameLayout.LayoutParams(dp(14), dp(14), Gravity.TOP or Gravity.END).also { it.setMargins(0, dp(5), dp(4), 0) })
+        }
+        // Chat ring (spec board 3): fill = chatbot progress, amber + "!" when it needs a hand.
+        // Tap = cycle the pane sizes; long-press = Tasks tray.
+        chatRing = ChatRingView(this)
+        chatRingWrap = FrameLayout(this).apply {
+            background = Glass.ripple(this@MainActivity, null)
+            contentDescription = "Chatbot"
+            addView(chatRing, FrameLayout.LayoutParams(dp(48), dp(48)))
+            setOnClickListener { cycleMode() }
+            setOnLongClickListener { showTasksTray(); true }
+        }
+        dockCenterBox = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            addView(dockBtn(Ic.BACK, "Previous chapter") { step("prev") }, LinearLayout.LayoutParams(dp(48), dp(48)))
+            addView(extractBtn, extractLp())
+            addView(nextWrap, LinearLayout.LayoutParams(dp(48), dp(48)))
+        }
+        // The mode capsule and the old view-mode button stay constructed (tour + refreshModeChip feed
+        // them) but leave the dock: mode chip opens the four-mode sheet, the chat ring cycles panes.
         val dock = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), 0, dp(8), 0)
-            background = floatingBarBg(34)
-            elevation = dp(12).toFloat()
-            clipChildren = false   // the raised centre button may poke out above the dock
-            clipToPadding = false  // dock has side padding, so clipToPadding (default true) would still cut the button at the dock's top edge
-            addView(modeChip, LinearLayout.LayoutParams(0, dp(42), 1.9f).also { it.setMargins(0, 0, dp(2), 0) })
-            addView(modeBtn)
-            addView(dockBtn(Ic.BACK, "Previous chapter") { step("prev") })
-            addView(extractBtn, extractLp())
-            addView(dockBtn(Ic.FORWARD, "Next chapter") { step("next") })
-            addView(dockBtn(Ic.GRID, "Menu") { menu() }.also { menuBtnView = it })
+            setPadding(dp(10), 0, dp(10), 0)
+            background = floatingBarBg(0)
+            clipChildren = false
+            clipToPadding = false
+            addView(modeChip, LinearLayout.LayoutParams(WC, dp(44)))
+            addView(dockCenterBox, LinearLayout.LayoutParams(0, dp(48), 1f))
+            addView(chatRingWrap, LinearLayout.LayoutParams(dp(48), dp(48)))
         }
         val dockWrap = FrameLayout(this).apply {
             clipChildren = false
             clipToPadding = false
-            // Top padding >= the button's overhang (~11dp) + badge: hardware layers / elevation clip anything outside this view.
-            setPadding(dp(14), dp(18), dp(14), dp(12))
-            addView(dock, FrameLayout.LayoutParams(MP, dp(68)))
+            setPadding(0, 0, 0, dp(10))
+            addView(View(this@MainActivity).apply { setBackgroundColor(UiTheme.stroke) }, FrameLayout.LayoutParams(MP, maxOf(1, (resources.displayMetrics.density * 0.5f).toInt()), Gravity.TOP))
+            addView(dock, FrameLayout.LayoutParams(MP, dp(52), Gravity.TOP))
         }
         dockBar = dock
         dockWrapView = dockWrap
@@ -4256,29 +4417,47 @@ return t.length>=40?'TXT:'+t:'';
             setTextColor(UiTheme.text)
             maxWidth = dp(330)
             setPadding(dp(18), dp(12), dp(18), dp(12))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(0xF2292D3F.toInt(), 0xF2181B28.toInt())
-            ).apply {
+            background = GradientDrawable().apply {
+                setColor(UiTheme.surface1)
                 cornerRadius = dp(22).toFloat()
-                setStroke(dp(1), 0x38FFFFFF)
+                setStroke(dp(1), UiTheme.stroke)
             }
-            elevation = dp(16).toFloat()
+            elevation = dp(6).toFloat()
             visibility = View.GONE
             setOnClickListener { hideSnack() }
+        }
+
+        bannerHost = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            setBackgroundColor(UiTheme.bg)
         }
 
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
             addView(browserChrome, LinearLayout.LayoutParams(MP, WC))
+            addView(bannerHost, LinearLayout.LayoutParams(MP, WC))
             addView(contentHolder, LinearLayout.LayoutParams(MP, 0, 1f))
             addView(dockWrap, LinearLayout.LayoutParams(MP, WC))
         }
         floatBoltHost = FrameLayout(this).apply {
             visibility = View.GONE
+            clipChildren = false
+            clipToPadding = false
             elevation = dp(12).toFloat()
         }
+        // Immersive state (spec board 4): a one-tap ring bottom-right + the 3 dp top progress line.
+        floatRing = ChatRingView(this)
+        floatRingHost = FrameLayout(this).apply {
+            visibility = View.GONE
+            clipChildren = false
+            background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, UiTheme.surface1, 28, UiTheme.stroke, 1), 28)
+            contentDescription = "Show controls"
+            addView(floatRing, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.CENTER))
+            setOnClickListener { setBarsHidden(false) }
+        }
+        topLineView = TopLineProgress(this).apply { visibility = View.GONE }
         modeOverlay = ModeSwitchOverlay(this)
         tourOverlay = TourOverlay(this)
         homeView = HomeView(this).apply {
@@ -4293,11 +4472,15 @@ return t.length>=40?'TXT:'+t:'';
             addView(main, FrameLayout.LayoutParams(MP, MP))
             addView(homeView, FrameLayout.LayoutParams(MP, MP))
             addView(modeOverlay, FrameLayout.LayoutParams(dp(230), dp(230), Gravity.CENTER))
-            addView(floatBoltHost, FrameLayout.LayoutParams(dp(60), dp(60), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).also { it.bottomMargin = dp(20) })
-            addView(snackView, FrameLayout.LayoutParams(WC, WC, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).also { it.bottomMargin = dp(106) })
+            addView(floatBoltHost, FrameLayout.LayoutParams(dp(160), dp(56), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).also { it.bottomMargin = dp(20) })
+            addView(snackView, FrameLayout.LayoutParams(WC, WC, Gravity.TOP or Gravity.CENTER_HORIZONTAL).also { it.topMargin = dp(64) })
+            addView(floatRingHost, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.BOTTOM or Gravity.END).also { it.setMargins(0, 0, dp(16), dp(26)) })
+            addView(topLineView, FrameLayout.LayoutParams(MP, dp(3), Gravity.TOP))
             addView(tourOverlay, FrameLayout.LayoutParams(MP, MP))
         }
         setContentView(root)
+        statusModel.listener = { updateStatusChrome() }
+        updateStatusChrome()
         handler.post(scanIndicatorRunnable)
         installManualExtractHost()
 
@@ -5550,16 +5733,16 @@ return t.length>=40?'TXT:'+t:'';
         )
     }
 
-    /** Slot of the raised centre button inside the dock (it is slightly wider than the dock is tall). */
-    private fun extractLp() = LinearLayout.LayoutParams(dp(74), dp(74)).also { it.setMargins(dp(-3), 0, dp(-3), 0) }
+    /** Pill slot of the Translate/Stop dock action (spec board 3: 44 dp high, ~120 dp wide). */
+    private fun extractLp() = LinearLayout.LayoutParams(dp(120), dp(44)).also { it.setMargins(dp(7), 0, dp(7), 0) }
 
     private fun refreshModeChip() {
         if (!::modeChipText.isInitialized) return
         val mode = currentReadMode()
         val t = when (mode) {
             ReadMode.NOVEL -> "Novel"
-            ReadMode.REALTIME -> "WebToon\nRealtime"
-            ReadMode.SCAN -> "WebToon\nScanning"
+            ReadMode.REALTIME -> if (manualExtractOn()) "Manual Lite" else "Real-time"
+            ReadMode.SCAN -> "Scanning"
         }
         if (modeChipText.text.toString() != t) modeChipText.text = t
         val idx = when (mode) {
@@ -5886,11 +6069,12 @@ return t.length>=40?'TXT:'+t:'';
                     // The bolt stays reachable: it floats over the page while the bars are away.
                     (extractBtn.parent as? ViewGroup)?.removeView(extractBtn)
                     extractBtn.translationY = 0f
-                    floatBoltHost.addView(extractBtn, FrameLayout.LayoutParams(dp(60), dp(60)))
+                    floatBoltHost.addView(extractBtn, FrameLayout.LayoutParams(dp(120), dp(44), Gravity.CENTER))
                     floatBoltHost.alpha = 0f
                     floatBoltHost.visibility = View.VISIBLE
                     floatBoltHost.animate().alpha(1f).setDuration(140L).start()
                     barsAnimating = false
+                    updateStatusChrome()
                 }.start()
             }
         } else {
@@ -5902,8 +6086,8 @@ return t.length>=40?'TXT:'+t:'';
             floatBoltHost.animate().cancel()
             if (extractBtn.parent === floatBoltHost) {
                 floatBoltHost.removeView(extractBtn)
-                extractBtn.translationY = -dp(8).toFloat()   // same lift as the initial build
-                dockBar.addView(extractBtn, 3, extractLp())
+                extractBtn.translationY = 0f
+                dockCenterBox.addView(extractBtn, 1, extractLp())
             }
             floatBoltHost.visibility = View.GONE
             chromeTopView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
@@ -5923,6 +6107,7 @@ return t.length>=40?'TXT:'+t:'';
                 chromeTopView.setLayerType(View.LAYER_TYPE_NONE, null)
                 dockWrapView.setLayerType(View.LAYER_TYPE_NONE, null)
                 barsAnimating = false
+                updateStatusChrome()
             }.start()
         }
     }
@@ -6109,6 +6294,65 @@ return t.length>=40?'TXT:'+t:'';
             Mode.NOVEL -> Mode.CHAT
             Mode.CHAT -> Mode.SPLIT
         })
+    }
+
+    // ================================================================== dock sheets (spec boards 5 + 16)
+
+    /** Four-mode pick sheet (spec board 16). Manual Lite = Real-time with Auto off. */
+    private fun showModePickSheet() {
+        val active = when {
+            currentReadMode() == ReadMode.NOVEL -> 0
+            currentReadMode() == ReadMode.SCAN -> 1
+            manualExtractOn() -> 3
+            else -> 2
+        }
+        val sheet = Sheets.create(this, Dock.buildModeSheet(this, active) { idx ->
+            tasksDialog?.dismiss()
+            when (idx) {
+                0 -> setReadMode(ReadMode.NOVEL)
+                1 -> setReadMode(ReadMode.SCAN)
+                2 -> { Prefs.putBool(this, "rtAutoOcrEnabled", true); setReadMode(ReadMode.REALTIME) }
+                else -> { Prefs.putBool(this, "rtAutoOcrEnabled", false); setReadMode(ReadMode.REALTIME) }
+            }
+        })
+        tasksDialog = sheet
+        sheet.show()
+    }
+
+    /** Tasks tray (spec board 5), opened by a long-press on the chat ring. */
+    private fun showTasksTray() {
+        val view = Dock.buildTasksTray(
+            this, statusModel,
+            Prefs.bool(this, "prefetchNextChapter"),
+            chipDetailLine(),
+            Notify.latest(3).map { it.text },
+            onStopAll = { cancelAll(); tasksDialog?.dismiss() },
+            onAhead = { on ->
+                Prefs.putBool(this, "prefetchNextChapter", on)
+                refreshPrefetchChip()
+                tasksDialog?.dismiss()
+                toast(if (on) "Ahead ON — the next chapter is prepared while you read" else "Ahead OFF")
+            },
+            onResend = { retryFailedChapters(); tasksDialog?.dismiss() },
+            onOpenChat = { setMode(Mode.CHAT); tasksDialog?.dismiss() },
+            onOpenLog = { tasksDialog?.dismiss(); Sheets.create(this, Notify.buildLogSheet(this)).show() }
+        )
+        val sheet = Sheets.create(this, view)
+        tasksDialog = sheet
+        sheet.show()
+    }
+
+    /** Centre pill while any lane works: stop the thing that is actually running (spec board 3). */
+    private fun stopFromDock() {
+        if (webModeHandle != null && !scanStopRequested && webModeStage.startsWith("Reading screen")) {
+            // Page-by-page (manga) scan: pages cannot tell where the chapter ends; stop and use what is captured.
+            scanStopRequested = true
+            webModeHandle?.stopScan()
+            toast("Stopping the scan; reading the pages captured so far")
+            updateProgressUi()
+            return
+        }
+        cancelAll()
     }
 
     // ================================================================== chatbots
@@ -9139,6 +9383,11 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
             handler.postDelayed({ pumpRealtimeAheadTranslation() }, 500L)
             return
         }
+        // Class C notice (spec board 13): amber banner + amber chat ring until handled or dismissed.
+        attentionNeeded = true
+        attentionText = "Could not send the message"
+        Notify.log("Translation failed · " + msg)
+        updateStatusChrome()
         deferNextChatbotRequest()
         releaseDeepSeekHashBatch(ch)
         deepSeekLastOcrAtMs = System.currentTimeMillis()
@@ -9268,6 +9517,8 @@ Do not invent text. Keep each translation short enough to fit a speech bubble.
         queue.clear()
         running = null
         chatWv.evaluateJavascript(Js.stop(), null)
+        attentionNeeded = false
+        statusModel.clearAttention()
         updateProgressUi()
         toast("⏹ Background translation stopped")
     }
