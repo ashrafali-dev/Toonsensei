@@ -4040,6 +4040,7 @@ return t.length>=40?'TXT:'+t:'';
         }
 
         val moreBtn = iconButton(Ic.DOTS, "Menu", 22, 44, UiTheme.text) { menu() }
+        menuBtnView = moreBtn
 
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -4465,6 +4466,10 @@ return t.length>=40?'TXT:'+t:'';
             onOpen = { u -> go(u) }
             onSearch = { q -> go(q) }
             onMenu = { menu() }
+            onLibrary = { libraryNovels() }
+            onMode = { idx -> pickHomeMode(idx) }
+            onLinkTranslate = { showLinkTranslateInfo() }
+            onBackToHome = { refreshHome() }
             onHub = { part -> Hub.open(this@MainActivity, part) }
         }
         val root = FrameLayout(this).apply {
@@ -4510,7 +4515,7 @@ return t.length>=40?'TXT:'+t:'';
         // Ask once, before any reading starts: which language to which language.
         // New installs: the quick tour comes first and the language question follows it (see startTour).
         // Existing installs that already finished the tour but never chose a language are asked right away.
-        if (!Langs.setupDone(this) && Prefs.bool(this, "tourDone")) {
+        if (!Langs.setupDone(this) && !Prefs.bool(this, "firstRunDone")) {
             handler.postDelayed({ if (!isFinishing) showLanguageSheet(true) }, 500L)
         }
         handler.postDelayed({ maybeAskCommunity() }, 12_000L)
@@ -4543,26 +4548,26 @@ return t.length>=40?'TXT:'+t:'';
     // ------------------------------------------------------------------ guided tour
 
     private fun tourSteps(): List<TourOverlay.Step> = listOf(
-        TourOverlay.Step("Novel", "Reading a novel? Tap Novel, open a chapter, then tap the bolt button.") {
-            tourOverlay.rectOf(modeCapsule, modeCapsule.segmentBounds(0))
+        TourOverlay.Step("Novel", "Reading a novel? Tap the mode chip, pick Novel, open a chapter, then tap Translate.") {
+            tourOverlay.rectOf(modeChip)
         },
-        TourOverlay.Step("Bolt button", "Tap it to read the page and send it for translation. It works in Novel and Scan modes.") {
+        TourOverlay.Step("Translate", "The centre pill reads the page and sends it for translation. While anything works it turns into Stop.") {
             tourOverlay.rectOf(extractBtn)
         },
         TourOverlay.Step("Ahead", "Bottom left. When it says Ahead ON, the app quietly loads the next chapter and translates it while you read, so it is ready when you go on. It uses more chatbot messages and works in Novel and Scan mode (not Live). Tap it to switch ON or OFF.") {
             if (::prefetchChip.isInitialized && prefetchChip.isShown) tourOverlay.rectOf(prefetchChip) else null
         },
-        TourOverlay.Step("Scan", "For webtoons and comics. Tap Scan, open the comic, then tap the bolt button to start scanning.") {
-            tourOverlay.rectOf(modeCapsule, modeCapsule.segmentBounds(1))
+        TourOverlay.Step("Scan", "For webtoons and comics. Pick Scanning from the mode chip, open the comic, then tap Translate to start scanning.") {
+            tourOverlay.rectOf(modeChip)
         },
         TourOverlay.Step("Missed a bubble?", "In Scan and Live mode this search button appears on the right. If a bubble was missed or only half translated, tap it, drag the six dots over that bubble, then tap Read this area. Only that spot is read and translated again; the rest of the page stays as it is, and other work pauses meanwhile.") {
             reOcrBtn?.takeIf { it.isShown }?.let { tourOverlay.rectOf(it) }
         },
-        TourOverlay.Step("Live", "Real-time mode for webtoons. Turn it on while the comic page is open, then wait a few seconds. If the text takes too long to appear, refresh the page once.") {
-            tourOverlay.rectOf(modeCapsule, modeCapsule.segmentBounds(2))
+        TourOverlay.Step("Live", "Real-time mode for webtoons: pick Real-time or Manual Lite from the mode chip while the comic page is open, then wait a few seconds. If the text takes too long to appear, refresh the page once.") {
+            tourOverlay.rectOf(modeChip)
         },
-        TourOverlay.Step("View", "Switch between the page, the page and chatbot side by side, or the chatbot alone. Handy for checking what was sent.") {
-            tourOverlay.rectOf(modeBtn)
+        TourOverlay.Step("View", "The chat ring switches between the page, the page and chatbot side by side, or the chatbot alone. Long-press it for the Tasks tray. Handy for checking what was sent.") {
+            tourOverlay.rectOf(chatRingWrap)
         },
         TourOverlay.Step("Prompts", "Menu → Edit Prompt For Novel / Live / Scanning Translation. The defaults already name your language; edit them only if you want different rules.") {
             menuBtnView?.let { tourOverlay.rectOf(it) }
@@ -4580,7 +4585,7 @@ return t.length>=40?'TXT:'+t:'';
         hideHome()
         handler.postDelayed({
             if (isFinishing) return@postDelayed
-            if (!modeCapsule.isShown || !extractBtn.isShown) {
+            if (!modeChip.isShown || !extractBtn.isShown) {
                 if (manual) toast("Open any page first, then start the tour again")
                 else if (attempt < 6 && !Prefs.bool(this, "tourDone")) {
                     // The page chrome is not ready yet: try again shortly instead of never asking for the language.
@@ -4605,21 +4610,30 @@ return t.length>=40?'TXT:'+t:'';
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = Sheets.sheetBackground(this@MainActivity)
-            setPadding(dp(18), dp(10), dp(18), dp(24))
+            setPadding(dp(20), dp(12), dp(20), dp(24))
         }
         col.addView(sheetHandle())
+        if (firstRun) {
+            col.addView(TextView(this).apply {
+                text = "Step 1 of 3"
+                textSize = 13f
+                setTextColor(UiTheme.faint)
+            })
+            col.addView(MascotView(this), LinearLayout.LayoutParams(dp(60), dp(60)).also { it.topMargin = dp(10) })
+        }
         col.addView(TextView(this).apply {
-            text = if (firstRun) "What are you translating?" else "Translation language"
-            textSize = 20f
+            text = if (firstRun) "Where do you want to read?" else "Translation language"
+            textSize = 22f
             typeface = boldMedium
             setTextColor(UiTheme.text)
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+            setPadding(0, dp(8), 0, 0)
         })
         col.addView(TextView(this).apply {
             text = "Choose once. The translation prompt follows your choice, and you can change it any time in the menu."
-            textSize = 13.5f
-            setTextColor(UiTheme.dim)
-            setPadding(dp(4), 0, dp(4), dp(14))
+            textSize = 14f
+            setTextColor(UiTheme.faint)
+            setLineSpacing(0f, 1.2f)
+            setPadding(0, dp(6), 0, dp(14))
         })
         fun picker(caption: String, options: List<String>, get: () -> String, set: (String) -> Unit): View {
             val value = TextView(this).apply {
@@ -4643,7 +4657,7 @@ return t.length>=40?'TXT:'+t:'';
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(16), dp(12), dp(14), dp(12))
-                background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, 0x14FFFFFF, 16, UiTheme.strokeSoft), 16)
+                background = Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, UiTheme.surface2, 16, UiTheme.stroke, 1), 16)
                 isClickable = true
                 setOnClickListener {
                     searchListDialog(caption, options) { picked -> set(picked); value.text = get() }
@@ -4665,32 +4679,208 @@ return t.length>=40?'TXT:'+t:'';
                 setPadding(dp(4), dp(12), dp(4), 0)
             })
         }
-        val save = TextView(this).apply {
-            text = "Save"
-            textSize = 16f
-            typeface = boldMedium
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(UiTheme.accentA, UiTheme.accentB)).apply {
-                cornerRadius = dp(26).toFloat()
-            }
-            isClickable = true
-            setOnClickListener {
-                Langs.save(this@MainActivity, src, tgt)
-                NovelStudioAnalytics.track(
-                    this@MainActivity, "target_language_selected",
-                    mode = analyticsReadMode(),
-                    targetLanguage = tgt,
-                    provider = currentBotKey
-                )
-                dlg.dismiss()
-                toast("Translating " + (if (src == Langs.AUTO) "any language" else src) + " to " + tgt)
-                downloadLanguageFont(tgt)
-                if (firstRun) Handler(Looper.getMainLooper()).postDelayed({ if (!isFinishing && !isDestroyed) showFirstPromptChoice() }, 400L)
-            }
+        val save = Ui.btnPrimary(this, "Continue")
+        save.setOnClickListener {
+            Langs.save(this@MainActivity, src, tgt)
+            NovelStudioAnalytics.track(
+                this@MainActivity, "target_language_selected",
+                mode = analyticsReadMode(),
+                targetLanguage = tgt,
+                provider = currentBotKey
+            )
+            dlg.dismiss()
+            toast("Translating " + (if (src == Langs.AUTO) "any language" else src) + " to " + tgt)
+            downloadLanguageFont(tgt)
+            if (firstRun) Handler(Looper.getMainLooper()).postDelayed({ if (!isFinishing && !isDestroyed) showOcrChoiceSheet() }, 400L)
         }
         col.addView(save, LinearLayout.LayoutParams(MP, dp(52)).also { it.topMargin = dp(18) })
         dlg = Sheets.create(this, col)
+        dlg.show()
+    }
+
+    /** First run, step 2 of 3 (spec board 30): pick the OCR engine once; changeable later in the menu. */
+    private fun showOcrChoiceSheet() {
+        lateinit var dlg: Dialog
+        var engine = Prefs.get(this, "ocrEngine", "mlkit")
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Sheets.sheetBackground(this@MainActivity)
+            setPadding(dp(20), dp(12), dp(20), dp(24))
+        }
+        col.addView(sheetHandle())
+        col.addView(TextView(this).apply {
+            text = "Step 2 of 3"
+            textSize = 13f
+            setTextColor(UiTheme.faint)
+        })
+        col.addView(TextView(this).apply {
+            text = "Choose an OCR engine"
+            textSize = 22f
+            typeface = boldMedium
+            setTextColor(UiTheme.text)
+            setPadding(0, dp(8), 0, 0)
+        })
+        col.addView(TextView(this).apply {
+            text = "OCR reads the text in comic images before it is translated."
+            textSize = 14f
+            setTextColor(UiTheme.faint)
+            setLineSpacing(0f, 1.2f)
+            setPadding(0, dp(6), 0, dp(12))
+        })
+
+        val cards = ArrayList<Pair<String, LinearLayout>>()
+        fun optionCard(key: String, title: String, badge: String, badgeSage: Boolean, sub: String): LinearLayout {
+            val radioDot = View(this).apply {
+                background = Glass.oval(if (engine == key) UiTheme.seal else UiTheme.surface1, UiTheme.seal, dp(if (engine == key) 6 else 1))
+            }
+            val tag = TextView(this).apply {
+                text = badge
+                textSize = 12f
+                setTextColor(if (badgeSage) UiTheme.sageInk else UiTheme.faint)
+                setPadding(dp(8), dp(2), dp(8), dp(2))
+                background = Glass.solid(this@MainActivity, if (badgeSage) UiTheme.sageSoft else UiTheme.surface2, 8)
+            }
+            val titles = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    addView(TextView(this@MainActivity).apply {
+                        text = title
+                        textSize = 15f
+                        typeface = boldMedium
+                        setTextColor(UiTheme.text)
+                    })
+                    addView(tag, LinearLayout.LayoutParams(WC, WC).also { it.marginStart = dp(6) })
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = sub
+                    textSize = 13f
+                    setTextColor(UiTheme.faint)
+                    setLineSpacing(0f, 1.2f)
+                    setPadding(0, dp(3), 0, 0)
+                })
+            }
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(dp(16), dp(14), dp(16), dp(14))
+                background = if (engine == key) Glass.solid(this@MainActivity, UiTheme.surface1, 18, UiTheme.seal, 2)
+                else Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, UiTheme.surface1, 18, UiTheme.stroke, 1), 18)
+                isClickable = true
+                addView(radioDot, LinearLayout.LayoutParams(dp(20), dp(20)).also { it.topMargin = dp(2); it.marginEnd = dp(14) })
+                addView(titles, LinearLayout.LayoutParams(0, WC, 1f))
+            }
+            cards += key to card
+            card.setOnClickListener {
+                engine = key
+                Prefs.put(this, "ocrEngine", key)
+                cards.forEach { (k, v) ->
+                    v.background = if (k == engine) Glass.solid(this@MainActivity, UiTheme.surface1, 18, UiTheme.seal, 2)
+                    else Glass.ripple(this@MainActivity, Glass.solid(this@MainActivity, UiTheme.surface1, 18, UiTheme.stroke, 1), 18)
+                    val dot = (v.getChildAt(0) as? View)
+                    dot?.background = Glass.oval(if (k == engine) UiTheme.seal else UiTheme.surface1, UiTheme.seal, dp(if (k == engine) 6 else 1))
+                }
+            }
+            return card
+        }
+
+        col.addView(optionCard("mlkit", "Google ML Kit", "Default", true, "Runs on the phone. Works offline. Latin, Chinese, Japanese and Korean."),
+            LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(10) })
+        col.addView(optionCard("lens", "Google Lens", "Optional", false, "Needs internet. Can read difficult fonts better."),
+            LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(10) })
+
+        // change-any-time note
+        val info = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = Glass.solid(this@MainActivity, UiTheme.surface2, 16)
+        }
+        info.addView(ImageView(this).apply { setImageDrawable(IconDrawable(Ic.INFO, UiTheme.faint)) }, LinearLayout.LayoutParams(dp(20), dp(20)).also { it.marginEnd = dp(12) })
+        info.addView(TextView(this).apply {
+            text = "You can change this any time in Menu, then OCR engine."
+            textSize = 14f
+            setTextColor(UiTheme.dim)
+            setLineSpacing(0f, 1.2f)
+        }, LinearLayout.LayoutParams(0, WC, 1f))
+        col.addView(info, LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(18) })
+
+        val cont = Ui.btnPrimary(this, "Continue")
+        col.addView(cont, LinearLayout.LayoutParams(MP, dp(52)).also { it.topMargin = dp(20) })
+        cont.setOnClickListener {
+            dlg.dismiss()
+            Handler(Looper.getMainLooper()).postDelayed({ if (!isFinishing && !isDestroyed) showFirstTipsSheet() }, 350L)
+        }
+        dlg = Sheets.create(this, col)
+        dlg.show()
+    }
+
+    /** First run, step 3 of 3 (spec board 31): three short tips, then home. */
+    private fun showFirstTipsSheet() {
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Sheets.sheetBackground(this@MainActivity)
+            setPadding(dp(20), dp(12), dp(20), dp(24))
+        }
+        col.addView(sheetHandle())
+        col.addView(TextView(this).apply {
+            text = "Step 3 of 3"
+            textSize = 13f
+            setTextColor(UiTheme.faint)
+        })
+        col.addView(MascotView(this), LinearLayout.LayoutParams(dp(60), dp(60)).also { it.topMargin = dp(10) })
+
+        fun tip(ic: Ic, title: String, sub: String): View {
+            val circle = FrameLayout(this).apply {
+                background = Glass.oval(UiTheme.sealSoft)
+                addView(ImageView(this@MainActivity).apply {
+                    setImageDrawable(IconDrawable(ic, UiTheme.sealInk))
+                }, FrameLayout.LayoutParams(dp(20), dp(20), Gravity.CENTER))
+            }
+            val texts = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(this@MainActivity).apply {
+                    text = title
+                    textSize = 15f
+                    typeface = boldMedium
+                    setTextColor(UiTheme.text)
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = sub
+                    textSize = 13f
+                    setTextColor(UiTheme.faint)
+                    setLineSpacing(0f, 1.2f)
+                    setPadding(0, dp(2), 0, 0)
+                })
+            }
+            return LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.TOP
+                setPadding(0, dp(18), 0, 0)
+                addView(circle, LinearLayout.LayoutParams(dp(40), dp(40)).also { it.marginEnd = dp(14) })
+                addView(texts, LinearLayout.LayoutParams(0, WC, 1f))
+            }
+        }
+
+        col.addView(tip(Ic.BOOK, "Match the mode to the page", "Novel for text sites, Scanning and Real-time for webtoons."))
+        col.addView(tip(Ic.SCAN, "Use Scanning for full meaning", "Scanning reads the whole chapter, so the translation understands the context."))
+        col.addView(tip(Ic.CROSSHAIR, "Using Real-time? Slow it down", "Raise Extra request delay in Menu, Advanced, Translation, to avoid rate limits."))
+
+        val done = Ui.btnPrimary(this, "Got it")
+        col.addView(done, LinearLayout.LayoutParams(MP, dp(48)).also { it.topMargin = dp(24) })
+        col.addView(TextView(this).apply {
+            text = "You can read these again in Menu, then Tips."
+            textSize = 12f
+            setTextColor(UiTheme.faint)
+            gravity = Gravity.CENTER
+        }, LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(12) })
+        val dlg = Sheets.create(this, col)
+        done.setOnClickListener {
+            Prefs.putBool(this, "firstRunDone", true)
+            dlg.dismiss()
+            showHome()
+        }
+        dlg.setOnDismissListener { Prefs.putBool(this, "firstRunDone", true) }
         dlg.show()
     }
 
@@ -4720,8 +4910,62 @@ return t.length>=40?'TXT:'+t:'';
 
     private fun refreshHome() {
         if (!::homeView.isInitialized) return
+        homeView.setActiveMode(homeModeIdx())
         val novel = siteShortcuts().map { HomeSite(it.first, it.second) }
         homeView.render(homeRecents(), novel, comicSiteShortcuts())
+    }
+
+    private fun homeModeIdx(): Int = when {
+        currentReadMode() == ReadMode.NOVEL -> 0
+        currentReadMode() == ReadMode.SCAN -> 1
+        manualExtractOn() -> 3
+        else -> 2
+    }
+
+    /** Home mode chip (board 2): pick the reading mode and open its start page (board 21). */
+    private fun pickHomeMode(idx: Int) {
+        when (idx) {
+            0 -> setReadMode(ReadMode.NOVEL)
+            1 -> setReadMode(ReadMode.SCAN)
+            2 -> { Prefs.putBool(this, "rtAutoOcrEnabled", true); setReadMode(ReadMode.REALTIME) }
+            else -> { Prefs.putBool(this, "rtAutoOcrEnabled", false); setReadMode(ReadMode.REALTIME) }
+        }
+        homeView.setActiveMode(idx)
+        homeView.showModeStart(idx)
+    }
+
+    /** Link -> Translate placeholder sheet (spec board 10; the full flow comes in a later phase). */
+    private fun showLinkTranslateInfo() {
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(28), dp(12), dp(28), dp(24))
+            background = Sheets.sheetBackground(this@MainActivity)
+        }
+        col.addView(Ui.sheetHandle(this), LinearLayout.LayoutParams(dp(36), dp(4)).also {
+            it.gravity = Gravity.CENTER_HORIZONTAL; it.bottomMargin = dp(12)
+        })
+        col.addView(MascotView(this), LinearLayout.LayoutParams(dp(72), dp(72)).also { it.gravity = Gravity.CENTER_HORIZONTAL })
+        val t = TextView(this).apply {
+            text = "Link \u2192 Translate"
+            textSize = 19f
+            typeface = boldMedium
+            setTextColor(UiTheme.text)
+        }
+        col.addView(t, LinearLayout.LayoutParams(WC, WC).also { it.gravity = Gravity.CENTER_HORIZONTAL; it.topMargin = dp(10) })
+        val d = TextView(this).apply {
+            text = "Paste a chapter link and get a clean translated page. This is being built; for now open the link in the browser and use one of the reading modes."
+            textSize = 14f
+            setTextColor(UiTheme.dim)
+            setLineSpacing(0f, 1.2f)
+            gravity = Gravity.CENTER
+        }
+        col.addView(d, LinearLayout.LayoutParams(MP, WC).also { it.topMargin = dp(8); it.bottomMargin = dp(18) })
+        val ok = Ui.btnGhost(this, "Got it")
+        col.addView(ok, LinearLayout.LayoutParams(MP, dp(48)))
+        val sheet = Sheets.create(this, col)
+        ok.setOnClickListener { sheet.dismiss() }
+        sheet.show()
     }
 
     /** Webtoon / comic starting points. Edit this list to add your own sites. */

@@ -32,11 +32,12 @@ class TourOverlay(private val ctx: Context) : FrameLayout(ctx) {
     private var index = 0
     private var onDone: () -> Unit = {}
 
-    private val dim = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xCC050711.toInt() }
+    private val dim = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xAD14110B.toInt() }   // tint #14110B at 68% (spec board 32)
     private val clear = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
     private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 2.5f * dens
+        strokeWidth = 2f * dens
+        color = UiTheme.seal
     }
     private val hole = RectF()
     private val tmp = RectF()
@@ -64,14 +65,14 @@ class TourOverlay(private val ctx: Context) : FrameLayout(ctx) {
         elevation = 24f * dens
 
         titleTv.apply {
-            textSize = 18f
+            textSize = 17f
             typeface = bold
             setTextColor(UiTheme.text)
         }
         bodyTv.apply {
-            textSize = 14.5f
+            textSize = 14f
             setTextColor(UiTheme.dim)
-            setLineSpacing(0f, 1.15f)
+            setLineSpacing(0f, 1.2f)
             setPadding(0, ctx.dpi(6), 0, ctx.dpi(14))
         }
         countTv.apply {
@@ -81,7 +82,7 @@ class TourOverlay(private val ctx: Context) : FrameLayout(ctx) {
         skipBtn.apply {
             text = "Skip tour"
             textSize = 14f
-            setTextColor(UiTheme.dim)
+            setTextColor(UiTheme.faint)
             setPadding(ctx.dpi(10), ctx.dpi(8), ctx.dpi(14), ctx.dpi(8))
             isClickable = true
             setOnClickListener { finish() }
@@ -89,11 +90,9 @@ class TourOverlay(private val ctx: Context) : FrameLayout(ctx) {
         nextBtn.apply {
             textSize = 14f
             typeface = bold
-            setTextColor(Color.WHITE)
+            setTextColor(UiTheme.bg)
             setPadding(ctx.dpi(20), ctx.dpi(9), ctx.dpi(20), ctx.dpi(9))
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(UiTheme.accentA, UiTheme.accentB)).apply {
-                cornerRadius = ctx.dpf(20)
-            }
+            background = Glass.ripple(ctx, Glass.solid(ctx, UiTheme.text, 20), 20)
             isClickable = true
             setOnClickListener { next() }
         }
@@ -107,8 +106,7 @@ class TourOverlay(private val ctx: Context) : FrameLayout(ctx) {
         card.apply {
             orientation = LinearLayout.VERTICAL
             setPadding(ctx.dpi(20), ctx.dpi(18), ctx.dpi(16), ctx.dpi(14))
-            background = Glass.solid(ctx, UiTheme.sheet, 22, UiTheme.stroke)
-            elevation = 12f * dens
+            background = Glass.solid(ctx, UiTheme.surface1, 16, UiTheme.stroke)
             addView(titleTv)
             addView(bodyTv)
             addView(bottom)
@@ -221,7 +219,7 @@ class TourOverlay(private val ctx: Context) : FrameLayout(ctx) {
             val r = min(hole.width(), hole.height()) / 2f
             val grow = 2f * dens * pulse
             tmp.set(hole.left - grow, hole.top - grow, hole.right + grow, hole.bottom + grow)
-            ring.color = ModeUi.withAlpha(Color.WHITE, (110 + 130 * (1f - pulse)).toInt())
+            ring.color = ModeUi.withAlpha(UiTheme.seal, (110 + 130 * (1f - pulse)).toInt())
             c.drawRoundRect(tmp, r + grow, r + grow, ring)
         }
     }
