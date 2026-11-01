@@ -153,7 +153,7 @@ internal object OcrEngineStatus {
 }
 
 internal class RoutingOcrEngine : OcrEngine {
-    private companion object {
+    internal companion object {
         /** Cap on how long a foreground Lens route waits for the shared gate (see OcrGate.run(timeoutMs)). */
         const val FOREGROUND_LENS_GATE_TIMEOUT_MS = 1_200L
 
