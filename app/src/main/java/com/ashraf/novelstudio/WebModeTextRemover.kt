@@ -202,8 +202,7 @@ internal object WebModeTextRemover {
                 if (soft) {
                     val localPaper = estimateFlatBackground(region, rw, rh, ix0, iy0, ix1, iy1)
                     if (localPaper != null &&
-                        min(distance(localPaper, fg1), distance(localPaper, fg2)) >= 52f) {
-                        val inkMask = ByteArray(regionCount)
+                        min(distance(localPaper, fg1), distance(localPaper, fg2)) >= 52f) {                        val inkMask = ByteArray(regionCount)
                         var inkCount = 0
                         for (ry in iy0 until iy1) for (rx in ix0 until ix1) {
                             val at = ry * rw + rx
@@ -369,6 +368,12 @@ internal object WebModeTextRemover {
                     onionFill(region, mask, rw, rh, (fontPx * 0.3f).toInt().coerceIn(4, 10), bg) else null
                 // Fill only the masked glyph pixels from their surroundings (never repaint a whole box).
                 val out = region.copyOf()
+                // Last-resort colour for a glyph pixel with no untouched neighbour at all. It must be the LOCAL
+                // paper (the balloon's own fill), never an arbitrary value: `bg` can be the artwork around the
+                // balloon, and filling glyph pixels with it painted a black bar across a white speech balloon.
+                val paper = estimateFlatBackground(region, rw, rh, ix0, iy0, ix1, iy1) ?: bg
+                val emptyFill = 0xFF000000.toInt() or (paper and 0xFFFFFF)
+                var suspect = 0
                 for (ry in 0 until rh) {
                     for (rx in 0 until rw) {
                         val at = ry * rw + rx
@@ -379,7 +384,7 @@ internal object WebModeTextRemover {
                             out[at] = if (aiFill != null) (0xFF000000.toInt() or (aiFill[at] and 0xFFFFFF))
                                 else if (tele != null) (0xFF000000.toInt() or (tele[at] and 0xFFFFFF))
                                 else 0xFF000000.toInt() or
-                                    gradientFill(region, mask, rw, rh, rx, ry, (fontPx * 1.6f).toInt().coerceIn(8, 60), bg)
+                                    gradientFill(region, mask, rw, rh, rx, ry, (fontPx * 1.6f).toInt().coerceIn(8, 60), paper)
                             continue
                         }
                         var sampleN = 0
@@ -402,9 +407,24 @@ internal object WebModeTextRemover {
                         }
                         val fill = if (sampleN >= 3) {
                             (sumR / sampleN shl 16) or (sumG / sampleN shl 8) or (sumB / sampleN)
-                        } else bg and 0x00FFFFFF
+                        } else paper and 0x00FFFFFF
                         out[at] = 0xFF000000.toInt() or fill
                     }
+                }
+                // Safety net: the fill must look like the paper it replaced. If most erased pixels came out as a
+                // colour far from the local background (the classic white balloon turned into a black bar), the
+                // bubble is left untouched and the writer's conservative cover box is used instead: an ugly box
+                // over legible text is recoverable, a hole in the drawing is not.
+                for (ry in 0 until rh) {
+                    for (rx in 0 until rw) {
+                        val at = ry * rw + rx
+                        if (mask[at].toInt() == 0) continue
+                        if (distance(out[at], paper) > (if (soft) 96 else 72)) suspect++
+                    }
+                }
+                if (suspect * 3 > selectedCount) {
+                    OcrDiag.log("CLEAN_SKIP", "implausible fill (${suspect}/${selectedCount} px off paper) src=${sourceUrl.take(60)} soft=$soft")
+                    continue
                 }
                 bitmap.setPixels(out, 0, rw, x0, y0, rw, rh)
                 totalRemoved += selectedCount

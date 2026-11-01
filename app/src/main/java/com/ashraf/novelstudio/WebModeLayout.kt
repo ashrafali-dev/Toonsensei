@@ -605,15 +605,47 @@ internal object WebModeLayoutStore {
         var changed = 0
         scans[k]?.let { l ->
             val (list, n) = WebModeLayout.refineBubbles(l.bubbles, src, refined)
-            if (n > 0) { scans[k] = WebModeLayout(l.titleOffset, list); changed = maxOf(changed, n) }
+            if (n > 0) {
+                carryErased(url, l.bubbles, list)
+                scans[k] = WebModeLayout(l.titleOffset, list); changed = maxOf(changed, n)
+            }
         }
         val m = mem[k] ?: get(ctx, url)
         if (m != null) {
             val (list, n) = WebModeLayout.refineBubbles(m.bubbles, src, refined)
-            if (n > 0) { mem[k] = WebModeLayout(m.titleOffset, list); changed = maxOf(changed, n); persist(ctx, url) }
+            if (n > 0) {
+                carryErased(url, m.bubbles, list)
+                mem[k] = WebModeLayout(m.titleOffset, list); changed = maxOf(changed, n); persist(ctx, url)
+            }
         }
         return changed
     }
+
+    /**
+     * An erased bubble is remembered by its geometry (see [WebModeTextRemovalCache.bubbleKey]). Refining a bubble
+     * moves that geometry, so the mark used to be lost and the writer put its opaque cover box back over a
+     * perfectly cleaned picture. Re-register the marks under the refined geometry.
+     */
+    private fun carryErased(url: String, before: List<WmBubble>, after: List<WmBubble>) {
+        val byText = HashMap<String, java.util.ArrayDeque<WmBubble>>()
+        for (b in before) {
+            if (!WebModeTextRemovalCache.isErased(b.src, WebModeTextRemovalCache.bubbleKey(b))) continue
+            byText.getOrPut(erasedKeyOf(b)) { java.util.ArrayDeque() }.add(b)
+        }
+        if (byText.isEmpty()) return
+        val update = HashMap<String, MutableSet<String>>()
+        for (b in after) {
+            val q = byText[erasedKeyOf(b)] ?: continue
+            val old = q.poll() ?: continue
+            update.getOrPut(old.src) { LinkedHashSet() }.add(WebModeTextRemovalCache.bubbleKey(b))
+        }
+        for ((s, keys) in update) {
+            WebModeTextRemovalCache.setErased(s, keys)
+        }
+    }
+
+    private fun erasedKeyOf(b: WmBubble): String =
+        WebModeLogic.normalizeUrl(b.src) + "\u0000" + WebModeLayout.normalizeOcrText(b.sourceText)
 
     /** Replace the stored layout for a deliberate whole-page Web Mode translation. */
     @Synchronized
@@ -933,10 +965,16 @@ internal object WmBubbleStyle {
         val soft = !ringFlat(bmp, l, t, r, b, bg)
         if (soft) {
             // Glow / shadow around the lettering tints the ring right next to it (that gave grey boxes on
-            // black). Read the cover colour from a ring OUTSIDE the glow instead, if that ring is flat.
+            // black). Read the cover colour from a ring OUTSIDE the glow instead, if that ring is flat AND
+            // still looks like the same paper.
+            //
+            // The flatness test alone is not enough: a white speech balloon on black artwork has a flat black
+            // ring just outside its outline, so this used to adopt the ARTWORK as the bubble's background. Every
+            // glyph pixel was then filled with black and the balloon came out with a black bar across it. A ring
+            // that is far darker than the ring next to the lettering is the page around the balloon, not paper.
             val rp = ((b - t) * 0.22f).toInt().coerceIn(6, 26)
             val outer = ringMedian(bmp, l - rp, t - rp, r + rp, b + rp, 3)
-            if (ringFlat(bmp, l - rp, t - rp, r + rp, b + rp, outer)) bg = outer
+            if (ringFlat(bmp, l - rp, t - rp, r + rp, b + rp, outer) && samePaper(outer, bg)) bg = outer
         }
         val mid = (t + b) / 2
         val fgTop = textColour(bmp, l, t, r, maxOf(t + 1, mid), bg)
@@ -1202,6 +1240,17 @@ internal object WmBubbleStyle {
     private fun contrast(a: Int, b: Int): Int = abs(lum(a) - lum(b))
 
     /** True when the ring around the text is one flat colour (a speech bubble), false on artwork. */
+    /**
+     * True when [outer] is plausibly the same paper as [inner], i.e. the ring further out belongs to the balloon
+     * and not to the artwork/page around it. Two flat rings that are far apart in brightness or hue are different
+     * surfaces: on a white balloon over black art the outer ring *is* flat, just black.
+     */
+    internal fun samePaper(outer: Int, inner: Int): Boolean {
+        val dl = lum(outer) - lum(inner)
+        if (Math.abs(dl) > 60) return false
+        return colourDist(outer, inner) <= 90
+    }
+
     private fun ringFlat(bmp: Bitmap, l: Int, t: Int, r: Int, b: Int, bg: Int): Boolean {
         val pad = 3
         val x0 = (l - pad).coerceAtLeast(0); val y0 = (t - pad).coerceAtLeast(0)
