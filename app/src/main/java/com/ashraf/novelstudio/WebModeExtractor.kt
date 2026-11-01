@@ -1179,15 +1179,50 @@ internal class WebModeExtractor(
          * detector + mask), upgrade only the SHAPE of bubbles whose text matches, then clean the picture with the final
          * shapes (non-AI cleaner). Never changes bubble count/order/text, so translations already aligned stay valid.
          */
+
+        /**
+         * True when the phone must not spend more CPU/native memory on optional balloon geometry. The mask model
+         * already refuses below 70 MB of free Java heap; refine is the heavier consumer (two models plus bitmaps
+         * per panel), so it stops earlier and leaves the panels exactly as the scan drew them.
+         */
+        private fun lowMemoryForRefine(@Suppress("UNUSED_PARAMETER") ctx: android.content.Context): Boolean {
+            if (freeHeapMbOf() < REFINE_MIN_FREE_HEAP_MB) return true
+            return try {
+                val am = ctx.applicationContext.getSystemService(android.content.Context.ACTIVITY_SERVICE)
+                    as? android.app.ActivityManager
+                if (am == null) false else {
+                    val mi = android.app.ActivityManager.MemoryInfo()
+                    am.getMemoryInfo(mi)
+                    mi.lowMemory
+                }
+            } catch (_: Throwable) {
+                false
+            }
+        }
+
+        /** Free Java heap headroom in MB (max heap minus what is currently held). */
+        private fun freeHeapMbOf(): Long {
+            val rt = Runtime.getRuntime()
+            return (rt.maxMemory() - (rt.totalMemory() - rt.freeMemory())) / 1048576L
+        }
+
         private fun startGeometryRefine(
             url: String, srcs: List<String>, panelLayouts: List<List<WmBubble>?>,
             files: List<java.io.File?>, scriptStart: OcrScript
         ) {
             val ctx = wv.context
+            // A/B switch, default OFF: panels whose OCR text already sits inside a detected balloon skip the two
+            // ONNX models. Nothing about text, bubble count or placement changes; only the cleanliness of the
+            // balloon outline (the OCR box instead of the true balloon shape). Leave OFF while accuracy is
+            // being compared with full refinement.
+            val skipInsideBubble = Prefs.bool(ctx, "wmRefineSkipInsideBubble", false)
             val t = Thread({
                 refinePhase = true
                 val t0 = SystemClock.elapsedRealtime()
                 var done = 0; var upgraded = 0; var bubblesUp = 0; var sinceNotify = 0
+                // Per-panel stage timings, written as one line so a log tells where the refine time went.
+                var detectMs = 0L; var ocrMs = 0L; var cleanMs = 0L
+                var skippedInside = 0; var skippedMemory = 0
                 try {
                     try { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_LESS_FAVORABLE) } catch (_: Throwable) {}
                     for (i in srcs.indices) {
@@ -1195,27 +1230,87 @@ internal class WebModeExtractor(
                         val lay = panelLayouts.getOrNull(i)
                         if (lay.isNullOrEmpty() || lay.none { it.sourceText.isNotBlank() }) { try { f.delete() } catch (_: Throwable) {}; continue }
                         if (cancelled.get() || !refineAliveBlocking(url)) break
+                        // Memory guard: the refine thread used to run a whole chapter of ONNX inference with no
+                        // check at all, while only the mask model guarded itself. On a low-RAM phone that ends in
+                        // "WebView renderer KILLED (low memory)" and lost translations, which is worse than a
+                        // panel with an approximate outline. Panels are simply left as the scan drew them.
+                        if (lowMemoryForRefine(ctx)) {
+                            skippedMemory++
+                            try { f.delete() } catch (_: Throwable) {}
+                            continue
+                        }
+                        val tPanel = SystemClock.elapsedRealtime()
+                        val before = BubbleDetector.lastInfo
                         try {
                             val bytes = f.readBytes()
+                            val tRecognize = SystemClock.elapsedRealtime()
                             val po = ocrBytes(bytes, ScriptState(scriptStart), srcs[i], fastMode = false, skipClean = true)
+                            ocrMs += SystemClock.elapsedRealtime() - tRecognize
                             done++
                             if (po != null && po.bubbles.isNotEmpty()) {
-                                val n = WebModeLayoutStore.refineGeometry(ctx, url, srcs[i], po.bubbles)
-                                if (n > 0) {
-                                    upgraded++; bubblesUp += n; sinceNotify++
-                                    // Clean with the FINAL stored shapes (the ones the translation is written into).
-                                    val finalBubbles = WebModeLayoutStore.bubblesForSrc(ctx, url, srcs[i])
-                                    try { WebModeTextRemover.cleanAndCache(ctx, srcs[i], bytes, finalBubbles, allowAi = false) } catch (_: Throwable) {}
+                                // The scan already placed this panel's lines on the page, and the detector's boxes
+                                // for them are cached by image fingerprint. A line whose box sits inside a
+                                // detected balloon is covered: the detector can only improve that balloon's
+                                // outline, never its text. Any line outside every balloon (sound effect, free
+                                // lettering) keeps the full detector + mask run. Default OFF: see above.
+                                //
+                                // The cache key is a 192-pixel sample of the decoded bitmap, so this decode has to
+                                // use the same subsampling the scan used or it can never hit the cached boxes.
+                                val scanBmp = if (skipInsideBubble) try {
+                                    val bo = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bo)
+                                    val sample = when { bo.outWidth > 5000 -> 4; bo.outWidth > 2400 -> 2; else -> 1 }
+                                    android.graphics.BitmapFactory.decodeByteArray(
+                                        bytes, 0, bytes.size,
+                                        android.graphics.BitmapFactory.Options().apply {
+                                            inSampleSize = sample
+                                            inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+                                        }
+                                    )
+                                } catch (_: Throwable) { null } catch (_: OutOfMemoryError) { null } else null
+                                val dets = if (scanBmp != null) BubbleDetector.cached(scanBmp) else null
+                                val scanW = scanBmp?.width ?: 0
+                                val scanH = scanBmp?.height ?: 0
+                                try { scanBmp?.recycle() } catch (_: Throwable) {}
+                                val insideOnly = skipInsideBubble && dets != null && scanW > 0 && scanH > 0 &&
+                                    WebModeLogic.allLayoutInsideBalloons(
+                                        lay,
+                                        dets.filter {
+                                            it.label == BubbleDetectorCore.CLS_BUBBLE ||
+                                                it.label == BubbleDetectorCore.CLS_TEXT_BUBBLE
+                                        }.map { intArrayOf(it.l, it.t, it.r, it.b) },
+                                        scanW, scanH
+                                    )
+                                if (insideOnly) {
+                                    skippedInside++
+                                } else {
+                                    val tGeom = SystemClock.elapsedRealtime()
+                                    val n = WebModeLayoutStore.refineGeometry(ctx, url, srcs[i], po.bubbles)
+                                    detectMs += SystemClock.elapsedRealtime() - tGeom
+                                    if (n > 0) {
+                                        upgraded++; bubblesUp += n; sinceNotify++
+                                        // Clean with the FINAL stored shapes (the ones the translation is written into).
+                                        val finalBubbles = WebModeLayoutStore.bubblesForSrc(ctx, url, srcs[i])
+                                        val tClean = SystemClock.elapsedRealtime()
+                                        try { WebModeTextRemover.cleanAndCache(ctx, srcs[i], bytes, finalBubbles, allowAi = false) } catch (_: Throwable) {}
+                                        cleanMs += SystemClock.elapsedRealtime() - tClean
+                                    }
                                 }
                             }
                         } catch (_: Throwable) {
                         } finally { try { f.delete() } catch (_: Throwable) {} }
+                        val detNote = if (BubbleDetector.lastInfo != before) BubbleDetector.lastInfo.take(48) else "cached"
+                        OcrDiag.log("REFINE_PANEL", "i=$i ms=${SystemClock.elapsedRealtime() - tPanel} " +
+                            "detector=$detNote inside=$skippedInside free=${freeHeapMbOf()}MB")
                         if (sinceNotify >= 20) { sinceNotify = 0; onMain { req.onRefined?.invoke(url) } }
                     }
                 } finally {
                     refinePhase = false
                     files.forEach { try { it?.delete() } catch (_: Throwable) {} }
-                    OcrDiag.log("REFINE", "panels=$done upgradedPanels=$upgraded bubbles=$bubblesUp ms=${SystemClock.elapsedRealtime() - t0}")
+                    OcrDiag.log("REFINE", "panels=$done upgradedPanels=$upgraded bubbles=$bubblesUp " +
+                        "ms=${SystemClock.elapsedRealtime() - t0} detectMs=$detectMs ocrMs=$ocrMs cleanMs=$cleanMs " +
+                        "skippedInside=$skippedInside skippedMemory=$skippedMemory skipInsideBubble=$skipInsideBubble " +
+                        "free=${freeHeapMbOf()}MB")
                     if (sinceNotify > 0 || upgraded > 0) onMain { req.onRefined?.invoke(url) }
                 }
             }, "ns-webmode-refine")
@@ -3261,6 +3356,8 @@ internal class WebModeExtractor(
         private const val SCAN_LENS_DEADLINE_MS = 45_000L
         /** Panels fetched concurrently during a full scan (network-bound, cheap). */
         private const val SCAN_FETCH_THREADS = 8
+        /** Refine stops (keeps panels as drawn) below this much free Java heap; the mask model's own floor is 70 MB. */
+        private const val REFINE_MIN_FREE_HEAP_MB = 80L
         /** Lens requests in flight during a full scan; the engine's own slot semaphore bounds the real work. */
         private const val SCAN_LENS_THREADS = 7
         // At most this many Lens requests of tall-panel slices in flight at once (all panels together).

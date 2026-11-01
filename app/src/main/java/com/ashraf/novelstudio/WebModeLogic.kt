@@ -144,4 +144,73 @@ internal object WebModeLogic {
     /** True when too many panels failed for the chapter to be called complete. */
     fun tooManyFailures(total: Int, failed: Int): Boolean =
         total > 0 && failed > 0 && failed.toDouble() / total > MAX_FAIL_FRACTION
+
+    /**
+     * Minimum fraction of a balloon box the OCR lettering must fill before the balloon is trusted as "this is
+     * what the reader already sees". A balloon whose inside is mostly artwork cannot prove that the OCR result
+     * covers all of it (a second, unread balloon line would hide behind the same outline).
+     */
+    const val INSIDE_BALLOON_MIN_COVERAGE = 0.55f
+
+    /**
+     * True when every readable OCR box already sits inside a balloon found earlier in this session.
+     *
+     * Used by the post-scan geometry refine to skip the two ONNX models (~4-8 s per panel) for panels whose
+     * text the reader has already been given: the balloon outline is then the OCR box, and nothing about the
+     * count, order or text of bubbles changes. Any unread line, or any box outside a balloon, returns false
+     * so the full detector still runs (sound effects and free-standing lettering are NOT balloon text).
+     *
+     * @param ocs OCR boxes in panel coordinates.
+     * @param balloons balloon boxes in panel coordinates as intArrayOf(left, top, right, bottom).
+     */
+    fun allTextInsideBalloons(
+        ocs: List<OcrBlock>, balloons: List<IntArray>,
+        minCoverage: Float = INSIDE_BALLOON_MIN_COVERAGE
+    ): Boolean {
+        val texts = ocs.filter { it.text.count { c -> c.isLetterOrDigit() } >= 2 }
+        if (texts.isEmpty() || balloons.isEmpty()) return false
+        for (t in texts) {
+            val bl = t.left.toFloat()
+            val bt = t.top.toFloat()
+            val br = bl + (if (t.w > 0f) t.w else 1f)
+            val bb = bt + (if (t.h > 0f) t.h else 1f)
+            val tcx = (bl + br) / 2f
+            val tcy = (bt + bb) / 2f
+            if (!coveredBy(balloons, tcx, tcy, bl, bt, br, bb, minCoverage)) return false
+        }
+        return true
+    }
+
+    /** True when every non-empty normalized layout bubble's box sits inside one of [balloons] (pixel coords). */
+    fun allLayoutInsideBalloons(
+        bubbles: List<WmBubble>, balloons: List<IntArray>, imgW: Int, imgH: Int,
+        minCoverage: Float = INSIDE_BALLOON_MIN_COVERAGE
+    ): Boolean {
+        if (imgW <= 0 || imgH <= 0) return false
+        val usable = bubbles.filter { it.sourceText.count { c -> c.isLetterOrDigit() } >= 2 }
+        if (usable.isEmpty() || balloons.isEmpty()) return false
+        for (b in usable) {
+            val bl = (b.cx - b.w / 2f) * imgW
+            val bt = (b.cy - b.h / 2f) * imgH
+            val br = (b.cx + b.w / 2f) * imgW
+            val bb = (b.cy + b.h / 2f) * imgH
+            if (!coveredBy(balloons, (bl + br) / 2f, (bt + bb) / 2f, bl, bt, br, bb, minCoverage)) return false
+        }
+        return true
+    }
+
+    private fun coveredBy(
+        balloons: List<IntArray>, tcx: Float, tcy: Float,
+        bl: Float, bt: Float, br: Float, bb: Float, minCoverage: Float
+    ): Boolean {
+        // The box centre must be inside the balloon, and the box must not stick far out of it.
+        val host = balloons.firstOrNull { b ->
+            tcx >= b[0] && tcx <= b[2] && tcy >= b[1] && tcy <= b[3]
+        } ?: return false
+        val area = (host[2] - host[0]).toFloat() * (host[3] - host[1]).toFloat()
+        if (area <= 0f) return false
+        val inside = (Math.min(br, host[2].toFloat()) - Math.max(bl, host[0].toFloat())).coerceAtLeast(0f) *
+            (Math.min(bb, host[3].toFloat()) - Math.max(bt, host[1].toFloat())).coerceAtLeast(0f)
+        return inside / area >= minCoverage
+    }
 }

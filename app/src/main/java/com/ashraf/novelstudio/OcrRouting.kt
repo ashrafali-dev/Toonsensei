@@ -156,6 +156,20 @@ internal class RoutingOcrEngine : OcrEngine {
     private companion object {
         /** Cap on how long a foreground Lens route waits for the shared gate (see OcrGate.run(timeoutMs)). */
         const val FOREGROUND_LENS_GATE_TIMEOUT_MS = 1_200L
+
+        /**
+         * Audited crops at or under this pixel size are read locally instead of by Lens. Real audit crops are
+         * 96x48 .. 117x72; a full webtoon panel is ~690x1600 and stays on Lens.
+         */
+        const val SMALL_CROP_MAX_PX = 200 * 200
+
+        /** True when a crop is too small for a remote read to be worth the round trip. */
+        fun preferLocalForSmallCrop(bitmap: Bitmap): Boolean =
+            preferLocalForSmallCrop(bitmap.width, bitmap.height)
+
+        /** Size-only form, so the routing rule is unit-testable without an Android bitmap. */
+        fun preferLocalForSmallCrop(width: Int, height: Int): Boolean =
+            width > 0 && height > 0 && width * height <= SMALL_CROP_MAX_PX
     }
 
     @Volatile private var appContext: Context? = null
@@ -464,7 +478,21 @@ internal class RoutingOcrEngine : OcrEngine {
         route(bitmap, script) { it.recognizeFallback(bitmap, script) }
 
     override fun recognizeRegion(bitmap: Bitmap, script: OcrScript): OcrResult =
-        route(bitmap, script) { it.recognizeRegion(bitmap, script) }
+        if (selectedMode == "lens" && preferLocalForSmallCrop(bitmap)) {
+            // Cropped audit rescans are small (100x50 in practice). Lens answers those with no text at all: the
+            // upload has too little context and the returned protobuf is empty, so every audit cost a network
+            // round trip (~180 ms) and a fallback read anyway. ML Kit is on-device, already loaded, and reads a
+            // single cropped line better. This never changes which engine answers a full panel.
+            val t0 = android.os.SystemClock.elapsedRealtime()
+            val local = OcrGate.run { mlKit.recognizeRegion(bitmap, script) }
+            OcrDiag.log(
+                "ROUTE",
+                "requestedEngine=lens language=$script activeEngine=mlkit(small-crop) fallbackUsed=true " +
+                    "totalMs=${android.os.SystemClock.elapsedRealtime() - t0} " +
+                    "image=${bitmap.width}x${bitmap.height} lastRouterError=small crop reads locally"
+            )
+            local
+        } else route(bitmap, script) { it.recognizeRegion(bitmap, script) }
 
     /**
      * Local-only fast read, never routed: used as a pre-filter so a silent panel costs no network round trip.
